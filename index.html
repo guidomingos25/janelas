@@ -392,40 +392,46 @@ function saturdayLoadCount(combo){
   return (combo || []).filter(day => Number(day) === 6).length;
 }
 function earlyLoadScore(combo){
-  // Quanto menor a pontuação, mais a combinação concentra carregamentos no início da semana.
-  // Sábado recebe uma penalidade alta para ficar somente quando não houver alternativa viável em dias úteis.
-  return (combo || []).reduce((sum, day, idx) => {
-    const d = Number(day) || 0;
-    const saturdayPenalty = d === 6 ? 100 : 0;
-    return sum + (d + saturdayPenalty) * (idx + 1);
-  }, 0);
+  // Prioridade absoluta para início da semana entre combinações viáveis.
+  // Quanto menor, mais cedo na semana: SEG, depois TER, QUA, QUI, SEX e SAB.
+  // A comparação é lexicográfica para que [SEG] vença [TER] e [SEG,QUI] vença [TER,QUA].
+  const days = (combo || []).map(Number).sort((a,b)=>a-b);
+  let score = 0;
+  for(let i = 0; i < 6; i++){
+    const d = days[i] ?? 99;
+    score += d * Math.pow(100, 5 - i);
+  }
+  return score;
 }
 function compareEvalByPrazoThenInicio(a,b){
-  // Ordem de decisão para combinações que ATENDEM o prazo:
-  // 1) evitar sábado sempre que existir alternativa viável;
-  // 2) preservar o melhor atendimento de prazo;
-  // 3) preservar a melhor média/total;
-  // 4) priorizar carregamentos no início da semana.
-  return (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
+  // Para combinações que ATENDEM o prazo:
+  // 1) prioriza início da semana: SEG, depois TER, depois QUA...;
+  // 2) em empate, evita sábado;
+  // 3) em empate, escolhe melhor pior prazo;
+  // 4) em empate, escolhe menor total/média.
+  return (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
+    || (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
     || (a.worst - b.worst)
     || (a.total - b.total)
-    || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
     || String(a.combo || '').localeCompare(String(b.combo || ''));
 }
 function compareFallbackByPrazoThenSabado(a,b){
-  // Para cenários que NÃO atendem, primeiro reduz o estouro/pior prazo.
-  // Só depois tenta evitar sábado.
+  // Para cenários que NÃO atendem:
+  // 1) reduz o estouro/pior prazo;
+  // 2) em empate, prioriza início da semana;
+  // 3) depois evita sábado.
   return (a.worst - b.worst)
     || (a.total - b.total)
-    || (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
     || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
+    || (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
     || String(a.combo || '').localeCompare(String(b.combo || ''));
 }
 function compareLinkedCandidatesByPrazoThenInicio(a,b){
-  return (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
+  // Para vocativos vinculados que ATENDEM, usa a mesma prioridade de início de semana.
+  return (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
+    || (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
     || (a.worst - b.worst)
     || (a.total - b.total)
-    || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
     || String(a.combo || '').localeCompare(String(b.combo || ''));
 }
 function nextLoad(start, allowed){ let wait=0, d=start; while(!allowed.includes(d) && wait<14){ d=(d+1)%7; wait++; } return {day:d,wait}; }
@@ -521,9 +527,9 @@ function getFixedDeliveryPairs(row, transit){
       };
     }).filter(Boolean);
     options.sort((a,b)=>
+      (a.loadDay - b.loadDay) ||
       (Number(a.loadDay===6) - Number(b.loadDay===6)) ||
-      (a.travelElapsed - b.travelElapsed) ||
-      (a.loadDay - b.loadDay)
+      (a.travelElapsed - b.travelElapsed)
     );
     return options[0];
   }).filter(Boolean);
