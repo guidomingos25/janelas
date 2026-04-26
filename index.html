@@ -51,7 +51,7 @@ main{width:100%;max-width:1720px;margin:0 auto;padding:18px 18px 42px}
 .connectionStatus.ok{border-color:#bbf7d0;background:#f0fdf4;color:#166534;font-weight:800}
 .connectionStatus.err{border-color:#fecaca;background:#fff1f2;color:#991b1b;font-weight:800}
 .connectionStatus.loading{border-color:#fed7aa;background:#fff7ed;color:#9a3412;font-weight:800}
-.filters{display:grid;grid-template-columns:repeat(7,minmax(118px,1fr)) auto;gap:9px;align-items:end}
+.filters{display:grid;grid-template-columns:repeat(8,minmax(118px,1fr)) auto;gap:9px;align-items:end}
 label{display:block;font-size:10px;font-weight:900;color:#4b5563;margin:0 0 5px;text-transform:uppercase;letter-spacing:.055em}
 select,input[type="text"],input[type="file"]{width:100%;min-height:36px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--text);padding:7px 9px;font-size:12px;outline:none;box-shadow:0 1px 0 rgba(17,24,39,.02)}
 select:focus,input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(240,90,0,.12)}
@@ -74,6 +74,17 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 .barrow{display:grid;grid-template-columns:98px minmax(80px,1fr) 38px;gap:9px;align-items:center;font-size:12px;margin:8px 0;color:#374151}
 .bartrack{height:10px;background:#e5e7eb;border-radius:999px;overflow:hidden}
 .bar{height:100%;background:linear-gradient(90deg,var(--brand),#fb923c)}
+.barrow.active{font-weight:900;color:var(--dark2)}
+.barrow.active .bartrack{background:#fff1e8;box-shadow:inset 0 0 0 1px #fed7aa}
+.loadDayChart{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;align-items:end;min-height:190px;margin-top:6px;padding:12px 8px 4px;border:1px solid var(--line2);border-radius:14px;background:#fff}
+.loadDayCol{display:grid;grid-template-rows:22px 140px auto;gap:6px;align-items:end;justify-items:center;cursor:pointer;border-radius:12px;padding:6px 4px;transition:.15s}
+.loadDayCol:hover{background:#fff7ed;transform:translateY(-1px)}
+.loadDayCol.active{background:#fff1e8;box-shadow:inset 0 0 0 1px #fed7aa}
+.loadDayValue{font-size:13px;font-weight:900;color:var(--dark2)}
+.loadDayTrack{width:100%;height:140px;display:flex;align-items:end;justify-content:center;background:linear-gradient(180deg,#f8fafc,#fff);border:1px solid var(--line2);border-radius:12px;padding:7px}
+.loadDayBar{width:70%;min-height:0;border-radius:9px 9px 4px 4px;background:linear-gradient(180deg,#fb923c,var(--brand));box-shadow:0 6px 12px rgba(240,90,0,.16)}
+.loadDayLabel{font-size:11px;font-weight:900;color:#4b5563}
+@media(max-width:760px){.loadDayChart{gap:5px;padding:8px 4px}.loadDayCol{padding:4px 2px}.loadDayTrack{height:112px}.loadDayBar{width:82%}.loadDayLabel{font-size:10px}}
 .ruleGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
 .rule{background:#fff;border:1px solid #f3d0b8;border-left:4px solid var(--brand);border-radius:13px;padding:11px 12px;font-size:12px;color:#4b5563;line-height:1.4}
 .rule b{color:#9a3412;text-transform:uppercase;letter-spacing:.04em;font-size:11px}
@@ -94,7 +105,7 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 .badge{display:inline-block;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.035em;border:1px solid transparent}
 .badge.good{background:var(--goodBg);color:#166534;border-color:#b7e4c5}.badge.warn{background:var(--warnBg);color:#92400e;border-color:#f5d58b}.badge.bad{background:var(--badBg);color:#991b1b;border-color:#ffc4c4}
 .vocCard>.smallmuted{padding:7px 12px 0 16px;font-size:10.5px;color:#7c2d12;background:#fffaf5}
-.metrics{display:grid;grid-template-columns:1.15fr .8fr .9fr .7fr .7fr;gap:0;border-bottom:1px solid var(--line2);border-top:1px solid var(--line2);margin-top:-1px;background:#fff}
+.metrics{display:grid;grid-template-columns:1.15fr .75fr .9fr .95fr .65fr .7fr;gap:0;border-bottom:1px solid var(--line2);border-top:1px solid var(--line2);margin-top:-1px;background:#fff}
 .metric{background:#fff;border:0;border-right:1px solid var(--line2);border-radius:0;padding:8px 10px;min-width:0}
 .metric:last-child{border-right:0}
 .metric span{display:block;font-size:9px;color:#6b7280;font-weight:900;text-transform:uppercase;letter-spacing:.045em;white-space:nowrap}
@@ -158,7 +169,7 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
     </div>
     <div class="headerNote">
       <b>Regras ativas</b><br>
-      Recebimento conta dentro do prazo. O primeiro carregamento só pode ocorrer no dia seguinte. Carregamentos: segunda a sábado. Entrega padrão: segunda a sexta. Se marcar entrega fixa, a entrega é forçada nos dias escolhidos, inclusive sábado e domingo; cada dia fixo exige uma janela de carregamento correspondente. Vocativos vinculados usam uma combinação comum de carregamento, otimizada para atender ambos com o mínimo de janelas.
+      Recebimento conta dentro do prazo, porém o início do prazo só é simulado de segunda a sexta, pois não há recebimento aos sábados e domingos. O primeiro carregamento só pode ocorrer no dia seguinte. Carregamentos: segunda a sábado. Entrega padrão: segunda a sexta. Se marcar entrega fixa, a entrega é forçada nos dias escolhidos, inclusive sábado e domingo; cada dia fixo exige uma janela de carregamento correspondente. Vocativos vinculados usam uma combinação comum de carregamento, otimizada para atender ambos com o mínimo de janelas.
     </div>
   </div>
 </header>
@@ -175,6 +186,7 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
       <div><label>Cidade</label><select id="fCidade"></select></div>
       <div><label>Status</label><select id="fStatus"><option value="">Todos</option><option value="atende">Atende</option><option value="critico">Crítico</option><option value="impossivel">Impossível</option></select></div>
       <div><label>Cargas</label><select id="fCargas"><option value="">Todas</option><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="5">5x</option><option value="6">6x</option></select></div>
+      <div><label>Dia de carga</label><select id="fDiaCarga"><option value="">Todos</option><option value="DOM">DOM</option><option value="SEG">SEG</option><option value="TER">TER</option><option value="QUA">QUA</option><option value="QUI">QUI</option><option value="SEX">SEX</option><option value="SAB">SAB</option></select></div>
       <div><label>Busca livre</label><input id="fBusca" type="text" placeholder="Cliente, vocativo, cidade..."></div>
       <div><button class="secondary" id="btnExport">Exportar CSV</button></div>
     </div>
@@ -212,10 +224,18 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
     </div>
   </section>
 
+  <section class="miniPanel" style="margin-top:12px">
+    <div class="sectionTitle" style="margin-bottom:8px">
+      <h2>Carregamentos por dia da semana</h2>
+      <span class="help">Mostra quantos vocativos possuem carregamento recomendado em cada dia da semana no filtro atual. Você também pode clicar em uma coluna do gráfico para filtrar.</span>
+    </div>
+    <div id="barsDiaCarga"></div>
+  </section>
+
   <section class="card resultsHeader">
     <div>
       <h2 style="margin:0;font-size:18px">Resultado executivo por vocativo</h2>
-      <div class="smallmuted">Cada card mostra a recomendação e permite editar dias não úteis, entregas fixas e vínculo de carregamento do próprio vocativo.</div>
+      <div class="smallmuted">Cada card mostra a recomendação e permite editar dias não úteis, entregas fixas e vínculo de carregamento do próprio vocativo. A aplicação prioriza atendimento do prazo e evita carregamento no sábado sempre que houver alternativa viável entre segunda e sexta.</div>
     </div>
     <div class="legend">
       <span><i class="dot good"></i>Atende</span>
@@ -233,6 +253,10 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyLE7UaWexN2R5X
 let BASE_DATA = [];
 const DAYS = ['DOM','SEG','TER','QUA','QUI','SEX','SAB'];
 const LOAD_INDEXES = [1,2,3,4,5,6];
+// Sua empresa recebe notas/materiais somente de segunda a sexta.
+// Por isso, o prazo nunca é simulado como iniciado no sábado ou domingo.
+// O carregamento continua permitido de segunda a sábado, sempre a partir do dia seguinte.
+const RECEIPT_INDEXES = [1,2,3,4,5];
 const DEFAULT_DELIVERY_INDEXES = [1,2,3,4,5];
 const ALL_DAYS = [0,1,2,3,4,5,6];
 const CFG_KEY = 'planejamento_janelas_por_vocativo_google_v2';
@@ -337,7 +361,7 @@ function getConfigForVocativo(vocativo){
   };
 }
 const $ = id => document.getElementById(id);
-const fCliente=$('fCliente'), fVocativo=$('fVocativo'), fUf=$('fUf'), fCidade=$('fCidade'), fStatus=$('fStatus'), fCargas=$('fCargas'), fBusca=$('fBusca'), cards=$('cards'), barsCarga=$('barsCarga');
+const fCliente=$('fCliente'), fVocativo=$('fVocativo'), fUf=$('fUf'), fCidade=$('fCidade'), fStatus=$('fStatus'), fCargas=$('fCargas'), fDiaCarga=$('fDiaCarga'), fBusca=$('fBusca'), cards=$('cards'), barsCarga=$('barsCarga'), barsDiaCarga=$('barsDiaCarga');
 
 function num(v){ if(v===null||v===undefined||v==='') return 0; if(typeof v==='number') return v; return Number(String(v).replace(',', '.').replace(/[^0-9.-]/g,'')) || 0; }
 function norm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().trim(); }
@@ -345,6 +369,13 @@ function isNaoConta(v){ const s=norm(v); return s.includes('NAO CONTA') || s.inc
 function unique(arr){ return [...new Set(arr.filter(v=>v!==undefined && v!==null && String(v).trim()!==''))].sort((a,b)=>String(a).localeCompare(String(b),'pt-BR')); }
 function opt(sel, values, allLabel){ const current=sel.value; sel.innerHTML=`<option value="">${allLabel}</option>`+values.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join(''); if(values.includes(current)) sel.value=current; }
 function fmt(v){ if(v===null || v===undefined || v===999 || v===-999 || !Number.isFinite(Number(v))) return '—'; return Number(v).toLocaleString('pt-BR',{maximumFractionDigits:1}); }
+function fmtWorstReceipt(r){
+  if(!r || !r.worstReceiptDay) return '—';
+  const parts=[r.worstReceiptDay];
+  if(r.worstLoadDay) parts.push(`carga ${r.worstLoadDay}`);
+  if(r.worstDeliveryDay) parts.push(`entrega ${r.worstDeliveryDay}`);
+  return parts.join(' • ');
+}
 function escapeHtml(s){ return String(s??'').replace(/[&<>"]/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m])); }
 function cssEsc(s){ return (window.CSS && CSS.escape) ? CSS.escape(String(s)) : String(s).replace(/[^a-zA-Z0-9_-]/g,'\$&'); }
 function getNonBusinessDays(vocativo){ return (CONFIG.nonBusinessByVocativo[vocativo] || []).map(Number).filter(d=>d>=0 && d<=6); }
@@ -356,6 +387,47 @@ function allowedDeliveryDays(row){
   return DEFAULT_DELIVERY_INDEXES.filter(d => !non.has(d));
 }
 function comb(arr,k,start=0,prefix=[],out=[]){ if(prefix.length===k){out.push(prefix.slice());return out;} for(let i=start;i<arr.length;i++) comb(arr,k,i+1,[...prefix,arr[i]],out); return out; }
+
+function saturdayLoadCount(combo){
+  return (combo || []).filter(day => Number(day) === 6).length;
+}
+function earlyLoadScore(combo){
+  // Quanto menor a pontuação, mais a combinação concentra carregamentos no início da semana.
+  // Sábado recebe uma penalidade alta para ficar somente quando não houver alternativa viável em dias úteis.
+  return (combo || []).reduce((sum, day, idx) => {
+    const d = Number(day) || 0;
+    const saturdayPenalty = d === 6 ? 100 : 0;
+    return sum + (d + saturdayPenalty) * (idx + 1);
+  }, 0);
+}
+function compareEvalByPrazoThenInicio(a,b){
+  // Ordem de decisão para combinações que ATENDEM o prazo:
+  // 1) evitar sábado sempre que existir alternativa viável;
+  // 2) preservar o melhor atendimento de prazo;
+  // 3) preservar a melhor média/total;
+  // 4) priorizar carregamentos no início da semana.
+  return (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
+    || (a.worst - b.worst)
+    || (a.total - b.total)
+    || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
+    || String(a.combo || '').localeCompare(String(b.combo || ''));
+}
+function compareFallbackByPrazoThenSabado(a,b){
+  // Para cenários que NÃO atendem, primeiro reduz o estouro/pior prazo.
+  // Só depois tenta evitar sábado.
+  return (a.worst - b.worst)
+    || (a.total - b.total)
+    || (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
+    || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
+    || String(a.combo || '').localeCompare(String(b.combo || ''));
+}
+function compareLinkedCandidatesByPrazoThenInicio(a,b){
+  return (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
+    || (a.worst - b.worst)
+    || (a.total - b.total)
+    || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
+    || String(a.combo || '').localeCompare(String(b.combo || ''));
+}
 function nextLoad(start, allowed){ let wait=0, d=start; while(!allowed.includes(d) && wait<14){ d=(d+1)%7; wait++; } return {day:d,wait}; }
 function countContractDays(receiptDow, calendarElapsed, nonBusiness){
   // Regra original restaurada:
@@ -399,56 +471,62 @@ function diffForwardDays(fromDay, toDay){
   return (toDay - fromDay + 7) % 7;
 }
 function fixedDeliveryFromLoad(loadDay, transit, fixedDays){
-  // Entrega fixa é calculada de trás para frente:
-  // dia ideal de carga = dia fixo de entrega - TRANSIT TIME em dias corridos.
-  // O dia do carregamento NÃO conta como transit time.
-  // Exemplo: entrega QUI + transit time 4 => carga ideal DOM.
-  // Como domingo não é dia permitido de carregamento, antecipa para SÁBADO,
-  // mantendo a entrega fixa em QUI e considerando o dia extra no prazo total.
+  // Entrega fixa é calculada mantendo o dia de entrega selecionado.
+  // A carga pode ocorrer antes do dia ideal quando isso ainda atende o transit time,
+  // para evitar sábado sempre que houver alternativa viável em dia útil.
+  // Ex.: entrega QUI + transit time 4 teria carga ideal DOM; como DOM não carrega,
+  // a aplicação testa SÁB, mas também permite SEX se o prazo continuar atendido.
   if(!fixedDays.length) return null;
   const transitDays=Math.max(0, Math.ceil(num(transit)));
 
-  for(const fixedDay of fixedDays){
-    const idealLoad=(fixedDay - transitDays + 700) % 7;
-    const effectiveLoad=idealLoad===0 ? 6 : idealLoad; // domingo vira sábado
-
-    if(loadDay===effectiveLoad){
-      const calendarTravel=diffForwardDays(loadDay, fixedDay);
+  const options = fixedDays
+    .map(fixedDay => {
+      const calendarTravel = diffForwardDays(loadDay, fixedDay);
+      if(calendarTravel < transitDays) return null;
+      const idealLoad=(fixedDay - transitDays + 700) % 7;
       return {
         day:fixedDay,
         travelElapsed:calendarTravel,
         transitTime:transitDays,
-        adjustedFromSunday: idealLoad===0,
-        calendarSpanFromLoad:calendarTravel + 1
+        adjustedFromSunday: idealLoad===0 && Number(loadDay)===6,
+        calendarSpanFromLoad:calendarTravel + 1,
+        extraWaitingDays: calendarTravel - transitDays
       };
-    }
-  }
+    })
+    .filter(Boolean);
 
-  return null;
+  if(!options.length) return null;
+  options.sort((a,b)=>a.extraWaitingDays-b.extraWaitingDays || a.travelElapsed-b.travelElapsed || a.day-b.day);
+  return options[0];
 }
 
 function getFixedDeliveryPairs(row, transit){
-  // Para entrega fixa, a janela de carregamento SEMPRE deve ser calculada,
-  // mesmo quando o prazo não é atendido.
-  // Regra definitiva: dia de carga = dia fixo de entrega - TRANSIT TIME em dias corridos.
-  // Se o dia calculado cair em DOM, antecipa para SÁB, que é o último dia permitido de carga.
+  // Pares sugeridos para entrega fixa, evitando sábado quando existir alternativa viável em dia útil.
   const fixed = getFixedDeliveryDays(row.vocativo);
   const transitDays = Math.max(0, Math.ceil(num(transit)));
   return fixed.map(fixedDay => {
-    const idealLoad = (fixedDay - transitDays + 700) % 7;
-    const effectiveLoad = idealLoad === 0 ? 6 : idealLoad;
-    const travelElapsed = diffForwardDays(effectiveLoad, fixedDay);
-    return {
-      loadDay: effectiveLoad,
-      deliveryDay: fixedDay,
-      load: DAYS[effectiveLoad],
-      delivery: DAYS[fixedDay],
-      travelElapsed,
-      transitTime: transitDays,
-      adjustedFromSunday: idealLoad === 0,
-      calendarSpanFromLoad: travelElapsed + 1
-    };
-  });
+    const options = LOAD_INDEXES.map(loadDay => {
+      const travelElapsed = diffForwardDays(loadDay, fixedDay);
+      if(travelElapsed < transitDays) return null;
+      const idealLoad = (fixedDay - transitDays + 700) % 7;
+      return {
+        loadDay,
+        deliveryDay: fixedDay,
+        load: DAYS[loadDay],
+        delivery: DAYS[fixedDay],
+        travelElapsed,
+        transitTime: transitDays,
+        adjustedFromSunday: idealLoad === 0 && loadDay === 6,
+        calendarSpanFromLoad: travelElapsed + 1
+      };
+    }).filter(Boolean);
+    options.sort((a,b)=>
+      (Number(a.loadDay===6) - Number(b.loadDay===6)) ||
+      (a.travelElapsed - b.travelElapsed) ||
+      (a.loadDay - b.loadDay)
+    );
+    return options[0];
+  }).filter(Boolean);
 }
 function resolveDeliveryFromLoad(row, loadDay, transit, allowedDays){
   const fixed = getFixedDeliveryDays(row.vocativo);
@@ -517,21 +595,37 @@ function evaluateComboForRow(row, deadline, transit, combo, options={}){
   const fixedCheck = fixedDeliveryCheck(row, transit, combo, options);
 
   if(!allowedDays.length){
-    return {ok:false, reason:'Sem dia de entrega permitido para o vocativo', combo, loadDays:combo.map(i=>DAYS[i]), deliveryDays:[], windowPairs:[], worst:999, worstCalendar:999, total:999};
+    return {ok:false, reason:'Sem dia de entrega permitido para o vocativo', combo, loadDays:combo.map(i=>DAYS[i]), deliveryDays:[], windowPairs:[], worst:999, worstCalendar:999, total:999, worstReceiptDay:'—', worstLoadDay:'—', worstDeliveryDay:'—'};
   }
 
   if(!fixedCheck.ok){
     const pairs=combo.map(i=>{ const de=resolveDeliveryFromLoad(row,i,transit,allowedDays); return de ? {load:DAYS[i],delivery:DAYS[de.day],travelElapsed:de.travelElapsed,adjustedFromSunday:de.adjustedFromSunday} : null; }).filter(Boolean);
-    return {ok:false, reason:fixedCheck.reason, combo, loadDays:combo.map(i=>DAYS[i]), deliveryDays:pairs.map(p=>p.delivery), windowPairs:pairs, worst:999, worstCalendar:999, total:999};
+    return {ok:false, reason:fixedCheck.reason, combo, loadDays:combo.map(i=>DAYS[i]), deliveryDays:pairs.map(p=>p.delivery), windowPairs:pairs, worst:999, worstCalendar:999, total:999, worstReceiptDay:'—', worstLoadDay:'—', worstDeliveryDay:'—'};
   }
 
   let ok=true, worst=-1, worstCalendar=-1, total=0, delivs=[];
-  for(let receipt=0; receipt<7; receipt++){
+  let worstReceipt=null;
+
+  for(const receipt of RECEIPT_INDEXES){
     const nl=nextLoad((receipt+1)%7,combo);
     const de=resolveDeliveryFromLoad(row,nl.day,transit,allowedDays);
     if(!de){ ok=false; break; }
     const calendarElapsed=1 + nl.wait + (de.calendarSpanFromLoad ?? (de.travelElapsed + 1));
     const contractElapsed=countContractDays(receipt, calendarElapsed, nonBusiness);
+
+    // Guarda o cenário de recebimento que gera o maior prazo real.
+    // Critério principal: maior prazo útil. Empate: maior prazo corrido.
+    if(!worstReceipt || contractElapsed > worstReceipt.contractElapsed || (contractElapsed === worstReceipt.contractElapsed && calendarElapsed > worstReceipt.calendarElapsed)){
+      worstReceipt={
+        receipt,
+        loadDay:nl.day,
+        deliveryDay:de.day,
+        contractElapsed,
+        calendarElapsed,
+        wait:nl.wait
+      };
+    }
+
     worst=Math.max(worst, contractElapsed);
     worstCalendar=Math.max(worstCalendar, calendarElapsed);
     total+=contractElapsed;
@@ -542,64 +636,53 @@ function evaluateComboForRow(row, deadline, transit, combo, options={}){
   const deliveryDays = fixedCheck.fixed.length
     ? [...new Set(pairs.map(p=>p.delivery))].sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b))
     : [...new Set(delivs)].sort((a,b)=>a-b).map(i=>DAYS[i]);
-  return {ok, reason:'', combo, loadDays:combo.map(i=>DAYS[i]), deliveryDays, windowPairs:pairs, worst:worst<0?999:worst, worstCalendar:worstCalendar<0?999:worstCalendar, total};
-}
-function evaluateFixedDeliveryForRow(row, deadline, transit){
-  deadline = num(deadline);
-  const nonBusiness = new Set(getNonBusinessDays(row.vocativo));
-  const pairs = getFixedDeliveryPairs(row, transit);
-
-  if(!pairs.length){
-    return {ok:false, reason:'Nenhuma entrega fixa selecionada', cargas:0, combo:[], loadDays:[], deliveryDays:[], windowPairs:[], worst:999, worstCalendar:999, total:999, avg:999};
-  }
-
-  let ok = true;
-  let worst = -1;
-  let worstCalendar = -1;
-  let total = 0;
-
-  // Para cada dia possível de recebimento, escolhe a próxima janela carga→entrega fixa disponível.
-  // O recebimento conta dentro do prazo e a carga só pode ocorrer a partir do dia seguinte.
-  for(let receipt=0; receipt<7; receipt++){
-    const firstLoadStart = (receipt + 1) % 7;
-    let best = null;
-
-    for(const p of pairs){
-      const wait = diffForwardDays(firstLoadStart, p.loadDay);
-      const calendarElapsed = 1 + wait + p.calendarSpanFromLoad;
-      const contractElapsed = countContractDays(receipt, calendarElapsed, nonBusiness);
-      const candidate = {contractElapsed, calendarElapsed, wait, pair:p};
-      if(!best || candidate.contractElapsed < best.contractElapsed || (candidate.contractElapsed === best.contractElapsed && candidate.calendarElapsed < best.calendarElapsed)){
-        best = candidate;
-      }
-    }
-
-    if(!best){ ok=false; continue; }
-    worst = Math.max(worst, best.contractElapsed);
-    worstCalendar = Math.max(worstCalendar, best.calendarElapsed);
-    total += best.contractElapsed;
-    if(best.contractElapsed > deadline) ok = false;
-  }
-
-  const loadDays = pairs.map(p=>p.load);
-  const deliveryDays = pairs.map(p=>p.delivery);
-  const reason = ok
-    ? `Entrega fixa: ${pairs.length} dia(s) selecionado(s), ${pairs.length} janela(s) de carga calculada(s)`
-    : `Não atende o prazo usando ${pairs.length} entrega(s) fixa(s), mas as janelas carga→entrega foram calculadas`;
-
   return {
     ok,
-    reason,
-    cargas: pairs.length,
-    combo: pairs.map(p=>p.loadDay),
-    loadDays,
+    reason:'',
+    combo,
+    loadDays:combo.map(i=>DAYS[i]),
     deliveryDays,
-    windowPairs: pairs,
-    worst: worst<0 ? 999 : worst,
-    worstCalendar: worstCalendar<0 ? 999 : worstCalendar,
+    windowPairs:pairs,
+    worst:worst<0?999:worst,
+    worstCalendar:worstCalendar<0?999:worstCalendar,
     total,
-    avg: total/7
+    worstReceiptDay: worstReceipt ? DAYS[worstReceipt.receipt] : '—',
+    worstLoadDay: worstReceipt ? DAYS[worstReceipt.loadDay] : '—',
+    worstDeliveryDay: worstReceipt ? DAYS[worstReceipt.deliveryDay] : '—',
+    worstReceiptDetail: worstReceipt || null
   };
+}
+function evaluateFixedDeliveryForRow(row, deadline, transit){
+  const fixedCount = getFixedDeliveryDays(row.vocativo).length;
+  if(!fixedCount){
+    return {ok:false, reason:'Nenhuma entrega fixa selecionada', cargas:0, combo:[], loadDays:[], deliveryDays:[], windowPairs:[], worst:999, worstCalendar:999, total:999, avg:999, worstReceiptDay:'—', worstLoadDay:'—', worstDeliveryDay:'—'};
+  }
+
+  const candidates=[];
+  const fallbackOptions=[];
+  for(const c of comb(LOAD_INDEXES, fixedCount)){
+    const ev=evaluateComboForRow(row, deadline, transit, c);
+    const hasAllFixedPairs = ev.windowPairs && ev.windowPairs.length === fixedCount;
+    if(hasAllFixedPairs) fallbackOptions.push(ev);
+    if(ev.ok) candidates.push(ev);
+  }
+
+  if(candidates.length){
+    candidates.sort(compareEvalByPrazoThenInicio);
+    const best=candidates[0];
+    const reason = saturdayLoadCount(best.combo)
+      ? `Entrega fixa: ${fixedCount} dia(s) selecionado(s). Sábado mantido por necessidade de prazo.`
+      : `Entrega fixa: ${fixedCount} dia(s) selecionado(s). Carga antecipada para dia útil quando possível.`;
+    return {...best, reason, cargas:best.combo.length, avg:best.total/RECEIPT_INDEXES.length};
+  }
+
+  if(fallbackOptions.length){
+    fallbackOptions.sort(compareFallbackByPrazoThenSabado);
+    const best=fallbackOptions[0];
+    return {...best, ok:false, reason:`Não atende o prazo usando ${fixedCount} entrega(s) fixa(s), mas as janelas carga→entrega foram calculadas`, cargas:best.combo.length, avg:best.total===999?999:best.total/RECEIPT_INDEXES.length};
+  }
+
+  return {ok:false, reason:'Nenhuma combinação de carga gera as entregas fixas selecionadas', cargas:fixedCount, combo:[], loadDays:[], deliveryDays:[], windowPairs:[], worst:999, worstCalendar:999, total:999, avg:999, worstReceiptDay:'—', worstLoadDay:'—', worstDeliveryDay:'—'};
 }
 
 function evaluateWindows(row, deadline, transit, forcedCombo){
@@ -614,7 +697,7 @@ function evaluateWindows(row, deadline, transit, forcedCombo){
     const baseReason = fixedCount
       ? `Entrega fixa: ${fixedCount} dia(s) selecionado(s), exigindo ${fixedCount} janela(s) de carga`
       : 'Carga vinculada: mesmo(s) dia(s) de carregamento do vocativo parceiro';
-    return {...forced, cargas:forcedCombo.length, avg:forced.total===999?999:forced.total/7, reason: forced.ok ? baseReason : (forced.reason || 'Não atende no vínculo atual')};
+    return {...forced, cargas:forcedCombo.length, avg:forced.total===999?999:forced.total/RECEIPT_INDEXES.length, reason: forced.ok ? baseReason : (forced.reason || 'Não atende no vínculo atual')};
   }
 
   const counts = candidateLoadCounts(row);
@@ -625,10 +708,10 @@ function evaluateWindows(row, deadline, transit, forcedCombo){
       if(ev.ok) candidates.push(ev);
     }
     if(candidates.length){
-      candidates.sort((a,b)=>a.worst-b.worst || a.total-b.total || a.combo.join('').localeCompare(b.combo.join('')));
+      candidates.sort(compareEvalByPrazoThenInicio);
       const best=candidates[0];
       const reason = fixedCount ? `Entrega fixa: ${fixedCount} dia(s) selecionado(s), ${fixedCount} janela(s) de carga calculada(s)` : '';
-      return {...best, cargas:k, avg:best.total/7, reason};
+      return {...best, cargas:k, avg:best.total/RECEIPT_INDEXES.length, reason};
     }
   }
 
@@ -651,7 +734,7 @@ function evaluateWindows(row, deadline, transit, forcedCombo){
   }
 
   if(fallbackOptions.length){
-    fallbackOptions.sort((a,b)=>a.worst-b.worst || a.total-b.total || a.combo.join('').localeCompare(b.combo.join('')));
+    fallbackOptions.sort(compareFallbackByPrazoThenSabado);
     fallback = fallbackOptions[0];
   } else {
     const fallbackCombo = comb(LOAD_INDEXES, fallbackK)[0] || LOAD_INDEXES.slice();
@@ -661,7 +744,7 @@ function evaluateWindows(row, deadline, transit, forcedCombo){
   const reason = fallback.reason || (fixedCount
     ? `Não atende o prazo usando ${fixedCount} entrega(s) fixa(s) e ${fixedCount} janela(s) de carga`
     : 'Não atende dentro do prazo com as restrições atuais');
-  return {...fallback, ok:false, cargas:fallbackK, avg:fallback.total===999?999:fallback.total/7, reason};
+  return {...fallback, ok:false, cargas:fallbackK, avg:fallback.total===999?999:fallback.total/RECEIPT_INDEXES.length, reason};
 }
 function scoreLinkedEval(e, deadline){
   if(!e) return {over:9999, worst:9999, total:9999};
@@ -720,14 +803,16 @@ function findBestLinkedCombo(row){
         k < bestFallback.combo.length ||
         (k === bestFallback.combo.length && candidate.maxOver < bestFallback.maxOver) ||
         (k === bestFallback.combo.length && candidate.maxOver === bestFallback.maxOver && candidate.worst < bestFallback.worst) ||
-        (k === bestFallback.combo.length && candidate.maxOver === bestFallback.maxOver && candidate.worst === bestFallback.worst && candidate.total < bestFallback.total)
+        (k === bestFallback.combo.length && candidate.maxOver === bestFallback.maxOver && candidate.worst === bestFallback.worst && candidate.total < bestFallback.total) ||
+        (k === bestFallback.combo.length && candidate.maxOver === bestFallback.maxOver && candidate.worst === bestFallback.worst && candidate.total === bestFallback.total && saturdayLoadCount(candidate.combo) < saturdayLoadCount(bestFallback.combo)) ||
+        (k === bestFallback.combo.length && candidate.maxOver === bestFallback.maxOver && candidate.worst === bestFallback.worst && candidate.total === bestFallback.total && saturdayLoadCount(candidate.combo) === saturdayLoadCount(bestFallback.combo) && earlyLoadScore(candidate.combo) < earlyLoadScore(bestFallback.combo))
       ){
         bestFallback=candidate;
       }
     }
 
     if(candidates.length){
-      candidates.sort((a,b)=>a.worst-b.worst || a.total-b.total || a.combo.join('').localeCompare(b.combo.join('')));
+      candidates.sort(compareEvalByPrazoThenInicio);
       return candidates[0].combo;
     }
   }
@@ -748,10 +833,29 @@ function enrich(r){
   return {...r,...parts,...w,folga,status,nonBusiness:getNonBusinessDays(r.vocativo),fixedDelivery:getFixedDeliveryDays(r.vocativo),linkedWith:getLinkedVocativo(r.vocativo)};
 }
 function getAll(){ return BASE_DATA.map(enrich); }
-function getFiltered(all){
+function getLoadDaysForChartAndFilter(row){
+  // Para o gráfico/filtro de dias de carga, quando o usuário força entrega fixa,
+  // a contagem deve refletir o dia de carregamento calculado a partir dessa entrega fixa.
+  // Isso mantém o gráfico sincronizado mesmo quando o card está em vínculo ou quando o prazo fica impossível.
+  const fixed = getFixedDeliveryDays(row.vocativo);
+  if(fixed.length){
+    const pairs = getFixedDeliveryPairs(row, row.transitTime);
+    return [...new Set(pairs.map(p=>p.load).filter(Boolean))];
+  }
+  return [...new Set((row.loadDays || []).filter(Boolean))];
+}
+function getFiltered(all, options={}){
   const busca=norm(fBusca.value);
+  const ignoreLoadDay = !!options.ignoreLoadDay;
   return all.filter(r=>
-    (!fCliente.value || r.cliente===fCliente.value) && (!fVocativo.value || r.vocativo===fVocativo.value) && (!fUf.value || r.ufDestino===fUf.value) && (!fCidade.value || r.cidadeDestino===fCidade.value) && (!fStatus.value || r.status===fStatus.value) && (!fCargas.value || String(r.cargas)===fCargas.value) && (!busca || norm(`${r.cliente} ${r.vocativo} ${r.cidadeDestino} ${r.ufDestino}`).includes(busca))
+    (!fCliente.value || r.cliente===fCliente.value) &&
+    (!fVocativo.value || r.vocativo===fVocativo.value) &&
+    (!fUf.value || r.ufDestino===fUf.value) &&
+    (!fCidade.value || r.cidadeDestino===fCidade.value) &&
+    (!fStatus.value || r.status===fStatus.value) &&
+    (!fCargas.value || String(r.cargas)===fCargas.value) &&
+    (ignoreLoadDay || !fDiaCarga.value || getLoadDaysForChartAndFilter(r).includes(fDiaCarga.value)) &&
+    (!busca || norm(`${r.cliente} ${r.vocativo} ${r.cidadeDestino} ${r.ufDestino}`).includes(busca))
   );
 }
 function render(){
@@ -760,6 +864,7 @@ function render(){
   opt(fUf, unique(all.map(r=>r.ufDestino)), 'Todas');
   opt(fCidade, unique(all.filter(r=>!fUf.value || r.ufDestino===fUf.value).map(r=>r.cidadeDestino)), 'Todas');
   opt(fVocativo, unique(all.filter(r=>(!fCliente.value || r.cliente===fCliente.value) && (!fUf.value || r.ufDestino===fUf.value) && (!fCidade.value || r.cidadeDestino===fCidade.value)).map(r=>r.vocativo)), 'Todos');
+  const filteredBeforeLoadDay=getFiltered(all,{ignoreLoadDay:true});
   const filtered=getFiltered(all);
   $('kReg').textContent=filtered.length.toLocaleString('pt-BR');
   $('kVoc').textContent=unique(filtered.map(r=>r.vocativo)).length.toLocaleString('pt-BR');
@@ -767,13 +872,41 @@ function render(){
   $('kCrit').textContent=filtered.filter(r=>r.status==='critico').length.toLocaleString('pt-BR');
   $('kBad').textContent=filtered.filter(r=>r.status==='impossivel').length.toLocaleString('pt-BR');
   $('kMedia').textContent=filtered.length ? (filtered.reduce((s,r)=>s+r.cargas,0)/filtered.length).toFixed(1).replace('.',',') : '0';
-  renderBars(filtered); renderCards(filtered);
+  renderBars(filtered);
+  renderLoadDayBars(filteredBeforeLoadDay);
+  renderCards(filtered);
 }
 function renderBars(rows){
   const counts=new Map(); for(let i=1;i<=6;i++) counts.set(i,0);
   rows.forEach(r=>counts.set(r.cargas,(counts.get(r.cargas)||0)+1));
   const max=Math.max(1,...counts.values());
   barsCarga.innerHTML=[...counts.entries()].map(([k,v])=>`<div class="barrow"><div>${k}x/semana</div><div class="bartrack"><div class="bar" style="width:${Math.max(3,v/max*100)}%"></div></div><div><b>${v}</b></div></div>`).join('');
+}
+function renderLoadDayBars(rows){
+  const counts=new Map(DAYS.map(day=>[day,0]));
+  rows.forEach(r=>{
+    getLoadDaysForChartAndFilter(r).forEach(day=>{
+      counts.set(day,(counts.get(day)||0)+1);
+    });
+  });
+  const max=Math.max(1,...DAYS.map(day=>counts.get(day)||0));
+  barsDiaCarga.innerHTML=`<div class="loadDayChart">${DAYS.map(day=>{
+    const value=counts.get(day)||0;
+    const height=value ? Math.max(6,(value/max)*100) : 0;
+    const active=fDiaCarga.value===day;
+    return `<div class="loadDayCol ${active?'active':''}" data-day-bar="${day}" title="Clique para filtrar por ${day}">
+      <div class="loadDayValue">${value}</div>
+      <div class="loadDayTrack"><div class="loadDayBar" style="height:${height}%"></div></div>
+      <div class="loadDayLabel">${day}</div>
+    </div>`;
+  }).join('')}</div>`;
+  barsDiaCarga.querySelectorAll('[data-day-bar]').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const day=el.dataset.dayBar;
+      fDiaCarga.value = (fDiaCarga.value===day) ? '' : day;
+      render();
+    });
+  });
 }
 function renderCycles(pairs){
   if(!pairs?.length) return '<span class="smallmuted">Sem ciclo calculado</span>';
@@ -807,6 +940,7 @@ function renderCards(rows){
         <div class="metric"><span>Prazo usado</span><b>${fmt(r.menorPrazo)} dias</b><div class="smallmuted">EXW ${fmt(r.prazoExwReal)} • FCA ${fmt(r.prazoFcaReal)}</div></div>
         <div class="metric"><span>Frequência</span><b>${r.cargas}x/semana</b></div>
         <div class="metric"><span>Prazo real</span><b>${fmt(r.worst)} úteis</b><div class="smallmuted">${fmt(r.worstCalendar)} corridos</div></div>
+        <div class="metric"><span>Recebimento crítico</span><b>${escapeHtml(r.worstReceiptDay || '—')}</b><div class="smallmuted">${escapeHtml(fmtWorstReceipt(r))}</div></div>
         <div class="metric"><span>Folga</span><b>${fmt(r.folga)} dias</b></div>
         <div class="metric"><span>Transit time</span><b>${fmt(r.transitTime)} dias</b></div>
       </div>
@@ -879,7 +1013,7 @@ function bindCardEvents(){
 }
 function exportCSV(){
   const rows=getFiltered(getAll());
-  const cols=[['cliente','Cliente'],['vocativo','Vocativo'],['ufOrigem','UF Origem'],['cidadeDestino','Cidade destino'],['ufDestino','UF Destino'],['prazoExwReal','Prazo EXW real'],['prazoFcaReal','Prazo FCA real'],['menorPrazo','Menor prazo'],['transitTime','Transit time'],['status','Status'],['cargas','Cargas semanais'],['ciclos','Ciclos carga entrega'],['entregaFixa','Entrega fixa'],['vinculo','Vinculado com'],['diasNaoUteis','Dias nao uteis vocativo'],['loadDays','Dias carga'],['deliveryDays','Dias entrega'],['worst','Pior prazo util'],['worstCalendar','Pior prazo corrido'],['folga','Folga']];
+  const cols=[['cliente','Cliente'],['vocativo','Vocativo'],['ufOrigem','UF Origem'],['cidadeDestino','Cidade destino'],['ufDestino','UF Destino'],['prazoExwReal','Prazo EXW real'],['prazoFcaReal','Prazo FCA real'],['menorPrazo','Menor prazo'],['transitTime','Transit time'],['status','Status'],['cargas','Cargas semanais'],['ciclos','Ciclos carga entrega'],['entregaFixa','Entrega fixa'],['vinculo','Vinculado com'],['diasNaoUteis','Dias nao uteis vocativo'],['loadDays','Dias carga'],['deliveryDays','Dias entrega'],['worst','Pior prazo util'],['worstCalendar','Pior prazo corrido'],['worstReceiptDay','Dia recebimento critico'],['worstLoadDay','Dia carga do pior prazo'],['worstDeliveryDay','Dia entrega do pior prazo'],['folga','Folga']];
   const lines=[cols.map(c=>c[1]).join(';')];
   rows.forEach(r=>{ lines.push(cols.map(([key])=>{ let v=r[key]; if(key==='ciclos') v=r.windowPairs.map(p=>`${p.load}->${p.delivery}`).join(' | '); if(key==='entregaFixa') v=getFixedDeliveryDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(key==='vinculo') v=getLinkedVocativo(r.vocativo); if(key==='diasNaoUteis') v=getNonBusinessDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(Array.isArray(v)) v=v.join(', '); return `"${String(v ?? '').replace(/"/g,'""')}"`; }).join(';')); });
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='planejamento_janelas_vocativo.csv'; a.click(); URL.revokeObjectURL(a.href);
@@ -1008,7 +1142,7 @@ async function loadBackendData(resetFilters=true){
     BASE_DATA=[]; render();
   }
 }
-[fCliente,fVocativo,fUf,fCidade,fStatus,fCargas].forEach(el=>el.addEventListener('change',render));
+[fCliente,fVocativo,fUf,fCidade,fStatus,fCargas,fDiaCarga].forEach(el=>el.addEventListener('change',render));
 fBusca.addEventListener('input',render);
 $('btnExport').addEventListener('click',exportCSV);
 $('btnSave').addEventListener('click',saveDirtyConfigs);
