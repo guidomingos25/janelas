@@ -2049,13 +2049,14 @@ function auxNormalizeRows(jsonRows){
     const cliente = String(auxFindValue(row,['Cliente','CLIENTE','Cliente Destinatário','Cliente Destinatario']) || '').trim();
     const vocativoExcel = String(auxFindValue(row,['Vocativo','Almoxarifado']) || '').trim();
     const vocativo = auxFindBaseVocativo(vocativoExcel);
+    const tipoCarga = String(auxFindValue(row,['Tipo de Carga','TIPO DE CARGA','Tipo Carga','TIPO CARGA']) || '').trim();
     const peso = auxToNumber(auxFindValue(row,['Peso','PESO']));
     const dataEntrada = auxToDate(auxFindValue(row,['Data Entrada','DATA ENTRADA','Data de Entrada da Nota']));
     const dataCheckin = auxToDate(auxFindValue(row,['Data de Check in','DATA CHECK-IN','Data Check in','Data Checkin']));
     const refDate = [dataEntrada,dataCheckin].filter(Boolean).sort((a,b)=>b-a)[0] || null;
     const nota = String(auxFindValue(row,['Nota','NUMERO NF','Número NF','NF']) || '').trim();
-    return {filial,cliente,vocativo,vocativoExcel,peso,dataEntrada,dataCheckin,refDate,monthKey:auxDateKey(refDate),nota};
-  }).filter(r=>r.vocativo && r.refDate && r.peso>0);
+    return {filial,cliente,vocativo,vocativoExcel,tipoCarga,peso,dataEntrada,dataCheckin,refDate,monthKey:auxDateKey(refDate),nota};
+  }).filter(r=>r.vocativo && r.refDate && r.peso>0 && auxNorm(r.tipoCarga)==='FRACIONADO');
 }
 function auxRefreshFilters(){
   const filialAtual=getSelectedValues(auxFilial), clienteAtual=getSelectedValues(auxCliente), mesAtual=getSelectedValues(auxMes);
@@ -2169,7 +2170,7 @@ async function auxReadFile(file){
   AUX_ROWS=auxNormalizeRows(AUX_ROWS_RAW);
   auxRefreshFilters();
   renderAux();
-  auxSetStatus(`${AUX_ROWS.length.toLocaleString('pt-BR')} linhas válidas carregadas do Excel, mantendo somente vocativos existentes no Planejamento de Janelas. Colunas usadas: Peso, Cliente, Filial Emissora VF/Filial, Vocativo, Data Entrada e Data de Check in.`,'ok');
+  auxSetStatus(`${AUX_ROWS.length.toLocaleString('pt-BR')} linhas válidas carregadas do Excel, mantendo somente vocativos existentes no Planejamento de Janelas e Tipo de Carga = FRACIONADO. Colunas usadas: Tipo de Carga, Peso, Cliente, Filial Emissora VF/Filial, Vocativo, Data Entrada e Data de Check in.`,'ok');
 }
 function auxExportCSV(){
   if(!AUX_RESULT.length){ auxSetStatus('Não há dados para exportar nos filtros atuais.','err'); return; }
