@@ -43,7 +43,7 @@ h1{margin:0;font-size:28px;line-height:1.08;letter-spacing:-.035em;color:var(--d
 .headerNote b{color:#fff}
 main{width:100%;max-width:1720px;margin:0 auto;padding:18px 18px 42px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadowSoft)}
-.toolbar{padding:14px 16px;margin-top:-18px;position:relative;border-top:4px solid var(--brand)}
+.toolbar{padding:14px 16px;margin-top:0;position:relative;border-top:4px solid var(--brand)}
 .sectionTitle{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin-bottom:12px;border-bottom:1px solid var(--line2);padding-bottom:10px}
 .sectionTitle h2{font-size:17px;margin:0;color:var(--dark2);letter-spacing:-.015em}
 .help,.smallmuted{font-size:11px;color:var(--muted);line-height:1.35}
@@ -158,6 +158,47 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
   .metric{border-bottom:1px solid var(--line2)}
   .vocTop{grid-template-columns:1fr;align-items:start}
 }
+
+.pageNav{max-width:1720px;margin:0 auto;padding:14px 18px 0;display:flex;gap:8px;flex-wrap:wrap}
+.pageNav button{background:#fff;color:#374151;border:1px solid var(--line);box-shadow:var(--shadowSoft)}
+.pageNav button.active{background:var(--brand);color:#fff;border-color:var(--brand)}
+.appPage{display:none}
+.appPage.active{display:block}
+.auxHero{padding:16px;border-top:4px solid var(--brand);margin-bottom:12px}
+.auxHero h2{margin:0;color:var(--dark2);font-size:18px;letter-spacing:-.02em}
+.auxHero p{margin:6px 0 0;color:var(--muted);line-height:1.45}
+.auxFilters{display:grid;grid-template-columns:minmax(250px,1.15fr) minmax(180px,.75fr) minmax(180px,.75fr) minmax(160px,.55fr) auto auto;gap:10px;align-items:end;margin-top:14px}
+.auxKpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:12px 0}
+.auxInfoBox{background:#f8fafc;border:1px solid var(--line2);border-left:4px solid var(--brand);border-radius:12px;padding:10px 12px;color:#4b5563;font-size:12px;line-height:1.45;margin:10px 0 12px}
+.auxCards{display:grid;grid-template-columns:1fr;gap:10px;margin-top:12px}
+.auxGroupCard{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadowSoft);overflow:hidden;position:relative}
+.auxGroupCard:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--brand)}
+.auxGroupTop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 13px 10px 18px;background:linear-gradient(180deg,#fff,#fafafa);border-bottom:1px solid var(--line2)}
+.auxGroupTitle{font-weight:900;color:var(--dark2);font-size:15px;letter-spacing:-.015em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.auxGroupSub{margin-top:3px;color:var(--muted);font-size:11px;line-height:1.35}
+.auxGroupTotals{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.auxMini{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:5px 8px;background:#f8fafc;border:1px solid var(--line2);font-size:10px;font-weight:900;color:#374151;white-space:nowrap}
+.auxMini strong{font-size:11px;color:var(--dark2)}
+.auxVehicleSummary{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:7px}
+.auxVehicleSummary .auxMini{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+.auxWindowGrid{display:flex;flex-direction:column;gap:6px;padding:10px 10px 12px 18px;background:#fff}
+.auxWindowCard{border:1px solid var(--line2);border-radius:11px;background:#fff;overflow:hidden;min-height:0;display:grid;grid-template-columns:minmax(230px,1.25fr) 112px 112px 96px 104px 104px 82px;align-items:stretch;position:relative;padding-bottom:5px}
+.auxWindowCard.semJanela{background:#fff7ed;border-color:#fed7aa}
+.auxWindowHead{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border-right:1px solid var(--line2);min-width:0}
+.auxWindowDate{font-weight:900;color:var(--dark2);font-size:12px;white-space:nowrap}
+.auxWindowPeriod{font-size:10px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.auxVehicle{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:4px 7px;font-size:10px;font-weight:900;background:#fff1e8;color:#9a3412;border:1px solid #fed7aa;white-space:nowrap;width:fit-content}
+.auxWindowBody{display:contents}
+.auxStat{padding:7px 9px;border-right:1px solid var(--line2);border-bottom:0;min-width:0;background:#fff}
+.auxStat:last-child{border-right:0}
+.auxStat span{display:block;font-size:8.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:900;color:#6b7280;white-space:nowrap}
+.auxStat b{display:block;margin-top:2px;font-size:12px;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.auxWarn{color:#991b1b;font-weight:900}
+.auxProgress{display:block;position:absolute;left:10px;right:10px;bottom:4px;height:4px;background:#edf0f5;border-radius:999px;overflow:hidden}
+.auxProgress>i{display:block;height:100%;background:linear-gradient(90deg,var(--brand),#fb923c);border-radius:999px}
+@media(max-width:1220px){.auxFilters{grid-template-columns:1fr 1fr}.auxKpis{grid-template-columns:repeat(2,1fr)}.auxGroupTop{grid-template-columns:1fr}.auxGroupTotals,.auxVehicleSummary{justify-content:flex-start}.auxWindowCard{grid-template-columns:minmax(220px,1fr) repeat(3,1fr);}.auxWindowHead{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line2)}.auxWindowBody{display:grid;grid-column:1/-1;grid-template-columns:repeat(6,1fr)}.auxStat{border-bottom:1px solid var(--line2)}}
+@media(max-width:760px){.pageNav{padding-left:10px;padding-right:10px}.auxFilters{grid-template-columns:1fr}.auxKpis{grid-template-columns:1fr}.auxWindowCard{display:block}.auxWindowHead{display:block}.auxWindowBody{display:grid;grid-template-columns:1fr 1fr}.auxStat{border-right:0;border-bottom:1px solid var(--line2)}}
+
 </style>
 </head>
 <body>
@@ -173,7 +214,9 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
     </div>
   </div>
 </header>
+<div class="pageNav"><button id="tabPlanejamento" class="active" type="button">Planejamento de janelas</button><button id="tabAuxVeiculos" type="button">Peso x veículos</button></div>
 <main>
+  <div id="pagePlanejamento" class="appPage active">
   <section class="card toolbar">
     <div class="sectionTitle">
       <h2>Filtros operacionais</h2>
@@ -245,7 +288,42 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
   </section>
 
   <section class="vocativoGrid" id="cards"></section>
+  </div>
+
+  <section id="pageAuxVeiculos" class="appPage">
+    <section class="card auxHero">
+      <h2>Auxiliar Excel: Peso por janela de carregamento e veículo necessário</h2>
+      <p>Carregue o relatório Excel no padrão enviado, filtre por <b>Filial Emissora VF</b> e por mês. O mês é calculado pela maior data entre <b>Data Entrada</b> e <b>Data de Check in</b>. O cálculo usa as janelas de carregamento do planejamento já carregado nesta aplicação.</p>
+      <div class="auxFilters">
+        <div><label>Relatório Excel</label><input id="auxFile" type="file" accept=".xlsx,.xls,.csv"></div>
+        <div><label>Filial Emissora VF</label><select id="auxFilial"><option value="">Todas</option></select></div>
+        <div><label>Cliente</label><select id="auxCliente"><option value="">Todos</option></select></div>
+        <div><label>Mês de referência</label><select id="auxMes"><option value="">Todos</option></select></div>
+        <button id="auxProcessar" type="button">Processar</button>
+        <button id="auxExportar" class="secondary" type="button">Exportar CSV</button>
+      </div>
+      <div id="auxStatus" class="connectionStatus" style="margin-top:12px">Aguardando arquivo Excel...</div>
+    </section>
+
+    <section class="auxKpis">
+      <div class="card kpi"><span>Linhas consideradas</span><strong id="auxKLinhas">0</strong></div>
+      <div class="card kpi"><span>Peso total</span><strong id="auxKPeso">0</strong></div>
+      <div class="card kpi good"><span>Vocativos</span><strong id="auxKVocativos">0</strong></div>
+      <div class="card kpi warn"><span>Carregamentos</span><strong id="auxKJanelas">0</strong></div>
+      <div class="card kpi bad"><span>Sem janela</span><strong id="auxKSemJanela">0</strong></div>
+    </section>
+
+    <div class="auxInfoBox">
+      <b>Regra aplicada:</b> cada NF entra no próximo carregamento disponível a partir da maior data entre Data Entrada e Data de Check in. Quando houver vocativos vinculados no Planejamento de Janelas, o peso é consolidado no mesmo card. O veículo é sugerido até 40% da capacidade da tabela; a ocupação exibida usa a capacidade real do veículo.
+    </div>
+
+    <section id="auxCards" class="auxCards">
+      <div class="empty card">Carregue um Excel para iniciar.</div>
+    </section>
+  </section>
+
 </main>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 // Cole aqui a URL publicada do seu Apps Script Web App, terminando em /exec.
 // Exemplo: const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/SEU_ID/exec';
@@ -1162,6 +1240,313 @@ $('btnReset').addEventListener('click',()=>{
     setLoadStatus('Configurações limpas na tela. Clique em Salvar alterações para gravar a limpeza na aba Página2.','loading');
   }
 });
+
+const AUX_VEHICLES = [
+  {nome:'UTILITÁRIO', peso:800},
+  {nome:'VAN', peso:1500},
+  {nome:'3/4', peso:3500},
+  {nome:'TRUCK', peso:14000},
+  {nome:'CARRETA', peso:24000},
+  {nome:'CARRETA LS', peso:27000},
+  {nome:'RODO-TREM', peso:54000}
+];
+let AUX_ROWS_RAW = [];
+let AUX_ROWS = [];
+let AUX_RESULT = [];
+const auxFile = $('auxFile'), auxFilial = $('auxFilial'), auxCliente = $('auxCliente'), auxMes = $('auxMes'), auxCards = $('auxCards');
+
+function setActivePage(page){
+  const isAux = page === 'aux';
+  $('pagePlanejamento').classList.toggle('active', !isAux);
+  $('pageAuxVeiculos').classList.toggle('active', isAux);
+  $('tabPlanejamento').classList.toggle('active', !isAux);
+  $('tabAuxVeiculos').classList.toggle('active', isAux);
+  if(isAux) renderAux();
+}
+function auxSetStatus(msg, cls=''){
+  const el=$('auxStatus');
+  if(!el) return;
+  el.className='connectionStatus' + (cls ? ' '+cls : '');
+  el.textContent=msg;
+}
+function auxNorm(s){ return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim(); }
+function auxFindValue(row, names){
+  const keys=Object.keys(row||{});
+  const wanted=names.map(auxNorm);
+  for(const k of keys){ if(wanted.includes(auxNorm(k))) return row[k]; }
+  for(const k of keys){
+    const nk=auxNorm(k);
+    if(wanted.some(w=>nk.includes(w) || w.includes(nk))) return row[k];
+  }
+  return '';
+}
+function auxToNumber(v){
+  if(v===null || v===undefined || v==='') return 0;
+  if(typeof v==='number') return v;
+  let s=String(v).trim();
+  if(s.includes(',') && s.includes('.')) s=s.replace(/\./g,'').replace(',','.');
+  else s=s.replace(',','.');
+  return Number(s.replace(/[^0-9.-]/g,'')) || 0;
+}
+function auxToDate(v){
+  if(v===null || v===undefined || v==='') return null;
+  if(v instanceof Date && !isNaN(v)) return new Date(v.getFullYear(), v.getMonth(), v.getDate());
+  if(typeof v === 'number'){
+    const d = new Date(Math.round((v - 25569) * 86400 * 1000));
+    if(!isNaN(d)) return new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  }
+  const s=String(v).trim();
+  const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(m){
+    const y=Number(m[3].length===2 ? '20'+m[3] : m[3]);
+    const d=new Date(y, Number(m[2])-1, Number(m[1]));
+    if(!isNaN(d)) return d;
+  }
+  const d=new Date(s);
+  if(!isNaN(d)) return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return null;
+}
+function auxDateKey(d){ return d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` : ''; }
+function auxMonthLabel(key){
+  if(!key) return 'Sem mês';
+  const [y,m]=key.split('-').map(Number);
+  return new Date(y,m-1,1).toLocaleDateString('pt-BR',{month:'2-digit', year:'numeric'});
+}
+function auxFmtDate(d){ return d ? d.toLocaleDateString('pt-BR') : '—'; }
+function auxFmtPeso(v){ return Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:1}); }
+function auxVehicleForWeight(weight){
+  const w=Number(weight||0);
+  for(const v of AUX_VEHICLES){
+    const limit=v.peso*0.4;
+    if(w <= limit) return {...v, qtd:1, label:v.nome, limite:limit};
+  }
+  const last=AUX_VEHICLES[AUX_VEHICLES.length-1];
+  const qtd=Math.max(1, Math.ceil(w/(last.peso*0.4)));
+  return {...last, qtd, label:`${qtd}x ${last.nome}`, limite:last.peso*0.4*qtd};
+}
+function auxFindBaseVocativo(vocativo){
+  const n=auxNorm(vocativo);
+  if(!n) return '';
+  return BASE_DATA.find(x => auxNorm(x.vocativo) === n)?.vocativo || '';
+}
+function auxMatchBaseVocativo(vocativo){
+  return auxFindBaseVocativo(vocativo) || vocativo;
+}
+function auxGetConsolidationVocativos(vocativo){
+  const baseVoc = auxMatchBaseVocativo(vocativo);
+  const group = (typeof getGroupVocativos === 'function') ? getGroupVocativos(baseVoc) : [baseVoc];
+  const normalized = [...new Set(group.map(v => auxMatchBaseVocativo(v)).filter(Boolean))];
+  return normalized.length ? normalized.sort((a,b)=>String(a).localeCompare(String(b),'pt-BR')) : [vocativo];
+}
+function auxGroupKeyForVocativo(vocativo){ return auxGetConsolidationVocativos(vocativo).map(auxNorm).sort().join(' + '); }
+function auxGetGroupWindows(groupVocativos){
+  const all = (typeof getAll === 'function') ? getAll() : [];
+  const indexes=[];
+  groupVocativos.forEach(vocativo=>{
+    const found = all.find(r => auxNorm(r.vocativo) === auxNorm(vocativo));
+    const days = found ? getLoadDaysForChartAndFilter(found) : [];
+    days.forEach(day=>{ const idx=DAYS.indexOf(day); if(idx>=0) indexes.push(idx); });
+  });
+  return [...new Set(indexes)].sort((a,b)=>a-b);
+}
+function auxLoadDatesForMonthHorizon(monthKey, dayIndexes){
+  if(!monthKey || !dayIndexes.length) return [];
+  const [y,m]=monthKey.split('-').map(Number);
+  const start=new Date(y,m-1,1), end=new Date(y,m,14);
+  const dates=[];
+  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+    if(dayIndexes.includes(d.getDay())) dates.push(new Date(d.getFullYear(),d.getMonth(),d.getDate()));
+  }
+  return dates;
+}
+function auxBuildBuckets(rows){
+  const groups=new Map();
+  rows.forEach(r=>{
+    const groupVocativos=auxGetConsolidationVocativos(r.vocativo);
+    const groupKey=auxGroupKeyForVocativo(r.vocativo);
+    const groupLabel=groupVocativos.join(' + ');
+    const key=`${r.filial || 'Sem filial'}||${groupKey}||${r.monthKey}`;
+    if(!groups.has(key)) groups.set(key, {filial:r.filial || 'Sem filial', groupKey, groupLabel, groupVocativos, monthKey:r.monthKey, items:[]});
+    groups.get(key).items.push({...r, groupLabel, groupVocativos});
+  });
+  const out=[];
+  groups.forEach(g=>{
+    const dayIndexes=auxGetGroupWindows(g.groupVocativos);
+    const loadDates=auxLoadDatesForMonthHorizon(g.monthKey, dayIndexes);
+    const daysLabel=dayIndexes.map(i=>DAYS[i]).join(', ') || 'Sem janela';
+    if(!loadDates.length){
+      const peso=g.items.reduce((s,x)=>s+x.peso,0);
+      const veh=auxVehicleForWeight(peso);
+      const vocativosPresentes=unique(g.items.map(x=>x.vocativo));
+      const clientesPresentes=unique(g.items.map(x=>x.cliente || 'Sem cliente'));
+      out.push({filial:g.filial,groupKey:g.groupKey,groupLabel:g.groupLabel,groupVocativos:g.groupVocativos,vocativosPresentes,clientesPresentes,monthKey:g.monthKey,loadDate:null,periodo:'Sem janela encontrada no planejamento',notas:g.items.length,peso,vehicle:veh,capacidade:veh.peso,limite:veh.limite,ocupacao:peso/veh.peso,loadDays:daysLabel,semJanela:true});
+      return;
+    }
+    const buckets=new Map();
+    const sortedDates=loadDates.sort((a,b)=>a-b);
+    g.items.forEach(item=>{
+      const next=sortedDates.find(d=>d>=item.refDate) || null;
+      const k=next ? `${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(next.getDate()).padStart(2,'0')}` : 'sem_janela';
+      if(!buckets.has(k)) buckets.set(k, {loadDate:next, items:[]});
+      buckets.get(k).items.push(item);
+    });
+    buckets.forEach(bucket=>{
+      const bucketItems=bucket.items;
+      const peso=bucketItems.reduce((s,x)=>s+x.peso,0);
+      const veh=auxVehicleForWeight(peso);
+      const dates=bucketItems.map(x=>x.refDate).filter(Boolean).sort((a,b)=>a-b);
+      const inicio=dates[0] || null;
+      const fim=dates[dates.length-1] || null;
+      const vocativosPresentes=unique(bucketItems.map(x=>x.vocativo));
+      const clientesPresentes=unique(bucketItems.map(x=>x.cliente || 'Sem cliente'));
+      out.push({
+        filial:g.filial, groupKey:g.groupKey, groupLabel:g.groupLabel, groupVocativos:g.groupVocativos, vocativosPresentes, clientesPresentes,
+        monthKey:g.monthKey, loadDate:bucket.loadDate,
+        periodo: bucket.loadDate ? `NFs de ${auxFmtDate(inicio)} a ${auxFmtDate(fim)}` : 'Sem próximo carregamento encontrado no horizonte calculado',
+        notas:bucketItems.length, peso, vehicle:veh, capacidade:veh.peso, limite:veh.limite, ocupacao:peso/veh.peso,
+        loadDays:daysLabel, semJanela:!bucket.loadDate
+      });
+    });
+  });
+  return out.sort((a,b)=>String(a.filial).localeCompare(String(b.filial),'pt-BR') || String(a.groupLabel).localeCompare(String(b.groupLabel),'pt-BR') || String(a.monthKey).localeCompare(String(b.monthKey)) || ((a.loadDate||new Date(9999,0,1))-(b.loadDate||new Date(9999,0,1))));
+}
+function auxNormalizeRows(jsonRows){
+  return jsonRows.map(row=>{
+    const filial = String(auxFindValue(row,['Filial Emissora VF','Filial','Filial Atual','Filial Emissora']) || '').trim();
+    const cliente = String(auxFindValue(row,['Cliente','CLIENTE','Cliente Destinatário','Cliente Destinatario']) || '').trim();
+    const vocativoExcel = String(auxFindValue(row,['Vocativo','Almoxarifado']) || '').trim();
+    const vocativo = auxFindBaseVocativo(vocativoExcel);
+    const peso = auxToNumber(auxFindValue(row,['Peso','PESO']));
+    const dataEntrada = auxToDate(auxFindValue(row,['Data Entrada','DATA ENTRADA','Data de Entrada da Nota']));
+    const dataCheckin = auxToDate(auxFindValue(row,['Data de Check in','DATA CHECK-IN','Data Check in','Data Checkin']));
+    const refDate = [dataEntrada,dataCheckin].filter(Boolean).sort((a,b)=>b-a)[0] || null;
+    const nota = String(auxFindValue(row,['Nota','NUMERO NF','Número NF','NF']) || '').trim();
+    return {filial,cliente,vocativo,vocativoExcel,peso,dataEntrada,dataCheckin,refDate,monthKey:auxDateKey(refDate),nota};
+  }).filter(r=>r.vocativo && r.refDate && r.peso>0);
+}
+function auxRefreshFilters(){
+  const filialAtual=auxFilial.value, clienteAtual=auxCliente.value, mesAtual=auxMes.value;
+  const filiais=unique(AUX_ROWS.map(r=>r.filial || 'Sem filial'));
+  const clientes=unique(AUX_ROWS.map(r=>r.cliente || 'Sem cliente'));
+  const meses=unique(AUX_ROWS.map(r=>r.monthKey).filter(Boolean));
+  auxFilial.innerHTML='<option value="">Todas</option>'+filiais.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  auxCliente.innerHTML='<option value="">Todos</option>'+clientes.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  auxMes.innerHTML='<option value="">Todos</option>'+meses.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(auxMonthLabel(v))}</option>`).join('');
+  if(filiais.includes(filialAtual)) auxFilial.value=filialAtual;
+  if(clientes.includes(clienteAtual)) auxCliente.value=clienteAtual;
+  if(meses.includes(mesAtual)) auxMes.value=mesAtual;
+}
+function auxVehicleSummary(items){
+  const counts=new Map();
+  items.forEach(x=>{
+    const label=x?.vehicle?.label || 'Sem veículo';
+    counts.set(label,(counts.get(label)||0)+1);
+  });
+  const vehicleOrder = AUX_VEHICLES.map(v=>v.label);
+  return [...counts.entries()].sort((a,b)=>{
+    const ia=vehicleOrder.indexOf(a[0]), ib=vehicleOrder.indexOf(b[0]);
+    return (ia<0?999:ia)-(ib<0?999:ib) || String(a[0]).localeCompare(String(b[0]),'pt-BR');
+  });
+}
+function auxRenderCards(results){
+  if(!AUX_ROWS.length){ auxCards.innerHTML='<div class="empty card">Carregue um Excel para iniciar.</div>'; return; }
+  if(!results.length){ auxCards.innerHTML='<div class="empty card">Nenhum registro encontrado para os filtros atuais.</div>'; return; }
+  const grouped=new Map();
+  results.forEach(r=>{
+    const key=`${r.filial}||${r.groupKey}||${r.monthKey}`;
+    if(!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(r);
+  });
+  auxCards.innerHTML=[...grouped.values()].map(items=>{
+    const first=items[0];
+    const totalPeso=items.reduce((s,x)=>s+x.peso,0);
+    const totalNotas=items.reduce((s,x)=>s+x.notas,0);
+    const vocs=first.groupVocativos || [];
+    const isConsolidado=vocs.length>1;
+    const resumoVeiculos=auxVehicleSummary(items);
+    return `<article class="auxGroupCard">
+      <div class="auxGroupTop">
+        <div>
+          <div class="auxGroupTitle">${escapeHtml(isConsolidado ? 'Consolidação: '+first.groupLabel : first.groupLabel)}</div>
+          <div class="auxGroupSub">${escapeHtml(first.filial || 'Sem filial')} • Cliente: ${escapeHtml((first.clientesPresentes||[]).join(', ') || 'Todos')} • ${escapeHtml(auxMonthLabel(first.monthKey))} • Dias de carga: ${escapeHtml(first.loadDays)}${isConsolidado ? ' • Peso somado dos vocativos vinculados' : ''}</div>
+          <div class="auxVehicleSummary">
+            ${resumoVeiculos.map(([label,qtd])=>`<span class="auxMini">${escapeHtml(label)} <strong>${qtd.toLocaleString('pt-BR')}</strong></span>`).join('')}
+          </div>
+        </div>
+        <div class="auxGroupTotals">
+          <span class="auxMini">Janelas <strong>${items.length.toLocaleString('pt-BR')}</strong></span>
+          <span class="auxMini">Notas <strong>${totalNotas.toLocaleString('pt-BR')}</strong></span>
+          <span class="auxMini">Peso <strong>${auxFmtPeso(totalPeso)} kg</strong></span>
+        </div>
+      </div>
+      <div class="auxWindowGrid">
+        ${items.map(r=>{
+          const pct=(r.ocupacao*100);
+          const pctBar=(r.limite ? (r.peso/r.limite)*100 : 0);
+          return `<div class="auxWindowCard ${r.semJanela?'semJanela':''}">
+            <div class="auxWindowHead">
+              <div style="min-width:0">
+                <div class="auxWindowDate">${r.loadDate ? `${escapeHtml(DAYS[r.loadDate.getDay()])} • ${auxFmtDate(r.loadDate)}` : '<span class="auxWarn">Sem janela</span>'}</div>
+                <div class="auxWindowPeriod">${escapeHtml(r.periodo)}</div>
+              </div>
+              <span class="auxVehicle">${escapeHtml(r.vehicle.label)}</span>
+            </div>
+            <div class="auxWindowBody">
+              <div class="auxStat"><span>Peso</span><b>${auxFmtPeso(r.peso)} kg</b></div>
+              <div class="auxStat"><span>Ocupação</span><b>${pct.toLocaleString('pt-BR',{maximumFractionDigits:1})}%</b></div>
+              <div class="auxStat"><span>Capacidade</span><b>${auxFmtPeso(r.capacidade)} kg</b></div>
+              <div class="auxStat"><span>Limite 40%</span><b>${auxFmtPeso(r.limite)} kg</b></div>
+              <div class="auxStat"><span>Notas</span><b>${r.notas.toLocaleString('pt-BR')}</b></div>
+              <div class="auxStat"><span>Veículo</span><b>${escapeHtml(r.vehicle.label)}</b></div>
+            </div>
+            <div class="auxProgress" title="Barra sobre o limite de 40%: ${pctBar.toLocaleString('pt-BR',{maximumFractionDigits:1})}%"><i style="width:${Math.min(100, Math.max(0, pctBar))}%"></i></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </article>`;
+  }).join('');
+}
+function renderAux(){
+  const rows=AUX_ROWS.filter(r=>(!auxFilial.value || (r.filial || 'Sem filial')===auxFilial.value) && (!auxCliente.value || (r.cliente || 'Sem cliente')===auxCliente.value) && (!auxMes.value || r.monthKey===auxMes.value));
+  AUX_RESULT=auxBuildBuckets(rows);
+  $('auxKLinhas').textContent=rows.length.toLocaleString('pt-BR');
+  $('auxKPeso').textContent=auxFmtPeso(rows.reduce((s,r)=>s+r.peso,0));
+  $('auxKVocativos').textContent=unique(rows.map(r=>r.vocativo)).length.toLocaleString('pt-BR');
+  $('auxKJanelas').textContent=AUX_RESULT.length.toLocaleString('pt-BR');
+  $('auxKSemJanela').textContent=AUX_RESULT.filter(r=>r.semJanela).length.toLocaleString('pt-BR');
+  auxRenderCards(AUX_RESULT);
+}
+async function auxReadFile(file){
+  if(!window.XLSX){ auxSetStatus('Biblioteca XLSX não carregada. Verifique sua conexão com a internet e recarregue a página.','err'); return; }
+  const data=await file.arrayBuffer();
+  const wb=XLSX.read(data,{type:'array',cellDates:true});
+  const sheet=wb.Sheets[wb.SheetNames[0]];
+  AUX_ROWS_RAW=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:true});
+  AUX_ROWS=auxNormalizeRows(AUX_ROWS_RAW);
+  auxRefreshFilters();
+  renderAux();
+  auxSetStatus(`${AUX_ROWS.length.toLocaleString('pt-BR')} linhas válidas carregadas do Excel, mantendo somente vocativos existentes no Planejamento de Janelas. Colunas usadas: Peso, Cliente, Filial Emissora VF/Filial, Vocativo, Data Entrada e Data de Check in.`,'ok');
+}
+function auxExportCSV(){
+  if(!AUX_RESULT.length){ auxSetStatus('Não há dados para exportar nos filtros atuais.','err'); return; }
+  const header=['Filial Emissora VF','Cliente','Vocativo / Consolidacao','Vocativos considerados','Mes','Data do carregamento','Periodo das NFs','Notas','Peso somado','Veiculo necessario','Capacidade real do veiculo','Limite 40%','Ocupacao real','Dias de carga'];
+  const lines=[header.join(';')];
+  AUX_RESULT.forEach(r=>{
+    const row=[r.filial,(r.clientesPresentes||[]).join(', '),r.groupLabel,(r.vocativosPresentes||[]).join(', '),auxMonthLabel(r.monthKey),r.loadDate ? `${DAYS[r.loadDate.getDay()]} ${auxFmtDate(r.loadDate)}` : 'Sem janela',r.periodo,r.notas,auxFmtPeso(r.peso),r.vehicle.label,auxFmtPeso(r.capacidade),auxFmtPeso(r.limite),(r.ocupacao*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%',r.loadDays];
+    lines.push(row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(';'));
+  });
+  const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='peso_por_janela_veiculo_necessario.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+$('tabPlanejamento').addEventListener('click',()=>setActivePage('planejamento'));
+$('tabAuxVeiculos').addEventListener('click',()=>setActivePage('aux'));
+auxFile.addEventListener('change',e=>{ const file=e.target.files && e.target.files[0]; if(file) auxReadFile(file).catch(err=>{ console.error(err); auxSetStatus('Erro ao ler Excel: '+err.message,'err'); }); });
+auxFilial.addEventListener('change',renderAux);
+auxCliente.addEventListener('change',renderAux);
+auxMes.addEventListener('change',renderAux);
+$('auxProcessar').addEventListener('click',renderAux);
+$('auxExportar').addEventListener('click',auxExportCSV);
+
 updateSaveButton();
 loadBackendData();
 </script>
