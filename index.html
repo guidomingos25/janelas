@@ -278,6 +278,13 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 @media(max-width:1220px){.simpleFilters{grid-template-columns:repeat(2,1fr)}.simpleWindowCard{grid-template-columns:minmax(220px,1.2fr) 96px 22px minmax(210px,1fr)}.simpleMeta{grid-column:1/-1;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line2)}}
 @media(max-width:760px){.simpleFilters{grid-template-columns:1fr}.simpleWindowCard{display:block}.simpleWindowTop,.simpleBox,.simpleArrow{border-right:0;border-bottom:1px solid var(--line2)}.simpleArrow{height:18px}.simpleMeta{grid-template-columns:1fr 1fr}}
 
+
+.restrictionLine{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px;align-items:center}
+.restrictionPill{display:inline-flex;align-items:center;gap:4px;border:1px solid #e5e7eb;background:#f8fafc;color:#374151;border-radius:999px;padding:3px 7px;font-size:9.5px;font-weight:900;white-space:nowrap}
+.restrictionPill.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+.restrictionPill.bad{background:#fff1f2;border-color:#fecaca;color:#991b1b}
+.configSelect{min-height:29px;border-radius:8px;font-size:11px;padding:5px 7px;width:100%}
+.restrictionConfigBlock{background:#f9fafb;border-right:1px solid var(--line2);border-top:1px solid var(--line2);padding:9px 10px;min-width:0}
 </style>
 </head>
 <body>
@@ -293,7 +300,7 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
     </div>
   </div>
 </header>
-<div class="pageNav"><button id="tabPlanejamento" class="active" type="button">Planejamento de janelas</button><button id="tabJanelasSimples" type="button">Painel de janelas</button><button id="tabAuxVeiculos" type="button">Peso x veículos</button></div>
+<div class="pageNav"><button id="tabPlanejamento" class="active" type="button">Planejamento de janelas</button><button id="tabJanelasSimples" type="button">Janelas simples</button><button id="tabAuxVeiculos" type="button">Peso x veículos</button></div>
 <main>
   <div id="pagePlanejamento" class="appPage active">
   <section class="card toolbar">
@@ -2328,6 +2335,172 @@ function auxExportCSV(){
   const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='peso_por_janela_veiculo_necessario.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
+
+
+/* ===== Regras de restrição de veículo por vocativo - injetado ===== */
+const VEHICLE_RESTRICTION_OPTIONS = ['SEM RESTRIÇÃO','UTILITÁRIO','VAN','3/4','TRUCK','CARRETA','RODOTREM'];
+const BODY_RESTRICTION_OPTIONS = ['SEM RESTRIÇÃO','ABERTO','FECHADO'];
+const VEHICLE_RESTRICTION_ALIASES = {
+  'SEM RESTRICAO':'SEM RESTRIÇÃO','SEM RESTRIÇÃO':'SEM RESTRIÇÃO','SEM':'SEM RESTRIÇÃO','':'SEM RESTRIÇÃO',
+  'UTILITARIO':'UTILITÁRIO','UTILITÁRIO':'UTILITÁRIO','UTILITARIOS':'UTILITÁRIO','UTILITÁRIOS':'UTILITÁRIO',
+  'VAN':'VAN','3/4':'3/4','3 4':'3/4','TOCO':'3/4',
+  'TRUCK':'TRUCK','CARRETA':'CARRETA','CARRETA LS':'CARRETA','LS':'CARRETA',
+  'RODOTREM':'RODOTREM','RODO TREM':'RODOTREM','RODO-TREM':'RODOTREM'
+};
+const BODY_RESTRICTION_ALIASES = {
+  'SEM RESTRICAO':'SEM RESTRIÇÃO','SEM RESTRIÇÃO':'SEM RESTRIÇÃO','SEM':'SEM RESTRIÇÃO','':'SEM RESTRIÇÃO',
+  'ABERTO':'ABERTO','VEICULO ABERTO':'ABERTO','VEÍCULO ABERTO':'ABERTO',
+  'FECHADO':'FECHADO','VEICULO FECHADO':'FECHADO','VEÍCULO FECHADO':'FECHADO'
+};
+function normalizeVehicleRestriction(value){ return VEHICLE_RESTRICTION_ALIASES[norm(value)] || 'SEM RESTRIÇÃO'; }
+function normalizeBodyRestriction(value){ return BODY_RESTRICTION_ALIASES[norm(value)] || 'SEM RESTRIÇÃO'; }
+function vehicleRestrictionRank(value){ const idx=VEHICLE_RESTRICTION_OPTIONS.indexOf(normalizeVehicleRestriction(value)); return idx < 0 ? 0 : idx; }
+CONFIG.maxVehicleByVocativo = CONFIG.maxVehicleByVocativo || {};
+CONFIG.bodyRestrictionByVocativo = CONFIG.bodyRestrictionByVocativo || {};
+function getVehicleRestriction(vocativo){ return normalizeVehicleRestriction((CONFIG.maxVehicleByVocativo || {})[vocativo] || 'SEM RESTRIÇÃO'); }
+function getBodyRestriction(vocativo){ return normalizeBodyRestriction((CONFIG.bodyRestrictionByVocativo || {})[vocativo] || 'SEM RESTRIÇÃO'); }
+function setVehicleRestriction(vocativo, value){
+  CONFIG.maxVehicleByVocativo = CONFIG.maxVehicleByVocativo || {};
+  const v=normalizeVehicleRestriction(value);
+  if(v==='SEM RESTRIÇÃO') delete CONFIG.maxVehicleByVocativo[vocativo]; else CONFIG.maxVehicleByVocativo[vocativo]=v;
+  markDirty(vocativo); saveConfig();
+}
+function setBodyRestriction(vocativo, value){
+  CONFIG.bodyRestrictionByVocativo = CONFIG.bodyRestrictionByVocativo || {};
+  const v=normalizeBodyRestriction(value);
+  if(v==='SEM RESTRIÇÃO') delete CONFIG.bodyRestrictionByVocativo[vocativo]; else CONFIG.bodyRestrictionByVocativo[vocativo]=v;
+  markDirty(vocativo); saveConfig();
+}
+function getGroupVehicleRestriction(vocativos){
+  const selected=(vocativos || []).map(getVehicleRestriction).filter(v=>v && v!=='SEM RESTRIÇÃO');
+  if(!selected.length) return 'SEM RESTRIÇÃO';
+  return selected.sort((a,b)=>vehicleRestrictionRank(a)-vehicleRestrictionRank(b))[0];
+}
+function getGroupBodyRestriction(vocativos){
+  const selected=[...new Set((vocativos || []).map(getBodyRestriction).filter(v=>v && v!=='SEM RESTRIÇÃO'))];
+  return selected.length ? selected.join(' / ') : 'SEM RESTRIÇÃO';
+}
+function renderRestrictionPills(vocativos){
+  const maxV=getGroupVehicleRestriction(vocativos);
+  const body=getGroupBodyRestriction(vocativos);
+  return '<div class="restrictionLine"><span class="restrictionPill '+(maxV==='SEM RESTRIÇÃO'?'':'warn')+'">Maior veículo: '+escapeHtml(maxV)+'</span><span class="restrictionPill '+(body==='SEM RESTRIÇÃO'?'':'warn')+'">Carroceria: '+escapeHtml(body)+'</span></div>';
+}
+function restrictionSelectHtml(vocativo){
+  const maxV=getVehicleRestriction(vocativo), body=getBodyRestriction(vocativo);
+  return '<div class="restrictionConfigBlock"><div class="compactLabel"><label>Maior veículo</label><span class="compactHint">Peso x veículos</span></div><select class="configSelect" data-max-vehicle-voc="'+escapeHtml(vocativo)+'">'+VEHICLE_RESTRICTION_OPTIONS.map(v=>'<option value="'+escapeHtml(v)+'" '+(v===maxV?'selected':'')+'>'+escapeHtml(v)+'</option>').join('')+'</select></div>'+
+    '<div class="restrictionConfigBlock"><div class="compactLabel"><label>Carroceria</label><span class="compactHint">aberto/fechado</span></div><select class="configSelect" data-body-restriction-voc="'+escapeHtml(vocativo)+'">'+BODY_RESTRICTION_OPTIONS.map(v=>'<option value="'+escapeHtml(v)+'" '+(v===body?'selected':'')+'>'+escapeHtml(v)+'</option>').join('')+'</select></div>';
+}
+const _applyBackendConfigsBase = applyBackendConfigs;
+applyBackendConfigs = function(configs){
+  _applyBackendConfigsBase(configs);
+  CONFIG.maxVehicleByVocativo = CONFIG.maxVehicleByVocativo || {};
+  CONFIG.bodyRestrictionByVocativo = CONFIG.bodyRestrictionByVocativo || {};
+  Object.entries(configs || {}).forEach(([voc,cfg])=>{
+    const maxV=normalizeVehicleRestriction(cfg.maiorVeiculoPermitido || cfg.MAIOR_VEICULO_PERMITIDO || cfg.maiorVeiculo || cfg.MAIOR_VEICULO || '');
+    const body=normalizeBodyRestriction(cfg.restricaoCarroceria || cfg.RESTRICAO_CARROCERIA || cfg.tipoCarroceria || cfg.TIPO_CARROCERIA || '');
+    if(maxV !== 'SEM RESTRIÇÃO') CONFIG.maxVehicleByVocativo[voc]=maxV;
+    if(body !== 'SEM RESTRIÇÃO') CONFIG.bodyRestrictionByVocativo[voc]=body;
+  });
+  saveConfig();
+};
+getConfigForVocativo = function(vocativo){
+  return {
+    vocativo,
+    diasNaoUteis: indexesToDayList(CONFIG.nonBusinessByVocativo[vocativo] || []),
+    entregasFixas: indexesToDayList(CONFIG.fixedDeliveryByVocativo[vocativo] || []),
+    vincularCom: getLinkedVocativo(vocativo),
+    maiorVeiculoPermitido: getVehicleRestriction(vocativo),
+    restricaoCarroceria: getBodyRestriction(vocativo)
+  };
+};
+function injectRestrictionControls(){
+  document.querySelectorAll('[data-voc-card]').forEach(card=>{
+    const voc=card.getAttribute('data-voc-card');
+    const top=card.querySelector('.vocTop > div:first-child');
+    if(top && !top.querySelector('.restrictionLine')) top.insertAdjacentHTML('beforeend', renderRestrictionPills([voc]));
+    const cfg=card.querySelector('.configInCard');
+    if(cfg && !cfg.querySelector('[data-max-vehicle-voc]')) cfg.insertAdjacentHTML('beforeend', restrictionSelectHtml(voc));
+  });
+  document.querySelectorAll('select[data-max-vehicle-voc]').forEach(sel=>{
+    if(sel._restrictionBound) return; sel._restrictionBound=true;
+    sel.addEventListener('change',()=>{ setVehicleRestriction(sel.dataset.maxVehicleVoc, sel.value); render(); });
+  });
+  document.querySelectorAll('select[data-body-restriction-voc]').forEach(sel=>{
+    if(sel._restrictionBound) return; sel._restrictionBound=true;
+    sel.addEventListener('change',()=>{ setBodyRestriction(sel.dataset.bodyRestrictionVoc, sel.value); render(); });
+  });
+}
+const _renderCardsBase = renderCards;
+renderCards = function(rows){ _renderCardsBase(rows); injectRestrictionControls(); };
+cards.addEventListener('click', e=>{
+  const btn=e.target.closest('button[data-action="clear"]');
+  if(!btn) return;
+  const voc=btn.dataset.voc;
+  if(voc){ delete CONFIG.maxVehicleByVocativo[voc]; delete CONFIG.bodyRestrictionByVocativo[voc]; markDirty(voc); saveConfig(); }
+}, true);
+const _auxVehicleForWeightBase = auxVehicleForWeight;
+auxVehicleForWeight = function(weight, maxAllowed='SEM RESTRIÇÃO'){
+  const restriction=normalizeVehicleRestriction(maxAllowed);
+  if(restriction==='SEM RESTRIÇÃO') return _auxVehicleForWeightBase(weight);
+  const rank=vehicleRestrictionRank(restriction);
+  const original=AUX_VEHICLES.slice();
+  const allowed=original.filter(v=>vehicleRestrictionRank(v.nome || v.key) <= rank);
+  const list=allowed.length ? allowed : original;
+  const w=Number(weight||0), multiplier=auxLimitMultiplier();
+  for(const v of list){
+    const limit=v.peso*multiplier;
+    if(w <= limit) return {...v, qtd:1, label:v.nome.replace('RODO-TREM','RODOTREM'), limite:limit, limitePercentual:auxGetLimitPercent(), maxAllowed:restriction, limitadoPorRestricao:false};
+  }
+  const last=list[list.length-1], limit=last.peso*multiplier;
+  return {...last, qtd:1, label:String(last.nome).replace('RODO-TREM','RODOTREM'), limite, limitePercentual:auxGetLimitPercent(), maxAllowed:restriction, limitadoPorRestricao:true};
+};
+function applyRestrictionsToAuxResults(items){
+  (items || []).forEach(r=>{
+    r.maxAllowed=getGroupVehicleRestriction(r.groupVocativos || []);
+    r.bodyRestriction=getGroupBodyRestriction(r.groupVocativos || []);
+    r.vehicle=auxVehicleForWeight(r.peso, r.maxAllowed);
+    r.capacidade=r.vehicle.peso;
+    r.limite=r.vehicle.limite;
+    r.ocupacao=r.capacidade ? r.peso/r.capacidade : 0;
+  });
+  return items;
+}
+const _renderAuxBase = renderAux;
+renderAux = function(){
+  const rowsBase=AUX_ROWS.filter(r=>matchesSelected(auxFilial, r.filial || 'Sem filial') && matchesSelected(auxCliente, r.cliente || 'Sem cliente'));
+  const built=applyRestrictionsToAuxResults(auxBuildBuckets(rowsBase));
+  AUX_RESULT=built.filter(r=>matchesSelected(auxMes, r.monthKey));
+  const linhasConsideradas=AUX_RESULT.reduce((s,r)=>s+r.notas,0);
+  const pesoConsiderado=AUX_RESULT.reduce((s,r)=>s+r.peso,0);
+  const vocativosConsiderados=unique(AUX_RESULT.flatMap(r=>r.vocativosPresentes || []));
+  $('auxKLinhas').textContent=linhasConsideradas.toLocaleString('pt-BR');
+  $('auxKPeso').textContent=auxFmtPeso(pesoConsiderado);
+  $('auxKVocativos').textContent=vocativosConsiderados.length.toLocaleString('pt-BR');
+  $('auxKJanelas').textContent=AUX_RESULT.length.toLocaleString('pt-BR');
+  auxRenderCards(AUX_RESULT);
+  document.querySelectorAll('.auxGroupCard').forEach((card,i)=>{
+    const item=[...new Map(AUX_RESULT.map(r=>[r.filial+'||'+r.groupKey+'||'+r.monthKey,r])).values()][i];
+    const sub=card.querySelector('.auxGroupSub');
+    if(sub && item && !sub.parentElement.querySelector('.restrictionLine')) sub.insertAdjacentHTML('afterend', renderRestrictionPills(item.groupVocativos || []));
+  });
+};
+const _jsRenderGroupCardBase = jsRenderGroupCard;
+jsRenderGroupCard = function(g, day, items){
+  const html=_jsRenderGroupCardBase(g, day, items);
+  return html.replace('</div>'+ (g.isLinked ? '<span class="simpleZoneBadge">Zona consolidada</span>' : '<span class="simpleZoneBadge">Vocativo</span>') +'</div>', renderRestrictionPills(g.vocativos)+'</div>'+ (g.isLinked ? '<span class="simpleZoneBadge">Zona consolidada</span>' : '<span class="simpleZoneBadge">Vocativo</span>') +'</div>');
+};
+auxExportCSV = function(){
+  if(!AUX_RESULT.length){ auxSetStatus('Não há dados para exportar nos filtros atuais.','err'); return; }
+  const header=['Filial Emissora VF','Cliente','Vocativo / Consolidacao','Vocativos considerados','Vocativos carregados na janela','Vocativos elegiveis na janela','Mes','Data do carregamento','Periodo das NFs','Notas','Peso somado','Veiculo necessario','Capacidade real do veiculo','Limite '+auxGetLimitPercent()+'%','Ocupacao real','Dias de carga','Maior veiculo permitido','Restricao carroceria','Limitado por restricao'];
+  const lines=[header.join(';')];
+  AUX_RESULT.forEach(r=>{
+    const row=[r.filial,(r.clientesPresentes||[]).join(', '),r.groupLabel,(r.groupVocativos||[]).join(', '),(r.vocativosPresentes||[]).join(', '),(r.vocativosJanela||[]).join(', '),auxMonthLabel(r.monthKey),r.loadDate ? (DAYS[r.loadDate.getDay()]+' '+auxFmtDate(r.loadDate)) : 'Sem janela',r.periodo,r.notas,auxFmtPeso(r.peso),r.vehicle.label,auxFmtPeso(r.capacidade),auxFmtPeso(r.limite),(r.ocupacao*100).toLocaleString('pt-BR',{maximumFractionDigits:1})+'%',r.loadDays,r.maxAllowed || 'SEM RESTRIÇÃO',r.bodyRestriction || 'SEM RESTRIÇÃO',r.vehicle.limitadoPorRestricao ? 'SIM' : 'NÃO'];
+    lines.push(row.map(v=>'\"'+String(v??'').replace(/\"/g,'\"\"')+'\"').join(';'));
+  });
+  const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='peso_por_janela_veiculo_necessario.csv'; a.click(); URL.revokeObjectURL(a.href);
+};
+
 auxEnsurePercentOptions();
 initMultiSelectDropdown(fCliente,'Todos');
 initMultiSelectDropdown(fVocativo,'Todos');
