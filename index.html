@@ -1349,12 +1349,10 @@ function auxGetGroupWindows(groupVocativos){
   });
   return [...new Set(indexes)].sort((a,b)=>a-b);
 }
-function auxLoadDatesForMonthHorizon(monthKey, dayIndexes){
-  if(!monthKey || !dayIndexes.length) return [];
-  const [y,m]=monthKey.split('-').map(Number);
-  const start=new Date(y,m-1,1), end=new Date(y,m,14);
+function auxLoadDatesForRange(startDate, endDate, dayIndexes){
+  if(!startDate || !endDate || !dayIndexes.length) return [];
   const dates=[];
-  for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+  for(let d=new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate()); d<=endDate; d.setDate(d.getDate()+1)){
     if(dayIndexes.includes(d.getDay())) dates.push(new Date(d.getFullYear(),d.getMonth(),d.getDate()));
   }
   return dates;
@@ -1365,21 +1363,27 @@ function auxBuildBuckets(rows){
     const groupVocativos=auxGetConsolidationVocativos(r.vocativo);
     const groupKey=auxGroupKeyForVocativo(r.vocativo);
     const groupLabel=groupVocativos.join(' + ');
-    const key=`${r.filial || 'Sem filial'}||${groupKey}||${r.monthKey}`;
-    if(!groups.has(key)) groups.set(key, {filial:r.filial || 'Sem filial', groupKey, groupLabel, groupVocativos, monthKey:r.monthKey, items:[]});
+    const key=`${r.filial || 'Sem filial'}||${groupKey}`;
+    if(!groups.has(key)) groups.set(key, {filial:r.filial || 'Sem filial', groupKey, groupLabel, groupVocativos, items:[]});
     groups.get(key).items.push({...r, groupLabel, groupVocativos});
   });
   const out=[];
   groups.forEach(g=>{
     const dayIndexes=auxGetGroupWindows(g.groupVocativos);
-    const loadDates=auxLoadDatesForMonthHorizon(g.monthKey, dayIndexes);
     const daysLabel=dayIndexes.map(i=>DAYS[i]).join(', ') || 'Sem janela';
+    const refDates=g.items.map(x=>x.refDate).filter(Boolean).sort((a,b)=>a-b);
+    const firstRef=refDates[0] || null;
+    const lastRef=refDates[refDates.length-1] || null;
+    const start=firstRef ? new Date(firstRef.getFullYear(), firstRef.getMonth()-1, 1) : null;
+    const end=lastRef ? new Date(lastRef.getFullYear(), lastRef.getMonth()+2, 14) : null;
+    const loadDates=auxLoadDatesForRange(start, end, dayIndexes);
     if(!loadDates.length){
       const peso=g.items.reduce((s,x)=>s+x.peso,0);
       const veh=auxVehicleForWeight(peso);
       const vocativosPresentes=unique(g.items.map(x=>x.vocativo));
       const clientesPresentes=unique(g.items.map(x=>x.cliente || 'Sem cliente'));
-      out.push({filial:g.filial,groupKey:g.groupKey,groupLabel:g.groupLabel,groupVocativos:g.groupVocativos,vocativosPresentes,clientesPresentes,monthKey:g.monthKey,loadDate:null,periodo:'Sem janela encontrada no planejamento',notas:g.items.length,peso,vehicle:veh,capacidade:veh.peso,limite:veh.limite,ocupacao:peso/veh.peso,loadDays:daysLabel,semJanela:true});
+      const monthKey=auxDateKey(firstRef);
+      out.push({filial:g.filial,groupKey:g.groupKey,groupLabel:g.groupLabel,groupVocativos:g.groupVocativos,vocativosPresentes,clientesPresentes,monthKey,loadDate:null,periodo:'Sem janela encontrada no planejamento',notas:g.items.length,peso,vehicle:veh,capacidade:veh.peso,limite:veh.limite,ocupacao:peso/veh.peso,loadDays:daysLabel,semJanela:true});
       return;
     }
     const buckets=new Map();
@@ -1399,9 +1403,10 @@ function auxBuildBuckets(rows){
       const fim=dates[dates.length-1] || null;
       const vocativosPresentes=unique(bucketItems.map(x=>x.vocativo));
       const clientesPresentes=unique(bucketItems.map(x=>x.cliente || 'Sem cliente'));
+      const monthKey=bucket.loadDate ? auxDateKey(bucket.loadDate) : auxDateKey(inicio);
       out.push({
         filial:g.filial, groupKey:g.groupKey, groupLabel:g.groupLabel, groupVocativos:g.groupVocativos, vocativosPresentes, clientesPresentes,
-        monthKey:g.monthKey, loadDate:bucket.loadDate,
+        monthKey, loadDate:bucket.loadDate,
         periodo: bucket.loadDate ? `NFs de ${auxFmtDate(inicio)} a ${auxFmtDate(fim)}` : 'Sem próximo carregamento encontrado no horizonte calculado',
         notas:bucketItems.length, peso, vehicle:veh, capacidade:veh.peso, limite:veh.limite, ocupacao:peso/veh.peso,
         loadDays:daysLabel, semJanela:!bucket.loadDate
@@ -1428,7 +1433,7 @@ function auxRefreshFilters(){
   const filialAtual=auxFilial.value, clienteAtual=auxCliente.value, mesAtual=auxMes.value;
   const filiais=unique(AUX_ROWS.map(r=>r.filial || 'Sem filial'));
   const clientes=unique(AUX_ROWS.map(r=>r.cliente || 'Sem cliente'));
-  const meses=unique(AUX_ROWS.map(r=>r.monthKey).filter(Boolean));
+  const meses=unique(auxBuildBuckets(AUX_ROWS).map(r=>r.monthKey).filter(Boolean));
   auxFilial.innerHTML='<option value="">Todas</option>'+filiais.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
   auxCliente.innerHTML='<option value="">Todos</option>'+clientes.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
   auxMes.innerHTML='<option value="">Todos</option>'+meses.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(auxMonthLabel(v))}</option>`).join('');
@@ -1507,11 +1512,15 @@ function auxRenderCards(results){
   }).join('');
 }
 function renderAux(){
-  const rows=AUX_ROWS.filter(r=>(!auxFilial.value || (r.filial || 'Sem filial')===auxFilial.value) && (!auxCliente.value || (r.cliente || 'Sem cliente')===auxCliente.value) && (!auxMes.value || r.monthKey===auxMes.value));
-  AUX_RESULT=auxBuildBuckets(rows);
-  $('auxKLinhas').textContent=rows.length.toLocaleString('pt-BR');
-  $('auxKPeso').textContent=auxFmtPeso(rows.reduce((s,r)=>s+r.peso,0));
-  $('auxKVocativos').textContent=unique(rows.map(r=>r.vocativo)).length.toLocaleString('pt-BR');
+  const rowsBase=AUX_ROWS.filter(r=>(!auxFilial.value || (r.filial || 'Sem filial')===auxFilial.value) && (!auxCliente.value || (r.cliente || 'Sem cliente')===auxCliente.value));
+  const built=auxBuildBuckets(rowsBase);
+  AUX_RESULT=built.filter(r=>!auxMes.value || r.monthKey===auxMes.value);
+  const linhasConsideradas=AUX_RESULT.reduce((s,r)=>s+r.notas,0);
+  const pesoConsiderado=AUX_RESULT.reduce((s,r)=>s+r.peso,0);
+  const vocativosConsiderados=unique(AUX_RESULT.flatMap(r=>r.vocativosPresentes || []));
+  $('auxKLinhas').textContent=linhasConsideradas.toLocaleString('pt-BR');
+  $('auxKPeso').textContent=auxFmtPeso(pesoConsiderado);
+  $('auxKVocativos').textContent=vocativosConsiderados.length.toLocaleString('pt-BR');
   $('auxKJanelas').textContent=AUX_RESULT.length.toLocaleString('pt-BR');
   $('auxKSemJanela').textContent=AUX_RESULT.filter(r=>r.semJanela).length.toLocaleString('pt-BR');
   auxRenderCards(AUX_RESULT);
