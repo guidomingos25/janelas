@@ -240,6 +240,44 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 @media(max-width:1220px){.auxFilters{grid-template-columns:1fr 1fr}.auxKpis{grid-template-columns:repeat(2,1fr)}.auxGroupTop{grid-template-columns:1fr}.auxGroupTotals,.auxVehicleSummary{justify-content:flex-start}.auxWindowCard{grid-template-columns:minmax(220px,1fr) repeat(3,1fr);}.auxWindowHead{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line2)}.auxWindowBody{display:grid;grid-column:1/-1;grid-template-columns:repeat(7,1fr)}.auxStat{border-bottom:1px solid var(--line2)}}
 @media(max-width:760px){.pageNav{padding-left:10px;padding-right:10px}.auxFilters{grid-template-columns:1fr}.auxKpis{grid-template-columns:1fr}.auxWindowCard{display:block}.auxWindowHead{display:block}.auxWindowBody{display:grid;grid-template-columns:1fr 1fr}.auxStat{border-right:0;border-bottom:1px solid var(--line2)}}
 
+
+
+.simpleHero{padding:16px;border-top:4px solid var(--brand);margin-bottom:12px}
+.simpleHero h2{margin:0;color:var(--dark2);font-size:18px;letter-spacing:-.02em}
+.simpleHero p{margin:6px 0 0;color:var(--muted);line-height:1.45}
+.simpleFilters{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr)) auto;gap:10px;align-items:end;margin-top:14px}
+.simpleWeekGroup{margin-top:12px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:var(--shadowSoft);overflow:hidden}
+.simpleWeekHead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:linear-gradient(135deg,#2b2f36,#111827);color:#fff;border-left:5px solid var(--brand)}
+.simpleWeekTitle{font-size:15px;font-weight:950;letter-spacing:-.01em}
+.simpleWeekCount{font-size:11px;font-weight:900;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);border-radius:999px;padding:5px 8px;white-space:nowrap}
+.simpleCardGrid{display:grid;grid-template-columns:1fr;gap:6px;padding:8px;background:#f8fafc}
+.simpleWindowCard{background:#fff;border:1px solid var(--line);border-radius:11px;box-shadow:0 1px 5px rgba(17,24,39,.035);overflow:hidden;position:relative;display:grid;grid-template-columns:minmax(260px,1.25fr) 116px 26px minmax(260px,1.15fr) minmax(240px,.95fr);align-items:stretch;min-height:58px}
+.simpleWindowCard:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand)}
+.simpleWindowTop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 10px 7px 14px;border-right:1px solid var(--line2);background:linear-gradient(180deg,#fff,#fafafa);min-width:0}
+.simpleWindowTitle{font-size:12.5px;font-weight:950;color:var(--dark2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
+.simpleWindowSub{margin-top:1px;font-size:9.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.simpleZoneBadge{display:inline-flex;align-items:center;gap:4px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:999px;padding:3px 6px;font-size:8.5px;font-weight:950;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
+.simpleTimeline{display:contents}
+.simpleFlow{display:contents}
+.simpleBox{border:0;border-right:1px solid var(--line2);border-radius:0;padding:7px 9px;background:#fff;min-width:0;display:flex;flex-direction:column;justify-content:center}
+.simpleBox.load{background:#eff6ff;border-color:var(--line2)}
+.simpleBox.delivery{background:#f0fdf4;border-color:var(--line2)}
+.simpleBox span{display:block;font-size:8.5px;text-transform:uppercase;letter-spacing:.045em;font-weight:950;color:#6b7280;white-space:nowrap}
+.simpleBox b{display:block;margin-top:1px;font-size:13px;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.simpleArrow{display:flex;align-items:center;justify-content:center;color:var(--brand);font-weight:950;font-size:14px;border-right:1px solid var(--line2);background:#fff}
+.simpleDeliveryList{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center}
+.simpleDeliveryItem{display:inline-flex;align-items:center;justify-content:space-between;gap:5px;border-radius:999px;background:#fff;padding:3px 6px;border:1px solid #dcfce7;font-size:9.5px;color:#166534;font-weight:850;max-width:100%}
+.simpleDeliveryItem span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.simpleDeliveryItem small{color:#64748b;font-weight:800;white-space:nowrap}
+.simpleMeta{display:grid;grid-template-columns:.5fr .9fr .9fr .6fr;gap:0;background:#fff;min-width:0}
+.simpleMeta .metric{padding:7px 8px;background:#fff;border-right:1px solid var(--line2);border-bottom:0}
+.simpleMeta .metric:last-child{border-right:0}
+.simpleMeta .metric span{font-size:8px}
+.simpleMeta .metric b{font-size:11.5px;overflow:hidden;text-overflow:ellipsis}
+.simpleEmptyDay{padding:10px;color:var(--muted);font-size:12px;background:#fff}
+@media(max-width:1220px){.simpleFilters{grid-template-columns:repeat(2,1fr)}.simpleWindowCard{grid-template-columns:minmax(220px,1.2fr) 96px 22px minmax(210px,1fr)}.simpleMeta{grid-column:1/-1;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line2)}}
+@media(max-width:760px){.simpleFilters{grid-template-columns:1fr}.simpleWindowCard{display:block}.simpleWindowTop,.simpleBox,.simpleArrow{border-right:0;border-bottom:1px solid var(--line2)}.simpleArrow{height:18px}.simpleMeta{grid-template-columns:1fr 1fr}}
+
 </style>
 </head>
 <body>
@@ -255,7 +293,7 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
     </div>
   </div>
 </header>
-<div class="pageNav"><button id="tabPlanejamento" class="active" type="button">Planejamento de janelas</button><button id="tabAuxVeiculos" type="button">Peso x veículos</button></div>
+<div class="pageNav"><button id="tabPlanejamento" class="active" type="button">Planejamento de janelas</button><button id="tabJanelasSimples" type="button">Painel de janelas</button><button id="tabAuxVeiculos" type="button">Peso x veículos</button></div>
 <main>
   <div id="pagePlanejamento" class="appPage active">
   <section class="card toolbar">
@@ -330,6 +368,22 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 
   <section class="vocativoGrid" id="cards"></section>
   </div>
+
+  <section id="pageJanelasSimples" class="appPage">
+    <section class="card simpleHero">
+      <h2>Visualização simples de janelas</h2>
+      <p>Cards separados por dia da semana de carregamento. Quando houver dois vocativos vinculados, o card é consolidado como zona de consolidação e mostra as entregas separadas para cada vocativo.</p>
+      <div class="simpleFilters">
+        <div><label>Dia da semana</label><select id="jsDia" multiple><option value="DOM">DOM</option><option value="SEG">SEG</option><option value="TER">TER</option><option value="QUA">QUA</option><option value="QUI">QUI</option><option value="SEX">SEX</option><option value="SAB">SAB</option></select><div class="filterHint">Vazio = todos</div></div>
+        <div><label>Cliente</label><select id="jsCliente" multiple></select><div class="filterHint">Vazio = todos</div></div>
+        <div><label>UF</label><select id="jsUf" multiple></select><div class="filterHint">Vazio = todas</div></div>
+        <div><label>Cidade</label><select id="jsCidade" multiple></select><div class="filterHint">Vazio = todas</div></div>
+        <div><label>Vocativo</label><select id="jsVocativo" multiple></select><div class="filterHint">Vazio = todos</div></div>
+        <button id="jsLimpar" class="ghost" type="button">Limpar filtros</button>
+      </div>
+    </section>
+    <section id="jsCards"></section>
+  </section>
 
   <section id="pageAuxVeiculos" class="appPage">
     <section class="card auxHero">
@@ -1484,6 +1538,7 @@ function render(){
   renderBars(filtered);
   renderLoadDayBars(filteredBeforeLoadDay);
   renderCards(filtered);
+  if($('pageJanelasSimples')?.classList.contains('active')) renderSimpleWindows();
 }
 function renderBars(rows){
   const counts=new Map(); for(let i=1;i<=6;i++) counts.set(i,0);
@@ -1768,6 +1823,92 @@ $('btnReset').addEventListener('click',()=>{
   }
 });
 
+
+const jsDia = $('jsDia'), jsCliente = $('jsCliente'), jsUf = $('jsUf'), jsCidade = $('jsCidade'), jsVocativo = $('jsVocativo'), jsCards = $('jsCards');
+
+function jsGroupKeyForRow(r){
+  const linked=getLinkedVocativo(r.vocativo);
+  if(linked){
+    return [r.vocativo, linked].sort((a,b)=>a.localeCompare(b,'pt-BR')).join('|||');
+  }
+  return r.vocativo;
+}
+function jsBuildGroups(allRows){
+  const byVoc=new Map(allRows.map(r=>[r.vocativo,r]));
+  const seen=new Set();
+  const groups=[];
+  allRows.forEach(r=>{
+    const key=jsGroupKeyForRow(r);
+    if(seen.has(key)) return;
+    seen.add(key);
+    const vocs=key.split('|||').filter(Boolean);
+    const rows=vocs.map(v=>byVoc.get(v)).filter(Boolean);
+    if(!rows.length) return;
+    const isLinked=rows.length>1;
+    groups.push({
+      key,
+      isLinked,
+      label:isLinked ? 'Zona de consolidação: ' + vocs.join(' + ') : rows[0].vocativo,
+      vocativos:vocs,
+      rows,
+      clientes:unique(rows.map(x=>x.cliente)),
+      ufs:unique(rows.map(x=>x.ufDestino)),
+      cidades:unique(rows.map(x=>x.cidadeDestino)),
+      status:rows.some(x=>x.status==='impossivel')?'impossivel':(rows.some(x=>x.status==='critico')?'critico':'atende')
+    });
+  });
+  return groups;
+}
+function jsAnySelectedMatches(sel, arr){
+  const vals=getSelectedValues(sel);
+  return !vals.length || (arr||[]).some(v=>vals.includes(String(v)));
+}
+function jsGroupMatches(g){
+  const dayVals=getSelectedValues(jsDia);
+  const hasDay=!dayVals.length || g.rows.some(r=>(r.windowPairs||[]).some(p=>dayVals.includes(p.load)));
+  return hasDay && jsAnySelectedMatches(jsCliente,g.clientes) && jsAnySelectedMatches(jsUf,g.ufs) && jsAnySelectedMatches(jsCidade,g.cidades) && jsAnySelectedMatches(jsVocativo,g.vocativos);
+}
+function jsRefreshFilters(allRows){
+  opt(jsCliente, unique(allRows.map(r=>r.cliente)), 'Todos');
+  opt(jsUf, unique(allRows.map(r=>r.ufDestino)), 'Todas');
+  const cityBase=allRows.filter(r=>matchesSelected(jsUf,r.ufDestino));
+  opt(jsCidade, unique(cityBase.map(r=>r.cidadeDestino)), 'Todas');
+  const vocBase=allRows.filter(r=>matchesSelected(jsCliente,r.cliente) && matchesSelected(jsUf,r.ufDestino) && matchesSelected(jsCidade,r.cidadeDestino));
+  opt(jsVocativo, unique(vocBase.map(r=>r.vocativo)), 'Todos');
+}
+function jsItemsForGroupAndDay(g, day){
+  return g.rows.flatMap(r=>(r.windowPairs||[])
+    .filter(p=>p.load===day)
+    .map(p=>({vocativo:r.vocativo, cliente:r.cliente, cidade:r.cidadeDestino, uf:r.ufDestino, status:r.status, ...p})));
+}
+function jsRenderGroupCard(g, day, items){
+  const badge=g.isLinked ? '<span class="simpleZoneBadge">Zona consolidada</span>' : '<span class="simpleZoneBadge">Vocativo</span>';
+  const deliveryDays=unique(items.map(it=>it.delivery)).join(' / ') || '—';
+  const deliveries=items.map(it=>'<div class="simpleDeliveryItem"><span>'+escapeHtml(it.vocativo)+' → '+escapeHtml(it.delivery)+'</span><small>'+fmt(it.travelElapsed)+'d'+(it.linkedAdjusted?' • ajustado':'')+'</small></div>').join('');
+  const statusLabel=g.status==='impossivel'?'Impossível':(g.status==='critico'?'Crítico':'Atende');
+  return '<article class="simpleWindowCard">'
+    + '<div class="simpleWindowTop"><div><div class="simpleWindowTitle">'+escapeHtml(g.label)+'</div><div class="simpleWindowSub">'+escapeHtml(g.clientes.join(', ') || 'Sem cliente')+' • '+escapeHtml(g.cidades.join(', ') || 'Sem cidade')+'/'+escapeHtml(g.ufs.join(', ') || 'UF')+'</div></div>'+badge+'</div>'
+    + '<div class="simpleTimeline"><div class="simpleFlow"><div class="simpleBox load"><span>Carregamento</span><b>'+escapeHtml(day)+'</b></div><div class="simpleArrow">→</div><div class="simpleBox delivery"><span>Entrega desta carga</span><b>'+escapeHtml(deliveryDays)+'</b><div class="simpleDeliveryList">'+deliveries+'</div></div></div></div>'
+    + '<div class="simpleMeta"><div class="metric"><span>Voc.</span><b>'+g.vocativos.length+'</b></div><div class="metric"><span>Cliente</span><b>'+escapeHtml(g.clientes.join(', ') || '—')+'</b></div><div class="metric"><span>Destino</span><b>'+escapeHtml(g.cidades.join(', ') || '—')+'/'+escapeHtml(g.ufs.join(', ') || '—')+'</b></div><div class="metric"><span>Status</span><b>'+statusLabel+'</b></div></div>'
+    + '</article>';
+}
+function renderSimpleWindows(){
+  if(!jsCards) return;
+  LINKED_SCHEDULE_CACHE.clear();
+  const allRows=getAll();
+  jsRefreshFilters(allRows);
+  const groups=jsBuildGroups(allRows).filter(jsGroupMatches);
+  const selectedDays=getSelectedValues(jsDia);
+  const daysToRender=selectedDays.length ? DAYS.filter(d=>selectedDays.includes(d)) : DAYS;
+  if(!allRows.length){ jsCards.innerHTML='<div class="empty card">Carregue os dados do Google Planilhas para visualizar as janelas.</div>'; return; }
+  if(!groups.length){ jsCards.innerHTML='<div class="empty card">Nenhuma janela encontrada para os filtros selecionados.</div>'; return; }
+  jsCards.innerHTML=daysToRender.map(day=>{
+    const cards=groups.map(g=>({g,items:jsItemsForGroupAndDay(g,day)})).filter(x=>x.items.length);
+    if(!cards.length) return '<section class="simpleWeekGroup"><div class="simpleWeekHead"><div class="simpleWeekTitle">'+day+'</div><div class="simpleWeekCount">0 cards</div></div><div class="simpleEmptyDay">Nenhuma janela de carregamento neste dia para os filtros atuais.</div></section>';
+    return '<section class="simpleWeekGroup"><div class="simpleWeekHead"><div class="simpleWeekTitle">'+day+'</div><div class="simpleWeekCount">'+cards.length.toLocaleString('pt-BR')+' card(s)</div></div><div class="simpleCardGrid">'+cards.map(x=>jsRenderGroupCard(x.g,day,x.items)).join('')+'</div></section>';
+  }).join('');
+}
+
 const AUX_VEHICLES = [
   {nome:'UTILITÁRIO', peso:800},
   {nome:'VAN', peso:1500},
@@ -1794,11 +1935,15 @@ const auxFile = $('auxFile'), auxFilial = $('auxFilial'), auxCliente = $('auxCli
 
 function setActivePage(page){
   const isAux = page === 'aux';
-  $('pagePlanejamento').classList.toggle('active', !isAux);
+  const isSimple = page === 'janelas';
+  $('pagePlanejamento').classList.toggle('active', !isAux && !isSimple);
+  $('pageJanelasSimples').classList.toggle('active', isSimple);
   $('pageAuxVeiculos').classList.toggle('active', isAux);
-  $('tabPlanejamento').classList.toggle('active', !isAux);
+  $('tabPlanejamento').classList.toggle('active', !isAux && !isSimple);
+  $('tabJanelasSimples').classList.toggle('active', isSimple);
   $('tabAuxVeiculos').classList.toggle('active', isAux);
   if(isAux) renderAux();
+  if(isSimple) renderSimpleWindows();
 }
 function auxSetStatus(msg, cls=''){
   const el=$('auxStatus');
@@ -2194,9 +2339,17 @@ initMultiSelectDropdown(fDiaCarga,'Todos');
 initMultiSelectDropdown(auxFilial,'Todas');
 initMultiSelectDropdown(auxCliente,'Todos');
 initMultiSelectDropdown(auxMes,'Todos');
+initMultiSelectDropdown(jsDia,'Todos');
+initMultiSelectDropdown(jsCliente,'Todos');
+initMultiSelectDropdown(jsUf,'Todas');
+initMultiSelectDropdown(jsCidade,'Todas');
+initMultiSelectDropdown(jsVocativo,'Todos');
 refreshAllMultiSelectDropdowns();
 $('tabPlanejamento').addEventListener('click',()=>setActivePage('planejamento'));
+$('tabJanelasSimples').addEventListener('click',()=>setActivePage('janelas'));
 $('tabAuxVeiculos').addEventListener('click',()=>setActivePage('aux'));
+[jsDia,jsCliente,jsUf,jsCidade,jsVocativo].forEach(el=>el.addEventListener('change',()=>{ updateMultiSelectDropdown(el); renderSimpleWindows(); }));
+$('jsLimpar').addEventListener('click',()=>{ [jsDia,jsCliente,jsUf,jsCidade,jsVocativo].forEach(clearSelect); refreshAllMultiSelectDropdowns(); renderSimpleWindows(); });
 auxFile.addEventListener('change',e=>{ const file=e.target.files && e.target.files[0]; if(file) auxReadFile(file).catch(err=>{ console.error(err); auxSetStatus('Erro ao ler Excel: '+err.message,'err'); }); });
 auxFilial.addEventListener('change',()=>{ updateMultiSelectDropdown(auxFilial); renderAux(); });
 auxCliente.addEventListener('change',()=>{ updateMultiSelectDropdown(auxCliente); renderAux(); });
