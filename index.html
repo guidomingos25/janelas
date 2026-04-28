@@ -188,6 +188,25 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
   .metrics,.miniInfo{grid-template-columns:repeat(3,1fr)}
 }
 .linkSelect{min-height:29px;border-radius:8px;font-size:11px;padding:5px 7px}
+.linkConfigGrid{display:grid;grid-template-columns:1fr;gap:6px}
+.linkConfigRow{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.linkConfigMiniLabel{font-size:9px;font-weight:900;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.linkConfigHint{font-size:9.5px;color:#6b7280;line-height:1.25;margin-top:4px}
+.linkDropdown{position:relative;width:100%}
+.linkDropdownBtn{width:100%;min-height:30px;background:#fff!important;color:#374151!important;border:1px solid var(--line)!important;border-radius:8px!important;box-shadow:none!important;padding:6px 8px!important;font-size:10.5px!important;font-weight:900!important;display:flex;align-items:center;justify-content:space-between;gap:7px;text-align:left;white-space:nowrap;overflow:hidden;transform:none!important;filter:none!important}
+.linkDropdownBtn:hover{border-color:var(--brand)!important;background:#fff7ed!important;transform:none!important;filter:none!important}
+.linkDropdown.open .linkDropdownBtn{border-color:var(--brand)!important;box-shadow:0 0 0 3px rgba(240,90,0,.12)!important}
+.linkDropdownText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.linkDropdownCaret{font-size:9px;color:#6b7280;flex:0 0 auto}
+.linkDropdownMenu{display:none;position:absolute;z-index:120;left:0;right:0;top:calc(100% + 5px);background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 34px rgba(17,24,39,.22);padding:8px;min-width:260px;max-height:270px;overflow:auto}
+.linkDropdown.open .linkDropdownMenu{display:block}
+.linkDropdownOption{display:flex;align-items:center;gap:7px;padding:7px 6px;border-radius:8px;cursor:pointer;font-size:10.5px;color:#374151;font-weight:800;line-height:1.2}
+.linkDropdownOption:hover{background:#fff7ed}
+.linkDropdownOption input{width:14px;height:14px;margin:0;accent-color:var(--brand);flex:0 0 auto}
+.linkDropdownOption.isNone{border-bottom:1px solid var(--line2);margin-bottom:5px;padding-bottom:8px;color:#9a3412;font-weight:950}
+.linkDropdownOptionText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:760px){.linkDropdownMenu{position:fixed;left:14px;right:14px;top:auto;bottom:18px;max-height:52vh}}
+.linkOrderSelect,.linkSameDaySelect{min-height:28px;border-radius:8px;font-size:11px;padding:5px 7px;width:100%}
 .linkBadge{display:inline-block;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900}
 @media(max-width:760px){
   main{padding-left:10px;padding-right:10px}
@@ -296,7 +315,7 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
     </div>
     <div class="headerNote">
       <b>Regras ativas</b><br>
-      Recebimento conta dentro do prazo, porém o início do prazo só é simulado de segunda a sexta, pois não há recebimento aos sábados e domingos. O primeiro carregamento só pode ocorrer no dia seguinte. Carregamentos: segunda a sábado. Entrega padrão: segunda a sexta. Se marcar entrega fixa, a entrega é forçada nos dias escolhidos, inclusive sábado e domingo; cada dia fixo exige uma janela de carregamento correspondente. Vocativos vinculados usam uma combinação comum de carregamento, otimizada para atender ambos com o mínimo de janelas.
+      Recebimento conta dentro do prazo, porém o início do prazo só é simulado de segunda a sexta, pois não há recebimento aos sábados e domingos. O primeiro carregamento só pode ocorrer no dia seguinte. Carregamentos: segunda a sábado. Entrega padrão: segunda a sexta. Se marcar entrega fixa, a entrega é forçada nos dias escolhidos, inclusive sábado e domingo; cada dia fixo exige uma janela de carregamento correspondente. Vocativos vinculados usam uma combinação comum de carregamento, com suporte a múltiplos vocativos, ordem de entrega e opção de entrega no mesmo dia.
     </div>
   </div>
 </header>
@@ -379,7 +398,7 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
   <section id="pageJanelasSimples" class="appPage">
     <section class="card simpleHero">
       <h2>Visualização simples de janelas</h2>
-      <p>Cards separados por dia da semana de carregamento. Quando houver dois vocativos vinculados, o card é consolidado como zona de consolidação e mostra as entregas separadas para cada vocativo.</p>
+      <p>Cards separados por dia da semana de carregamento. Quando houver vocativos vinculados, o card é consolidado como zona de consolidação e mostra as entregas separadas conforme a ordem configurada.</p>
       <div class="simpleFilters">
         <div><label>Dia da semana</label><select id="jsDia" multiple><option value="DOM">DOM</option><option value="SEG">SEG</option><option value="TER">TER</option><option value="QUA">QUA</option><option value="QUI">QUI</option><option value="SEX">SEX</option><option value="SAB">SAB</option></select><div class="filterHint">Vazio = todos</div></div>
         <div><label>Cliente</label><select id="jsCliente" multiple></select><div class="filterHint">Vazio = todos</div></div>
@@ -448,10 +467,26 @@ let LINKED_SCHEDULE_CACHE = new Map();
 function loadConfig(){
   try{
     const raw = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
-    return {nonBusinessByVocativo: raw.nonBusinessByVocativo || {}, fixedDeliveryByVocativo: raw.fixedDeliveryByVocativo || {}, linkedByVocativo: raw.linkedByVocativo || {}};
-  }catch(e){ return {nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, linkedByVocativo:{}}; }
+    return {
+      nonBusinessByVocativo: raw.nonBusinessByVocativo || {},
+      fixedDeliveryByVocativo: raw.fixedDeliveryByVocativo || {},
+      linkedByVocativo: raw.linkedByVocativo || {},
+      deliveryOrderByVocativo: raw.deliveryOrderByVocativo || {},
+      sameDayDeliveryByVocativo: raw.sameDayDeliveryByVocativo || {}
+    };
+  }catch(e){
+    return {nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}};
+  }
 }
-function saveConfig(){ localStorage.setItem(CFG_KEY, JSON.stringify(CONFIG)); }
+function ensureConfigShape(){
+  CONFIG = CONFIG || {};
+  CONFIG.nonBusinessByVocativo = CONFIG.nonBusinessByVocativo || {};
+  CONFIG.fixedDeliveryByVocativo = CONFIG.fixedDeliveryByVocativo || {};
+  CONFIG.linkedByVocativo = CONFIG.linkedByVocativo || {};
+  CONFIG.deliveryOrderByVocativo = CONFIG.deliveryOrderByVocativo || {};
+  CONFIG.sameDayDeliveryByVocativo = CONFIG.sameDayDeliveryByVocativo || {};
+}
+function saveConfig(){ ensureConfigShape(); localStorage.setItem(CFG_KEY, JSON.stringify(CONFIG)); }
 function dayToIndex(day){
   const s=norm(day);
   const map={DOM:0,SEG:1,TER:2,QUA:3,QUI:4,SEX:5,SAB:6};
@@ -464,62 +499,199 @@ function dayListToIndexes(list){
   return [...new Set(list.map(dayToIndex).filter(v=>v!==null))].sort((a,b)=>a-b);
 }
 function indexesToDayList(list){ return (list||[]).map(Number).filter(d=>d>=0 && d<=6).sort((a,b)=>a-b).map(i=>DAYS[i]); }
+function splitVocativoList(value){
+  const arr = Array.isArray(value) ? value : String(value || '').split(',');
+  return [...new Set(arr.map(v=>String(v||'').trim()).filter(Boolean))];
+}
+function normalizeYesNoFront(value){
+  const s=norm(value).replace(/\s+/g,' ');
+  return (s==='SIM' || s==='S' || s==='YES' || s==='TRUE' || s==='1') ? 'SIM' : 'NÃO';
+}
 function applyBackendConfigs(configs){
-  CONFIG = {nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, linkedByVocativo:{}};
+  CONFIG = {nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}};
   BACKEND_CONFIG_VOCATIVOS = new Set();
   Object.entries(configs || {}).forEach(([voc,cfg])=>{
     BACKEND_CONFIG_VOCATIVOS.add(voc);
     const off=dayListToIndexes(cfg.diasNaoUteis || cfg.DIAS_NAO_UTEIS || '');
     const fixed=dayListToIndexes(cfg.entregasFixas || cfg.ENTREGAS_FIXAS || '');
-    const linked=String(cfg.vincularCom || cfg.VINCULAR_COM || cfg.vinculadoCom || '').trim();
+    const linkedList=splitVocativoList(cfg.vincularComLista || cfg.vincularCom || cfg.VINCULAR_COM || cfg.vinculadoCom || '').filter(v=>v && v!==voc);
+    const ordem=Number(cfg.ordemEntrega || cfg.ORDEM_ENTREGA || cfg.ordem || 0);
+    const mesmoDia=normalizeYesNoFront(cfg.entregaMesmoDia || cfg.ENTREGA_MESMO_DIA || cfg.mesmoDia || 'NÃO');
     if(off.length) CONFIG.nonBusinessByVocativo[voc]=off;
     if(fixed.length) CONFIG.fixedDeliveryByVocativo[voc]=fixed;
-    if(linked && linked !== voc) CONFIG.linkedByVocativo[voc]=linked;
+    if(linkedList.length) CONFIG.linkedByVocativo[voc]=linkedList;
+    if(Number.isFinite(ordem) && ordem>0) CONFIG.deliveryOrderByVocativo[voc]=Math.floor(ordem);
+    CONFIG.sameDayDeliveryByVocativo[voc]=mesmoDia;
   });
   normalizeLinks();
   DIRTY_VOCATIVOS.clear();
   saveConfig();
 }
 function normalizeLinks(){
+  ensureConfigShape();
   const map = CONFIG.linkedByVocativo || {};
-  Object.keys(map).forEach(a=>{
-    const b = String(map[a] || '').trim();
-    if(!b || b === a){ delete map[a]; return; }
-    if(map[b] && map[b] !== a){
-      // Se o parceiro já apontava para outro, mantém o vínculo mais recente do primeiro e limpa conflito.
-      delete map[b];
+  const nodes=new Set();
+  Object.keys(map).forEach(v=>{
+    const clean=splitVocativoList(map[v]).filter(x=>x && x!==v);
+    if(clean.length){
+      map[v]=clean;
+      nodes.add(v);
+      clean.forEach(x=>nodes.add(x));
+    }else{
+      delete map[v];
     }
-    map[b] = a;
+  });
+
+  const visited=new Set();
+  const groups=[];
+  nodes.forEach(start=>{
+    if(visited.has(start)) return;
+    const queue=[start];
+    const group=[];
+    while(queue.length){
+      const cur=queue.shift();
+      if(!cur || visited.has(cur)) continue;
+      visited.add(cur);
+      group.push(cur);
+      splitVocativoList(map[cur]).forEach(n=>{ if(n && !visited.has(n)) queue.push(n); });
+      Object.keys(map).forEach(k=>{ if(splitVocativoList(map[k]).includes(cur) && !visited.has(k)) queue.push(k); });
+    }
+    if(group.length>1) groups.push(unique(group));
+  });
+
+  Object.keys(map).forEach(k=>delete map[k]);
+  groups.forEach(group=>{
+    group.forEach(v=>{
+      map[v]=group.filter(x=>x!==v);
+    });
   });
 }
-function setLinkedVocativo(vocativo, partner){
-  CONFIG.linkedByVocativo = CONFIG.linkedByVocativo || {};
-  const old = CONFIG.linkedByVocativo[vocativo];
-  if(old){ delete CONFIG.linkedByVocativo[old]; markDirty(old); }
-  Object.keys(CONFIG.linkedByVocativo).forEach(k=>{
-    if(CONFIG.linkedByVocativo[k] === vocativo || k === partner || CONFIG.linkedByVocativo[k] === partner){
-      const other = CONFIG.linkedByVocativo[k];
-      delete CONFIG.linkedByVocativo[k];
-      if(other) delete CONFIG.linkedByVocativo[other];
-      markDirty(k);
-      if(other) markDirty(other);
-    }
-  });
-  if(partner && partner !== vocativo){
-    CONFIG.linkedByVocativo[vocativo] = partner;
-    CONFIG.linkedByVocativo[partner] = vocativo;
-    markDirty(partner);
-  }else{
-    delete CONFIG.linkedByVocativo[vocativo];
+function buildClosedLinkGroup(vocativo, partners){
+  ensureConfigShape();
+  const selected=splitVocativoList(partners).filter(v=>v && v!==vocativo);
+  const seed=[vocativo, ...selected];
+  const group=new Set();
+  const queue=[...seed];
+  while(queue.length){
+    const cur=queue.shift();
+    if(!cur || group.has(cur)) continue;
+    group.add(cur);
+    getLinkedVocativos(cur).forEach(n=>{ if(n && !group.has(n)) queue.push(n); });
   }
-  markDirty(vocativo);
+  return [...group];
 }
-function getLinkedVocativo(vocativo){
-  return String((CONFIG.linkedByVocativo || {})[vocativo] || '').trim();
+function setClosedGroupLinks(group){
+  ensureConfigShape();
+  const list=unique((group || []).filter(Boolean));
+  if(list.length > 1){
+    list.forEach(v=>{
+      CONFIG.linkedByVocativo[v]=list.filter(x=>x!==v);
+    });
+    ensureDeliveryOrdersForGroup(list);
+  }else if(list.length === 1){
+    delete CONFIG.linkedByVocativo[list[0]];
+  }
 }
+function setLinkedVocativos(vocativo, partners){
+  ensureConfigShape();
+  partners = splitVocativoList(partners).filter(v=>v && v!==vocativo);
+
+  const previousGroup = getGroupVocativos(vocativo);
+  const nextGroup = partners.length ? buildClosedLinkGroup(vocativo, partners) : [vocativo];
+  const remainingPreviousGroup = previousGroup.filter(v=>v && !nextGroup.includes(v));
+  const affected = new Set([...previousGroup, ...nextGroup, ...remainingPreviousGroup]);
+
+  // Remove somente os vínculos dos vocativos impactados pela alteração.
+  // Importante: ao desvincular um vocativo de um grupo com 3+ membros,
+  // os demais membros devem continuar vinculados entre si.
+  [...affected].forEach(v=>{
+    if(v) delete CONFIG.linkedByVocativo[v];
+  });
+  Object.keys(CONFIG.linkedByVocativo).forEach(k=>{
+    const clean=splitVocativoList(CONFIG.linkedByVocativo[k]).filter(v=>!affected.has(v));
+    if(clean.length) CONFIG.linkedByVocativo[k]=clean;
+    else delete CONFIG.linkedByVocativo[k];
+  });
+
+  // Grupo novo do vocativo editado.
+  setClosedGroupLinks(nextGroup);
+
+  // Se o vocativo editado saiu de um grupo maior, mantém os demais fechados entre si.
+  setClosedGroupLinks(remainingPreviousGroup);
+
+  normalizeLinks();
+
+  const finalGroups = [getGroupVocativos(vocativo)];
+  remainingPreviousGroup.forEach(v=>finalGroups.push(getGroupVocativos(v)));
+  finalGroups.forEach(g=>ensureDeliveryOrdersForGroup(g));
+
+  affected.forEach(v=>{
+    if(v) DIRTY_VOCATIVOS.add(v);
+  });
+  updateSaveButton();
+}
+function setLinkedVocativo(vocativo, partner){ setLinkedVocativos(vocativo, partner ? [partner] : []); }
+function markGroupDirty(vocativo){
+  getGroupVocativos(vocativo).forEach(v=>{ if(v) DIRTY_VOCATIVOS.add(v); });
+  updateSaveButton();
+}
+function ensureDeliveryOrdersForGroup(group){
+  const list=unique((group || []).filter(Boolean));
+  if(list.length < 2) return;
+  const used=new Set();
+  list.forEach(v=>{
+    const n=Number(CONFIG.deliveryOrderByVocativo[v]);
+    if(Number.isFinite(n) && n>0 && !used.has(Math.floor(n))) used.add(Math.floor(n));
+  });
+  let next=1;
+  list.forEach(v=>{
+    const n=Number(CONFIG.deliveryOrderByVocativo[v]);
+    if(Number.isFinite(n) && n>0) return;
+    while(used.has(next)) next++;
+    CONFIG.deliveryOrderByVocativo[v]=next;
+    used.add(next);
+  });
+  list.forEach(v=>{
+    CONFIG.sameDayDeliveryByVocativo[v]=normalizeYesNoFront(CONFIG.sameDayDeliveryByVocativo[v] || 'NÃO');
+  });
+}
+function getLinkedVocativos(vocativo){
+  ensureConfigShape();
+  return splitVocativoList((CONFIG.linkedByVocativo || {})[vocativo]).filter(v=>v && v!==vocativo);
+}
+function getLinkedVocativo(vocativo){ return getLinkedVocativos(vocativo)[0] || ''; }
 function getGroupVocativos(vocativo){
-  const partner = getLinkedVocativo(vocativo);
-  return partner && partner !== vocativo ? [vocativo, partner] : [vocativo];
+  ensureConfigShape();
+  const visited=new Set();
+  const queue=[vocativo];
+  while(queue.length){
+    const cur=queue.shift();
+    if(!cur || visited.has(cur)) continue;
+    visited.add(cur);
+    getLinkedVocativos(cur).forEach(n=>{ if(!visited.has(n)) queue.push(n); });
+  }
+  return [...visited];
+}
+function getDeliveryOrder(vocativo){
+  ensureConfigShape();
+  const n=Number(CONFIG.deliveryOrderByVocativo[vocativo]);
+  return Number.isFinite(n) && n>0 ? Math.floor(n) : '';
+}
+function setDeliveryOrder(vocativo, value){
+  ensureConfigShape();
+  const n=Number(value);
+  if(Number.isFinite(n) && n>0) CONFIG.deliveryOrderByVocativo[vocativo]=Math.floor(n);
+  else delete CONFIG.deliveryOrderByVocativo[vocativo];
+  markGroupDirty(vocativo);
+}
+function getEntregaMesmoDia(vocativo){
+  ensureConfigShape();
+  return normalizeYesNoFront(CONFIG.sameDayDeliveryByVocativo[vocativo] || 'NÃO');
+}
+function setEntregaMesmoDia(vocativo, value){
+  ensureConfigShape();
+  CONFIG.sameDayDeliveryByVocativo[vocativo]=normalizeYesNoFront(value);
+  markGroupDirty(vocativo);
 }
 function markDirty(vocativo){
   if(vocativo) DIRTY_VOCATIVOS.add(vocativo);
@@ -534,11 +706,40 @@ function updateSaveButton(){
   btn.style.opacity = n ? '1' : '.72';
 }
 function getConfigForVocativo(vocativo){
+  const linkedList=getLinkedVocativos(vocativo);
+  const diasNaoUteis = indexesToDayList(CONFIG.nonBusinessByVocativo[vocativo] || []);
+  const entregasFixas = indexesToDayList(CONFIG.fixedDeliveryByVocativo[vocativo] || []);
+  const ordemEntrega = getDeliveryOrder(vocativo);
+  const entregaMesmoDia = getEntregaMesmoDia(vocativo);
+
+  // Envia os campos nos dois padrões:
+  // 1) camelCase, usado internamente no front/back;
+  // 2) nomes iguais aos cabeçalhos da planilha, para garantir gravação no Apps Script.
   return {
     vocativo,
-    diasNaoUteis: indexesToDayList(CONFIG.nonBusinessByVocativo[vocativo] || []),
-    entregasFixas: indexesToDayList(CONFIG.fixedDeliveryByVocativo[vocativo] || []),
-    vincularCom: getLinkedVocativo(vocativo)
+    VOCATIVO: vocativo,
+
+    diasNaoUteis,
+    DIAS_NAO_UTEIS: diasNaoUteis,
+
+    entregasFixas,
+    ENTREGAS_FIXAS: entregasFixas,
+
+    vincularCom: linkedList.join(','),
+    vincularComLista: linkedList,
+    VINCULAR_COM: linkedList.join(','),
+
+    ordemEntrega,
+    ORDEM_ENTREGA: ordemEntrega === '' ? '' : String(ordemEntrega),
+
+    entregaMesmoDia,
+    ENTREGA_MESMO_DIA: entregaMesmoDia,
+
+    maiorVeiculoPermitido: getMaxVehicleRestriction(vocativo),
+    MAIOR_VEICULO_PERMITIDO: getMaxVehicleRestriction(vocativo),
+
+    restricaoCarroceria: getBodyRestriction(vocativo),
+    RESTRICAO_CARROCERIA: getBodyRestriction(vocativo)
   };
 }
 const $ = id => document.getElementById(id);
@@ -696,16 +897,13 @@ function showCombinationImpact(vocativo){
   const all=getAll();
   LAST_ALL_ROWS=all;
   const current=all.find(x=>x.vocativo===vocativo);
-  const partner=current?.linkedWith ? all.find(x=>x.vocativo===current.linkedWith) : null;
+  const linkedNames=getGroupVocativos(vocativo).filter(v=>v!==vocativo);
+  const impacted=linkedNames.map(v=>all.find(x=>x.vocativo===v)).filter(x=>x && x.status==='impossivel');
 
-  // O popup deve aparecer somente quando a alteração feita no vocativo atual
-  // tornar o vocativo vinculado/parceiro impossível de atender o prazo.
-  // Se apenas o próprio vocativo alterado ficar impossível, mantemos o status do card,
-  // mas não abrimos popup.
-  if(partner?.status==='impossivel'){
-    const message=`Atenção: a alteração realizada em ${current?.vocativo || vocativo} tornou o vocativo vinculado ${partner.vocativo} impossível de atender o prazo.`;
-    setLoadStatus(`${message} Revise janelas, entregas fixas, dias não úteis ou vínculo.`, 'err');
-    showDeadlineModal([message]);
+  if(impacted.length){
+    const messages=impacted.map(row=>`Atenção: a alteração realizada em ${current?.vocativo || vocativo} tornou o vocativo vinculado ${row.vocativo} impossível de atender o prazo.`);
+    setLoadStatus(`${messages[0]} Revise janelas, entregas fixas, dias não úteis, ordem de entrega ou vínculo.`, 'err');
+    showDeadlineModal(messages);
   }
 }
 function fmt(v){ if(v===null || v===undefined || v===999 || v===-999 || !Number.isFinite(Number(v))) return '—'; return Number(v).toLocaleString('pt-BR',{maximumFractionDigits:1}); }
@@ -825,98 +1023,77 @@ function getPlannedDelivery(options, vocativo, loadDay){
   if(!plan || !plan.map) return null;
   return plan.map[deliveryPlanKey(vocativo, loadDay)] || null;
 }
-function deliveryFromLoadAfterElapsed(row, loadDay, transit, afterElapsed){
+function deliveryFromLoadAtOrAfterElapsed(row, loadDay, transit, minElapsed){
   const allowedDays = allowedDeliveryDays(row);
   if(!allowedDays.length) return null;
   const transitDays = Math.max(0, Math.ceil(num(transit)));
-  let start = Math.max(transitDays, Math.floor(Number(afterElapsed) || 0) + 1);
+  let start = Math.max(transitDays, Math.floor(Number(minElapsed) || 0));
   for(let elapsed=start; elapsed<=35; elapsed++){
     const day=(Number(loadDay) + elapsed) % 7;
     if(allowedDays.includes(day)){
-      return {
-        day,
-        travelElapsed: elapsed,
-        calendarSpanFromLoad: elapsed + 1,
-        linkedAdjusted: true
-      };
+      return { day, travelElapsed: elapsed, calendarSpanFromLoad: elapsed + 1, linkedAdjusted: elapsed > transitDays };
     }
   }
   return null;
+}
+function deliveryFromLoadAfterElapsed(row, loadDay, transit, afterElapsed){
+  return deliveryFromLoadAtOrAfterElapsed(row, loadDay, transit, Math.floor(Number(afterElapsed) || 0) + 1);
 }
 function deliveryWeekPenalty(leader, follower){
   if(!leader || !follower) return 99;
   const leaderWeek=Math.floor((Number(leader.travelElapsed)||0)/7);
   const followerWeek=Math.floor((Number(follower.travelElapsed)||0)/7);
   const gap=(Number(follower.travelElapsed)||0) - (Number(leader.travelElapsed)||0);
-  // Evita, quando houver alternativa, que uma entrega fique na sexta e a outra só na segunda.
   const weekendSplit = Number(leader.day)===5 && Number(follower.day)===1;
   return (followerWeek > leaderWeek || weekendSplit || gap > 2) ? 1 : 0;
 }
-function getStaggerOptionsForLoad(rowA, rowB, loadDay){
-  const allowedA=allowedDeliveryDays(rowA), allowedB=allowedDeliveryDays(rowB);
-  const baseA=resolveDeliveryFromLoad(rowA, loadDay, rowA.transitTime, allowedA);
-  const baseB=resolveDeliveryFromLoad(rowB, loadDay, rowB.transitTime, allowedB);
-  if(!baseA || !baseB) return [];
-
-  const makeOption=(leaderRow, followerRow, leaderBase, followerBase)=>{
-    let follower = null;
-    let changed = false;
-
-    // Se a entrega natural do vocativo já fica depois da entrega do parceiro, mantém.
-    // Caso contrário, empurra este vocativo para o próximo dia de entrega possível posterior.
-    if(Number(followerBase.travelElapsed) > Number(leaderBase.travelElapsed)){
-      follower = {...followerBase, linkedAdjusted:false};
-    }else{
-      follower = deliveryFromLoadAfterElapsed(followerRow, loadDay, followerRow.transitTime, leaderBase.travelElapsed);
-      changed = true;
-    }
-    if(!follower) return null;
-
-    const leader = {...leaderBase, linkedAdjusted:false};
-    const gap = Number(follower.travelElapsed) - Number(leader.travelElapsed);
-    if(gap <= 0) return null;
-
-    return {
-      leaderRow,
-      followerRow,
-      leader,
-      follower,
-      changed,
-      gap,
-      extraDelay: Math.max(0, Number(follower.travelElapsed) - Number(followerBase.travelElapsed)),
-      weekPenalty: deliveryWeekPenalty(leader, follower)
-    };
-  };
-
-  const options=[
-    makeOption(rowA,rowB,baseA,baseB),
-    makeOption(rowB,rowA,baseB,baseA)
-  ].filter(Boolean);
-
-  options.sort((a,b)=>
-    (a.weekPenalty-b.weekPenalty) ||
-    (a.gap-b.gap) ||
-    (a.extraDelay-b.extraDelay) ||
-    (Number(a.changed)-Number(b.changed)) ||
-    String(a.followerRow.vocativo).localeCompare(String(b.followerRow.vocativo),'pt-BR')
-  );
-
-  return options;
-}
-function chooseStaggerOptionForLoad(rowA, rowB, loadDay){
-  return getStaggerOptionsForLoad(rowA,rowB,loadDay)[0] || null;
+function getOrderedLinkedRows(groupRows){
+  const rows=[...(groupRows || [])];
+  rows.sort((a,b)=>{
+    const oa=Number(getDeliveryOrder(a.vocativo) || 9999);
+    const ob=Number(getDeliveryOrder(b.vocativo) || 9999);
+    if(oa!==ob) return oa-ob;
+    return String(a.vocativo).localeCompare(String(b.vocativo),'pt-BR');
+  });
+  return rows;
 }
 function cloneLinkedPlanPlanBase(){
   return {map:{}, weekPenalty:0, gap:0, extraDelay:0, changed:0, complete:true, descriptions:[]};
 }
-function appendStaggerOptionToPlan(plan, option, loadDay){
-  plan.map[deliveryPlanKey(option.leaderRow.vocativo, loadDay)] = option.leader;
-  plan.map[deliveryPlanKey(option.followerRow.vocativo, loadDay)] = option.follower;
-  plan.weekPenalty += option.weekPenalty;
-  plan.gap += option.gap;
-  plan.extraDelay += option.extraDelay;
-  if(option.changed) plan.changed += 1;
-  plan.descriptions.push(`${DAYS[loadDay]}: ${option.leaderRow.vocativo} entrega ${DAYS[option.leader.day]} → ${option.followerRow.vocativo} entrega ${DAYS[option.follower.day]}`);
+function buildLinkedDeliveryPlan(groupRows, combo){
+  const plan=cloneLinkedPlanPlanBase();
+  if(!Array.isArray(groupRows) || groupRows.length < 2 || !Array.isArray(combo) || !combo.length) return plan;
+  const orderedRows=getOrderedLinkedRows(groupRows);
+  for(const loadDay of combo){
+    let previous=null;
+    const descriptionParts=[];
+    for(let idx=0; idx<orderedRows.length; idx++){
+      const row=orderedRows[idx];
+      const base=resolveDeliveryFromLoad(row, loadDay, row.transitTime, allowedDeliveryDays(row));
+      if(!base){ plan.complete=false; return plan; }
+      let delivery={...base, linkedAdjusted:false};
+      if(idx>0){
+        const sameDay=getEntregaMesmoDia(row.vocativo)==='SIM';
+        const minElapsed=Number(previous.travelElapsed) + (sameDay ? 0 : 1);
+        if(Number(base.travelElapsed) < minElapsed){
+          delivery=deliveryFromLoadAtOrAfterElapsed(row, loadDay, row.transitTime, minElapsed);
+          if(!delivery){ plan.complete=false; return plan; }
+          delivery.linkedAdjusted=true;
+        }
+      }
+      plan.map[deliveryPlanKey(row.vocativo, loadDay)] = delivery;
+      if(previous){
+        plan.weekPenalty += deliveryWeekPenalty(previous, delivery);
+        plan.gap += Math.max(0, Number(delivery.travelElapsed) - Number(previous.travelElapsed));
+      }
+      plan.extraDelay += Math.max(0, Number(delivery.travelElapsed) - Number(base.travelElapsed));
+      if(delivery.linkedAdjusted) plan.changed += 1;
+      descriptionParts.push(`${row.vocativo} entrega ${DAYS[delivery.day]}${idx>0 && getEntregaMesmoDia(row.vocativo)==='SIM' ? ' (mesmo dia permitido)' : ''}`);
+      previous=delivery;
+    }
+    plan.descriptions.push(`${DAYS[loadDay]}: ${descriptionParts.join(' → ')}`);
+  }
+  return plan;
 }
 function scoreLinkedPlanForDeadlines(groupRows, combo, plan){
   const evals=groupRows.map(gr=>{
@@ -925,81 +1102,33 @@ function scoreLinkedPlanForDeadlines(groupRows, combo, plan){
     const score=scoreLinkedEval(ev,d.menorPrazo);
     return {row:gr, deadline:d.menorPrazo, ev, score};
   });
-
   const hardInvalid = evals.some(x => !x.ev || x.ev.worst===999 || x.ev.total===999);
-
-  return {
-    hardInvalid,
-    ok: !hardInvalid && evals.every(x=>x.ev.ok) && plan.complete,
-    maxOver: hardInvalid ? 9999 : Math.max(...evals.map(x=>x.score.over)),
-    worst: hardInvalid ? 9999 : Math.max(...evals.map(x=>x.score.worst)),
-    total: hardInvalid ? 999999 : evals.reduce((s,x)=>s+x.score.total,0),
-    evals
-  };
+  return { hardInvalid, ok: !hardInvalid && evals.every(x=>x.ev.ok) && plan.complete, maxOver: hardInvalid ? 9999 : Math.max(...evals.map(x=>x.score.over)), worst: hardInvalid ? 9999 : Math.max(...evals.map(x=>x.score.worst)), total: hardInvalid ? 999999 : evals.reduce((s,x)=>s+x.score.total,0), evals };
 }
 function compareLinkedPlanScores(a,b){
-  return (a.maxOver-b.maxOver)
-    || (a.worst-b.worst)
-    || (a.total-b.total)
-    || (a.plan.weekPenalty-b.plan.weekPenalty)
-    || (a.plan.gap-b.plan.gap)
-    || (a.plan.extraDelay-b.plan.extraDelay)
-    || (a.plan.changed-b.plan.changed);
+  return (a.maxOver-b.maxOver) || (a.worst-b.worst) || (a.total-b.total) || (a.plan.weekPenalty-b.plan.weekPenalty) || (a.plan.gap-b.plan.gap) || (a.plan.extraDelay-b.plan.extraDelay) || (a.plan.changed-b.plan.changed);
 }
-function buildLinkedDeliveryPlan(groupRows, combo){
+function buildLinkedDeliveryPlanForCombos(groupRows, comboByVoc){
   const emptyPlan=cloneLinkedPlanPlanBase();
-  if(!Array.isArray(groupRows) || groupRows.length !== 2 || !Array.isArray(combo) || !combo.length) return emptyPlan;
-
-  const [rowA,rowB]=groupRows;
-  const optionsByLoad = combo.map(loadDay => ({
-    loadDay,
-    options: getStaggerOptionsForLoad(rowA,rowB,loadDay)
-  }));
-
-  if(optionsByLoad.some(x=>!x.options.length)){
-    emptyPlan.complete=false;
-    return emptyPlan;
-  }
-
-  // Regra corrigida:
-  // Não fixa sempre o mesmo vocativo como "empurrado".
-  // Para cada janela de carregamento, testa as duas direções possíveis:
-  // A entrega primeiro e B no próximo dia possível, ou B primeiro e A no próximo dia possível.
-  // Depois avalia a combinação global contra os prazos dos dois vocativos.
-  let plans=[cloneLinkedPlanPlanBase()];
-  optionsByLoad.forEach(({loadDay,options})=>{
-    const nextPlans=[];
-    plans.forEach(base=>{
-      options.forEach(option=>{
-        const plan={
-          map:{...base.map},
-          weekPenalty:base.weekPenalty,
-          gap:base.gap,
-          extraDelay:base.extraDelay,
-          changed:base.changed,
-          complete:base.complete,
-          descriptions:base.descriptions.slice()
-        };
-        appendStaggerOptionToPlan(plan, option, loadDay);
-        nextPlans.push(plan);
-      });
-    });
-    plans=nextPlans;
+  if(!Array.isArray(groupRows) || groupRows.length < 2) return emptyPlan;
+  const combos=groupRows.map(r=>comboByVoc[r.vocativo] || []);
+  if(combos.some(c=>!c.length)) return {...emptyPlan, complete:false, commonCombo:[]};
+  let shared=combos[0].slice();
+  for(let i=1;i<combos.length;i++) shared=comboIntersection(shared, combos[i]);
+  if(!shared.length) return {...emptyPlan, complete:false, commonCombo:[]};
+  const plan=buildLinkedDeliveryPlan(groupRows, shared);
+  return {...plan, commonCombo:shared};
+}
+function scoreLinkedPlanForDeadlinesByCombos(groupRows, comboByVoc, plan){
+  const evals=groupRows.map(gr=>{
+    const d=calcDeadlineParts(gr);
+    const combo=comboByVoc[gr.vocativo] || [];
+    const ev=evaluateComboForRow(gr,d.menorPrazo,gr.transitTime,combo,{allowExtraLoads:true, linkedDeliveryPlan:plan});
+    const score=scoreLinkedEval(ev,d.menorPrazo);
+    return {row:gr, deadline:d.menorPrazo, combo, ev, score};
   });
-
-  const scored=plans.map(plan=>({
-    plan,
-    ...scoreLinkedPlanForDeadlines(groupRows, combo, plan)
-  })).filter(x=>!x.hardInvalid);
-
-  if(!scored.length){
-    const fallback=plans[0] || emptyPlan;
-    fallback.complete=false;
-    return fallback;
-  }
-
-  scored.sort(compareLinkedPlanScores);
-  return scored[0].plan;
+  const hardInvalid = evals.some(x => !x.combo.length || !x.ev || x.ev.worst===999 || x.ev.total===999);
+  return { hardInvalid, ok: !hardInvalid && evals.every(x=>x.ev.ok) && plan.complete, maxOver: hardInvalid ? 9999 : Math.max(...evals.map(x=>x.score.over)), worst: hardInvalid ? 9999 : Math.max(...evals.map(x=>x.score.worst)), total: hardInvalid ? 999999 : evals.reduce((sum,x)=>sum+x.score.total,0), evals };
 }
 function fixedDeliveryFromLoad(loadDay, transit, fixedDays){
   // Entrega fixa é calculada mantendo o dia de entrega selecionado.
@@ -1241,7 +1370,7 @@ function evaluateWindows(row, deadline, transit, forcedCombo){
     const baseReason = fixedCount
       ? `Entrega fixa: ${fixedCount} dia(s) selecionado(s), exigindo ${fixedCount} janela(s) de carga`
       : (linkedSchedule && groupCount > rowForcedCombo.length
-        ? `Carga vinculada parcial: ${rowForcedCombo.length} janela(s) própria(s), dentro de ${groupCount} janela(s) do grupo; ${sharedCount} compartilhada(s) com entrega escalonada`
+        ? `Carga vinculada otimizada: ${rowForcedCombo.length} janela(s) para este vocativo, dentro de ${groupCount} janela(s) do grupo; ${sharedCount} janela(s) compartilhada(s) com entrega escalonada`
         : (linkedPlan && linkedPlan.complete
           ? 'Carga vinculada: mesmo(s) dia(s) de carregamento, com entrega do parceiro no próximo dia possível posterior'
           : 'Carga vinculada: mesmo(s) dia(s) de carregamento do vocativo parceiro'));
@@ -1308,6 +1437,10 @@ function comboIntersection(a,b){
 function comboUnion(a,b){
   return [...new Set([...(a||[]),...(b||[])].map(Number))].sort((x,y)=>x-y);
 }
+function comboIncludesAll(combo, required){
+  const set=new Set((combo || []).map(Number));
+  return (required || []).every(day=>set.has(Number(day)));
+}
 function getRepresentativeRowsForLink(vocativo){
   const groupVocs=[...new Set(getGroupVocativos(vocativo))];
   if(groupVocs.length<2) return [];
@@ -1315,175 +1448,75 @@ function getRepresentativeRowsForLink(vocativo){
 }
 function enumerateCombosForLinkedRow(row){
   const out=[];
-  candidateLoadCounts(row).forEach(k=>{
-    comb(LOAD_INDEXES,k).forEach(c=>out.push(c));
-  });
+  candidateLoadCounts(row).forEach(k=>{ comb(LOAD_INDEXES,k).forEach(c=>out.push(c)); });
   return out;
 }
-function buildLinkedDeliveryPlanForCombos(groupRows, comboByVoc){
-  const emptyPlan=cloneLinkedPlanPlanBase();
-  if(!Array.isArray(groupRows) || groupRows.length !== 2) return emptyPlan;
-  const [rowA,rowB]=groupRows;
-  const comboA=comboByVoc[rowA.vocativo] || [];
-  const comboB=comboByVoc[rowB.vocativo] || [];
-  const shared=comboIntersection(comboA, comboB);
-
-  if(!shared.length){
-    emptyPlan.complete=false;
-    return {...emptyPlan, commonCombo:[]};
-  }
-
-  const optionsByLoad = shared.map(loadDay => ({
-    loadDay,
-    options: getStaggerOptionsForLoad(rowA,rowB,loadDay)
-  }));
-
-  if(optionsByLoad.some(x=>!x.options.length)){
-    emptyPlan.complete=false;
-    return {...emptyPlan, commonCombo:shared};
-  }
-
-  let plans=[cloneLinkedPlanPlanBase()];
-  optionsByLoad.forEach(({loadDay,options})=>{
-    const nextPlans=[];
-    plans.forEach(base=>{
-      options.forEach(option=>{
-        const plan={
-          map:{...base.map},
-          weekPenalty:base.weekPenalty,
-          gap:base.gap,
-          extraDelay:base.extraDelay,
-          changed:base.changed,
-          complete:base.complete,
-          descriptions:base.descriptions.slice()
-        };
-        appendStaggerOptionToPlan(plan, option, loadDay);
-        nextPlans.push(plan);
-      });
+function bestComboForLinkedRowIncluding(row, requiredCombo, linkedPlan){
+  const required=[...new Set((requiredCombo || []).map(Number))].sort((a,b)=>a-b);
+  const parts=calcDeadlineParts(row);
+  const candidates=[];
+  const fallback=[];
+  const counts=candidateLoadCounts(row).filter(k=>k>=required.length);
+  counts.forEach(k=>{
+    comb(LOAD_INDEXES,k).forEach(combo=>{
+      if(!comboIncludesAll(combo, required)) return;
+      const ev=evaluateComboForRow(row, parts.menorPrazo, row.transitTime, combo, {allowExtraLoads:true, linkedDeliveryPlan:linkedPlan});
+      const pack={combo:combo.slice(), ev, score:scoreLinkedEval(ev, parts.menorPrazo)};
+      fallback.push(pack);
+      if(ev && ev.ok) candidates.push(pack);
     });
-    plans=nextPlans;
   });
-
-  const scored=plans.map(plan=>({
-    plan,
-    ...scoreLinkedPlanForDeadlinesByCombos(groupRows, comboByVoc, plan)
-  })).filter(x=>!x.hardInvalid);
-
-  if(!scored.length){
-    const fallback=plans[0] || emptyPlan;
-    fallback.complete=false;
-    return {...fallback, commonCombo:shared};
-  }
-
-  scored.sort(compareLinkedPlanScores);
-  return {...scored[0].plan, commonCombo:shared};
-}
-function scoreLinkedPlanForDeadlinesByCombos(groupRows, comboByVoc, plan){
-  const evals=groupRows.map(gr=>{
-    const d=calcDeadlineParts(gr);
-    const combo=comboByVoc[gr.vocativo] || [];
-    const ev=evaluateComboForRow(gr,d.menorPrazo,gr.transitTime,combo,{allowExtraLoads:true, linkedDeliveryPlan:plan});
-    const score=scoreLinkedEval(ev,d.menorPrazo);
-    return {row:gr, deadline:d.menorPrazo, combo, ev, score};
-  });
-
-  const hardInvalid = evals.some(x => !x.combo.length || !x.ev || x.ev.worst===999 || x.ev.total===999);
-
-  return {
-    hardInvalid,
-    ok: !hardInvalid && evals.every(x=>x.ev.ok) && plan.complete,
-    maxOver: hardInvalid ? 9999 : Math.max(...evals.map(x=>x.score.over)),
-    worst: hardInvalid ? 9999 : Math.max(...evals.map(x=>x.score.worst)),
-    total: hardInvalid ? 999999 : evals.reduce((sum,x)=>sum+x.score.total,0),
-    evals
-  };
+  const sorter=(a,b)=>(a.combo.length-b.combo.length) || (earlyLoadScore(a.combo)-earlyLoadScore(b.combo)) || (saturdayLoadCount(a.combo)-saturdayLoadCount(b.combo)) || (a.score.worst-b.score.worst) || (a.score.total-b.score.total) || String(comboKey(a.combo)).localeCompare(String(comboKey(b.combo)));
+  if(candidates.length){ candidates.sort(sorter); return candidates[0]; }
+  if(fallback.length){ fallback.sort((a,b)=>(a.score.over-b.score.over) || sorter(a,b)); return fallback[0]; }
+  return null;
 }
 function compareLinkedSchedulesOk(a,b){
-  return (a.assignedLoads-b.assignedLoads)
-    || (a.groupLoads-b.groupLoads)
-    || (a.linkedWeekPenalty-b.linkedWeekPenalty)
-    || (a.linkedGap-b.linkedGap)
-    || (a.linkedExtraDelay-b.linkedExtraDelay)
-    || (a.worst-b.worst)
-    || (a.total-b.total)
-    || (earlyLoadScore(a.groupCombo)-earlyLoadScore(b.groupCombo))
-    || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo))
-    || String(comboKey(a.groupCombo)).localeCompare(String(comboKey(b.groupCombo)));
+  return (a.groupLoads-b.groupLoads) || (a.assignedLoads-b.assignedLoads) || (a.linkedWeekPenalty-b.linkedWeekPenalty) || (a.linkedGap-b.linkedGap) || (a.linkedExtraDelay-b.linkedExtraDelay) || (a.worst-b.worst) || (a.total-b.total) || (earlyLoadScore(a.commonCombo)-earlyLoadScore(b.commonCombo)) || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo)) || String(comboKey(a.groupCombo)).localeCompare(String(comboKey(b.groupCombo)));
 }
 function compareLinkedSchedulesFallback(a,b){
-  return (a.maxOver-b.maxOver)
-    || (a.worst-b.worst)
-    || (a.total-b.total)
-    || (a.assignedLoads-b.assignedLoads)
-    || (a.groupLoads-b.groupLoads)
-    || (a.linkedWeekPenalty-b.linkedWeekPenalty)
-    || (a.linkedGap-b.linkedGap)
-    || (a.linkedExtraDelay-b.linkedExtraDelay)
-    || (earlyLoadScore(a.groupCombo)-earlyLoadScore(b.groupCombo))
-    || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo));
+  return (a.maxOver-b.maxOver) || (a.groupLoads-b.groupLoads) || (a.assignedLoads-b.assignedLoads) || (a.worst-b.worst) || (a.total-b.total) || (a.linkedWeekPenalty-b.linkedWeekPenalty) || (a.linkedGap-b.linkedGap) || (a.linkedExtraDelay-b.linkedExtraDelay) || (earlyLoadScore(a.commonCombo)-earlyLoadScore(b.commonCombo)) || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo));
 }
-function makeLinkedScheduleCandidate(groupRows, comboA, comboB){
-  const [rowA,rowB]=groupRows;
-  const commonCombo=comboIntersection(comboA, comboB);
-  if(!commonCombo.length) return null;
-  const groupCombo=comboUnion(comboA, comboB);
-  const comboByVoc={
-    [rowA.vocativo]: comboA.slice(),
-    [rowB.vocativo]: comboB.slice()
-  };
-  const linkedPlan=buildLinkedDeliveryPlanForCombos(groupRows, comboByVoc);
+function makeLinkedScheduleCandidate(groupRows, commonCombo){
+  if(!commonCombo || !commonCombo.length) return null;
+  const linkedPlan=buildLinkedDeliveryPlan(groupRows, commonCombo);
   if(!linkedPlan || !linkedPlan.complete) return null;
+
+  const comboByVoc={};
+  let hardInvalid=false;
+  groupRows.forEach(r=>{
+    const best=bestComboForLinkedRowIncluding(r, commonCombo, linkedPlan);
+    if(!best || !best.combo || !best.combo.length){ hardInvalid=true; return; }
+    comboByVoc[r.vocativo]=best.combo.slice();
+  });
+  if(hardInvalid) return null;
+
   const scored=scoreLinkedPlanForDeadlinesByCombos(groupRows, comboByVoc, linkedPlan);
   if(scored.hardInvalid) return null;
-  return {
-    comboByVoc,
-    groupCombo,
-    commonCombo,
-    linkedPlan,
-    ok:scored.ok,
-    maxOver:scored.maxOver,
-    worst:scored.worst,
-    total:scored.total,
-    assignedLoads:comboA.length + comboB.length,
-    groupLoads:groupCombo.length,
-    linkedWeekPenalty: linkedPlan.weekPenalty,
-    linkedGap: linkedPlan.gap,
-    linkedExtraDelay: linkedPlan.extraDelay,
-    evals:scored.evals
-  };
+  const groupCombo=groupRows.reduce((acc,r)=>comboUnion(acc, comboByVoc[r.vocativo] || []), []);
+  const assignedLoads=groupRows.reduce((sum,r)=>sum + ((comboByVoc[r.vocativo] || []).length), 0);
+  const rowsWithSingleCommon=groupRows.filter(r=>comboKey(comboByVoc[r.vocativo])===comboKey(commonCombo)).length;
+  return { comboByVoc, groupCombo, commonCombo:commonCombo.slice(), linkedPlan, ok:scored.ok, maxOver:scored.maxOver, worst:scored.worst, total:scored.total, assignedLoads, groupLoads:groupCombo.length, rowsWithSingleCommon, linkedWeekPenalty: linkedPlan.weekPenalty, linkedGap: linkedPlan.gap, linkedExtraDelay: linkedPlan.extraDelay, evals:scored.evals };
 }
 function findBestLinkedSchedule(row){
   const groupRows=getRepresentativeRowsForLink(row.vocativo);
   if(groupRows.length<2) return null;
-
-  const cacheKey=groupRows.map(r=>r.vocativo).sort((a,b)=>a.localeCompare(b,'pt-BR')).join('|||');
+  const cacheKey=groupRows.map(r=>r.vocativo).sort((a,b)=>a.localeCompare(b,'pt-BR')).join('|||') + '::' + groupRows.map(r=>`${r.vocativo}:${getDeliveryOrder(r.vocativo)||''}:${getEntregaMesmoDia(r.vocativo)}`).join('|');
   if(LINKED_SCHEDULE_CACHE.has(cacheKey)) return LINKED_SCHEDULE_CACHE.get(cacheKey);
-
-  const [rowA,rowB]=groupRows;
-  const combosA=enumerateCombosForLinkedRow(rowA);
-  const combosB=enumerateCombosForLinkedRow(rowB);
   const okCandidates=[];
   let bestFallback=null;
-
-  combosA.forEach(comboA=>{
-    combosB.forEach(comboB=>{
-      const candidate=makeLinkedScheduleCandidate(groupRows, comboA, comboB);
+  for(let k=1;k<=6;k++){
+    comb(LOAD_INDEXES,k).forEach(combo=>{
+      const candidate=makeLinkedScheduleCandidate(groupRows, combo);
       if(!candidate) return;
       if(candidate.ok) okCandidates.push(candidate);
-      if(!bestFallback || compareLinkedSchedulesFallback(candidate,bestFallback)<0){
-        bestFallback=candidate;
-      }
+      if(!bestFallback || compareLinkedSchedulesFallback(candidate,bestFallback)<0) bestFallback=candidate;
     });
-  });
-
-  let best=null;
-  if(okCandidates.length){
-    okCandidates.sort(compareLinkedSchedulesOk);
-    best=okCandidates[0];
-  }else{
-    best=bestFallback;
+    if(okCandidates.length) break;
   }
-
+  let best=null;
+  if(okCandidates.length){ okCandidates.sort(compareLinkedSchedulesOk); best=okCandidates[0]; }
+  else best=bestFallback;
   LINKED_SCHEDULE_CACHE.set(cacheKey,best || null);
   return best || null;
 }
@@ -1494,7 +1527,7 @@ function enrich(r){
   const w=evaluateWindows(r,parts.menorPrazo,r.transitTime,linkedSchedule);
   const folga = w.worst===999 ? null : parts.menorPrazo - w.worst;
   const status = !w.ok ? 'impossivel' : folga<=1 ? 'critico' : 'atende';
-  return {...r,...parts,...w,folga,status,nonBusiness:getNonBusinessDays(r.vocativo),fixedDelivery:getFixedDeliveryDays(r.vocativo),linkedWith:getLinkedVocativo(r.vocativo)};
+  return {...r,...parts,...w,folga,status,nonBusiness:getNonBusinessDays(r.vocativo),fixedDelivery:getFixedDeliveryDays(r.vocativo),linkedWith:getLinkedVocativo(r.vocativo),linkedWithList:getLinkedVocativos(r.vocativo),deliveryOrder:getDeliveryOrder(r.vocativo),entregaMesmoDia:getEntregaMesmoDia(r.vocativo)};
 }
 function getAll(){ return BASE_DATA.map(enrich); }
 function getLoadDaysForChartAndFilter(row){
@@ -1594,10 +1627,34 @@ function renderDayToggles(voc, type){
   return `<div class="daysGrid">${ALL_DAYS.map(i=>`<label class="dayToggle ${cls} ${selected.has(i)?'active':''} ${(type==='fixed' && (i===0||i===6))?'weekend':''}"><input type="checkbox" data-voc="${escapeHtml(voc)}" data-type="${type}" data-day="${i}" ${selected.has(i)?'checked':''}>${DAYS[i]}</label>`).join('')}</div>`;
 }
 function renderLinkSelect(voc){
-  const selected=getLinkedVocativo(voc);
+  const selected=new Set(getLinkedVocativos(voc));
   const options=unique(BASE_DATA.map(r=>r.vocativo)).filter(v=>v && v!==voc);
-  return `<select class="linkSelect" data-link-voc="${escapeHtml(voc)}"><option value="">Sem vínculo</option>${options.map(v=>`<option value="${escapeHtml(v)}" ${v===selected?'selected':''}>${escapeHtml(v)}</option>`).join('')}</select>`;
+  const groupSize=getGroupVocativos(voc).length || 1;
+  const maxOrder=Math.max(6, groupSize + 2);
+  const orderValue=String(getDeliveryOrder(voc) || '');
+  const sameDay=getEntregaMesmoDia(voc);
+  const selectedText = selected.size
+    ? `${selected.size} vínculo(s): ${[...selected].slice(0,2).join(', ')}${selected.size>2?'...':''}`
+    : 'SEM VÍNCULO';
+  return `<div class="linkConfigGrid">
+    <div>
+      <div class="linkConfigMiniLabel">Vocativos vinculados</div>
+      <div class="linkDropdown" data-link-dropdown="${escapeHtml(voc)}">
+        <button type="button" class="linkDropdownBtn" data-link-dd-button="${escapeHtml(voc)}"><span class="linkDropdownText">${escapeHtml(selectedText)}</span><span class="linkDropdownCaret">▾</span></button>
+        <div class="linkDropdownMenu">
+          <label class="linkDropdownOption isNone"><input type="checkbox" data-link-none="${escapeHtml(voc)}" ${selected.size?'':'checked'}><span class="linkDropdownOptionText">SEM VÍNCULO</span></label>
+          ${options.map(v=>`<label class="linkDropdownOption"><input type="checkbox" data-link-check="${escapeHtml(voc)}" value="${escapeHtml(v)}" ${selected.has(v)?'checked':''}><span class="linkDropdownOptionText">${escapeHtml(v)}</span></label>`).join('')}
+        </div>
+      </div>
+      <div class="linkConfigHint">Selecione um ou mais vocativos, ou marque SEM VÍNCULO.</div>
+    </div>
+    <div class="linkConfigRow">
+      <div><div class="linkConfigMiniLabel">Ordem</div><select class="linkOrderSelect" data-order-voc="${escapeHtml(voc)}"><option value="">Auto</option>${Array.from({length:maxOrder},(_,i)=>i+1).map(n=>`<option value="${n}" ${String(n)===orderValue?'selected':''}>${n}ª entrega</option>`).join('')}</select></div>
+      <div><div class="linkConfigMiniLabel">Mesmo dia?</div><select class="linkSameDaySelect" data-sameday-voc="${escapeHtml(voc)}"><option value="NÃO" ${sameDay==='NÃO'?'selected':''}>Não</option><option value="SIM" ${sameDay==='SIM'?'selected':''}>Sim</option></select></div>
+    </div>
+  </div>`;
 }
+
 function renderCards(rows){
   if(!rows.length){ cards.innerHTML='<div class="empty card">Nenhum registro encontrado. Verifique a conexão com o Google Planilhas ou os filtros atuais.</div>'; return; }
   cards.innerHTML=rows.map(r=>{
@@ -1632,7 +1689,7 @@ function renderCards(rows){
             ${renderDayToggles(r.vocativo,'fixed')}
           </div>
           <div class="configBlock">
-            <div class="compactLabel"><label>Vincular carga</label><span class="compactHint">mesmo dia</span></div>
+            <div class="compactLabel"><label>Vínculos e ordem</label><span class="compactHint">múltiplos</span></div>
             ${renderLinkSelect(r.vocativo)}
           </div>
         </div>
@@ -1642,7 +1699,7 @@ function renderCards(rows){
         <div class="metric"><span>Entregas</span><div class="pillLine">${r.deliveryDays.map(d=>`<span class="day deliv">${d}</span>`).join('') || '<span class="smallmuted">Nenhuma</span>'}</div></div>
         <div class="metric"><span>Não úteis</span><div class="pillLine">${r.nonBusiness.length ? r.nonBusiness.map(i=>`<span class="day off">${DAYS[i]}</span>`).join('') : '<span class="smallmuted">Nenhum</span>'}</div></div>
         <div class="metric"><span>Entrega fixa</span><div class="pillLine">${r.fixedDelivery.length ? r.fixedDelivery.map(i=>`<span class="day deliv">${DAYS[i]}</span>`).join('') : '<span class="smallmuted">Livre seg-sex</span>'}</div></div>
-        <div class="metric"><span>Vínculo</span><div class="pillLine">${r.linkedWith ? `<span class="linkBadge">${escapeHtml(r.linkedWith)}</span>` : '<span class="smallmuted">Sem vínculo</span>'}</div></div>
+        <div class="metric"><span>Vínculos</span><div class="pillLine">${r.linkedWithList && r.linkedWithList.length ? r.linkedWithList.map(v=>`<span class="linkBadge">${escapeHtml(v)}</span>`).join('') : '<span class="smallmuted">Sem vínculo</span>'}</div><div class="smallmuted">${r.deliveryOrder ? r.deliveryOrder + 'ª entrega' : 'Ordem auto'} • Mesmo dia: ${escapeHtml(r.entregaMesmoDia || 'NÃO')}</div></div>
         <div class="metric"><span>Ações</span><div class="quickActions"><button class="small ghost" data-action="weekend-off" data-voc="${escapeHtml(r.vocativo)}">Sáb/dom não úteis</button><button class="small ghost" data-action="clear" data-voc="${escapeHtml(r.vocativo)}">Limpar</button></div></div>
       </div>
     </article>`;
@@ -1659,36 +1716,82 @@ function bindCardEvents(){
       saveConfig(); markDirty(voc); render(); showCombinationImpact(voc);
     });
   });
-  cards.querySelectorAll('select[data-link-voc]').forEach(sel=>{
-    sel.addEventListener('change',()=>{
-      const voc=sel.dataset.linkVoc;
-      const partner=sel.value;
-      setLinkedVocativo(voc, partner);
+  cards.querySelectorAll('[data-link-dd-button]').forEach(btn=>{
+    btn.addEventListener('click',(ev)=>{
+      ev.preventDefault();
+      ev.stopPropagation();
+      const box=btn.closest('.linkDropdown');
+      const wasOpen=box && box.classList.contains('open');
+      cards.querySelectorAll('.linkDropdown.open').forEach(x=>{ if(x!==box) x.classList.remove('open'); });
+      if(box) box.classList.toggle('open', !wasOpen);
+    });
+  });
+  cards.querySelectorAll('input[data-link-none]').forEach(input=>{
+    input.addEventListener('change',()=>{
+      const voc=input.dataset.linkNone;
+      if(input.checked){
+        setLinkedVocativos(voc, []);
+        saveConfig();
+        render(); showCombinationImpact(voc);
+      }else{
+        input.checked = !getLinkedVocativos(voc).length;
+      }
+    });
+  });
+  cards.querySelectorAll('input[data-link-check]').forEach(input=>{
+    input.addEventListener('change',()=>{
+      const voc=input.dataset.linkCheck;
+      const partners=[...cards.querySelectorAll(`input[data-link-check="${cssEsc(voc)}"]:checked`)].map(x=>x.value).filter(Boolean);
+      setLinkedVocativos(voc, partners);
       saveConfig();
       render(); showCombinationImpact(voc);
     });
   });
-  cards.querySelectorAll('button[data-action]').forEach(btn=>{
+  cards.querySelectorAll('select[data-order-voc]').forEach(sel=>{
+    sel.addEventListener('change',()=>{
+      const voc=sel.dataset.orderVoc;
+      setDeliveryOrder(voc, sel.value);
+      saveConfig();
+      render(); showCombinationImpact(voc);
+    });
+  });
+  cards.querySelectorAll('select[data-sameday-voc]').forEach(sel=>{
+    sel.addEventListener('change',()=>{
+      const voc=sel.dataset.samedayVoc;
+      setEntregaMesmoDia(voc, sel.value);
+      saveConfig();
+      render(); showCombinationImpact(voc);
+    });
+  });
+  cards.querySelectorAll('button[data-action]' ).forEach(btn=>{
     btn.addEventListener('click',()=>{
       const voc=btn.dataset.voc;
       if(btn.dataset.action==='weekend-off') CONFIG.nonBusinessByVocativo[voc]=[0,6];
       if(btn.dataset.action==='clear'){
-        const oldPartner=getLinkedVocativo(voc);
+        const oldGroup=getGroupVocativos(voc);
         delete CONFIG.nonBusinessByVocativo[voc];
         delete CONFIG.fixedDeliveryByVocativo[voc];
-        delete CONFIG.linkedByVocativo[voc];
-        if(oldPartner){ delete CONFIG.linkedByVocativo[oldPartner]; markDirty(oldPartner); }
+        delete CONFIG.deliveryOrderByVocativo[voc];
+        CONFIG.sameDayDeliveryByVocativo[voc]='NÃO';
+        setLinkedVocativos(voc, []);
+        oldGroup.forEach(markDirty);
       }
       saveConfig(); markDirty(voc); render(); showCombinationImpact(voc);
       const el=document.querySelector(`[data-voc-card="${cssEsc(voc)}"]`); if(el) el.scrollIntoView({block:'nearest'});
     });
   });
 }
+
+document.addEventListener("click", (ev)=>{
+  if(ev.target.closest(".linkDropdown")) return;
+  document.querySelectorAll(".linkDropdown.open").forEach(box=>box.classList.remove("open"));
+});
+
 function exportCSV(){
   const rows=getFiltered(getAll());
-  const cols=[['cliente','Cliente'],['vocativo','Vocativo'],['ufOrigem','UF Origem'],['cidadeDestino','Cidade destino'],['ufDestino','UF Destino'],['prazoExwReal','Prazo EXW real'],['prazoFcaReal','Prazo FCA real'],['menorPrazo','Menor prazo'],['transitTime','Transit time'],['status','Status'],['cargas','Cargas semanais'],['ciclos','Ciclos carga entrega'],['entregaFixa','Entrega fixa'],['vinculo','Vinculado com'],['diasNaoUteis','Dias nao uteis vocativo'],['loadDays','Dias carga'],['deliveryDays','Dias entrega'],['worst','Pior prazo util'],['worstCalendar','Pior prazo corrido'],['worstReceiptDay','Dia recebimento critico'],['worstLoadDay','Dia carga do pior prazo'],['worstDeliveryDay','Dia entrega do pior prazo'],['folga','Folga']];
+  const cols=[['cliente','Cliente'],['vocativo','Vocativo'],['ufOrigem','UF Origem'],['cidadeDestino','Cidade destino'],['ufDestino','UF Destino'],['prazoExwReal','Prazo EXW real'],['prazoFcaReal','Prazo FCA real'],['menorPrazo','Menor prazo'],['transitTime','Transit time'],['status','Status'],['cargas','Cargas semanais'],['ciclos','Ciclos carga entrega'],['entregaFixa','Entrega fixa'],['vinculo','Vinculado com'],['ordemEntrega','Ordem entrega'],['entregaMesmoDia','Entrega mesmo dia'],['diasNaoUteis','Dias nao uteis vocativo'],['loadDays','Dias carga'],['deliveryDays','Dias entrega'],['worst','Pior prazo util'],['worstCalendar','Pior prazo corrido'],['worstReceiptDay','Dia recebimento critico'],['worstLoadDay','Dia carga do pior prazo'],['worstDeliveryDay','Dia entrega do pior prazo'],['folga','Folga']];
   const lines=[cols.map(c=>c[1]).join(';')];
-  rows.forEach(r=>{ lines.push(cols.map(([key])=>{ let v=r[key]; if(key==='ciclos') v=r.windowPairs.map(p=>`${p.load}->${p.delivery}`).join(' | '); if(key==='entregaFixa') v=getFixedDeliveryDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(key==='vinculo') v=getLinkedVocativo(r.vocativo); if(key==='diasNaoUteis') v=getNonBusinessDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(Array.isArray(v)) v=v.join(', '); return `"${String(v ?? '').replace(/"/g,'""')}"`; }).join(';')); });
+  rows.forEach(r=>{ lines.push(cols.map(([key])=>{ let v=r[key]; if(key==='ciclos') v=r.windowPairs.map(p=>`${p.load}->${p.delivery}`).join(' | '); if(key==='entregaFixa') v=getFixedDeliveryDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(key==='vinculo') v=getLinkedVocativos(r.vocativo).join(', '); if(key==='ordemEntrega') v=getDeliveryOrder(r.vocativo); if(key==='entregaMesmoDia') v=getEntregaMesmoDia(r.vocativo); if(key==='diasNaoUteis') v=getNonBusinessDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(Array.isArray(v)) v=v.join(', '); return `"${String(v ?? '').replace(/"/g,'""')}"`; }).join(';')); });
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='planejamento_janelas_vocativo.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
 function mapImportedRow(x){
@@ -1732,59 +1835,109 @@ function callBackendJsonp(params){
 }
 function loadViaJsonp(){ return callBackendJsonp({action:'dados'}); }
 function b64EncodeUnicode(str){
-  return btoa(unescape(encodeURIComponent(str)));
+  return btoa(unescape(encodeURIComponent(str)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
 }
 function getDirtyPayloadBatch(){
   const vocs=[...DIRTY_VOCATIVOS].filter(Boolean);
   const out=[];
   const seen=new Set();
+
+  // Antes de salvar, fecha novamente os grupos para garantir reciprocidade no payload.
+  normalizeLinks();
+
   vocs.forEach(v=>{
-    if(!v || seen.has(v)) return;
-    const cfg=getConfigForVocativo(v);
-    out.push(cfg); seen.add(v);
-    // Se houver vínculo, salva também o parceiro para manter vínculo recíproco na Página2.
-    if(cfg.vincularCom && !seen.has(cfg.vincularCom)){
-      out.push(getConfigForVocativo(cfg.vincularCom));
-      seen.add(cfg.vincularCom);
-    }
+    if(!v) return;
+    getGroupVocativos(v).forEach(g=>{
+      if(g && !seen.has(g)){
+        out.push(getConfigForVocativo(g));
+        seen.add(g);
+      }
+    });
   });
+
+  // Segurança extra: se um vocativo sujo apontar para outros, todos entram no payload,
+  // com VINCULAR_COM, ORDEM_ENTREGA e ENTREGA_MESMO_DIA.
+  out.forEach(cfg=>{
+    splitVocativoList(cfg.vincularComLista || cfg.vincularCom).forEach(v=>{
+      if(v && !seen.has(v)){
+        out.push(getConfigForVocativo(v));
+        seen.add(v);
+      }
+    });
+  });
+
   return out;
 }
+
+function chunkConfigsForSave(configs, maxChars){
+  const chunks=[];
+  let cur=[];
+  let curLen=0;
+  (configs || []).forEach(cfg=>{
+    const serialized=JSON.stringify(cfg || {});
+    const len=serialized.length;
+    if(cur.length && (curLen + len) > maxChars){
+      chunks.push(cur);
+      cur=[];
+      curLen=0;
+    }
+    cur.push(cfg);
+    curLen += len;
+  });
+  if(cur.length) chunks.push(cur);
+  return chunks;
+}
+
 async function saveDirtyConfigs(){
   if(!isUrlConfigured()){ setLoadStatus('Configure a URL do Apps Script antes de salvar.','err'); return; }
+  normalizeLinks();
   const configs=getDirtyPayloadBatch();
   if(!configs.length){ setLoadStatus('Não há alterações pendentes para salvar.','ok'); return; }
   const btn=$('btnSave');
   try{
     btn.disabled=true;
-    setLoadStatus(`Salvando ${configs.length} configuração(ões) na aba Página2...`,'loading');
-    const body={action:'salvar_configs', configs, frontendVersion:'salvamento-vinculo-v2'};
-    const payload=await callBackendJsonp({
-      action:'salvar_configs',
-      payloadB64: b64EncodeUnicode(JSON.stringify(body))
-    });
-    if(!payload || payload.ok===false) throw new Error(payload?.error || 'Erro ao salvar alterações.');
 
-    // Correção: algumas versões publicadas do Apps Script salvam corretamente,
-    // mas não retornam backendVersion === 'planejamento-vinculos-v3'.
-    // Isso não deve transformar um salvamento bem-sucedido em erro no front-end.
-    const written = Number(payload.written ?? payload.gravadas ?? payload.saved ?? 0);
-    const removed = Number(payload.removed ?? payload.removidas ?? 0);
-    const skipped = Number(payload.skipped ?? payload.ignoradas ?? 0);
-    const processedRaw = payload.processed ?? payload.processados ?? payload.totalProcessado;
-    const processed = Number.isFinite(Number(processedRaw))
-      ? Number(processedRaw)
-      : (written + removed + skipped || configs.length);
+    // JSONP usa GET; por isso salvamos em lotes menores para evitar URL grande demais.
+    // Quando a URL estoura, o Apps Script pode nem receber a requisição e nada é gravado.
+    const batches=chunkConfigsForSave(configs, 4200);
+    let totalWritten=0, totalRemoved=0, totalSkipped=0, totalProcessed=0;
+    let lastPayload=null;
+
+    for(let i=0;i<batches.length;i++){
+      const batch=batches[i];
+      setLoadStatus('Salvando lote '+(i+1)+'/'+batches.length+' na aba Página2 ('+batch.length+' configuração(ões))...','loading');
+      const body={
+        action:'salvar_configs',
+        configs:batch,
+        frontendVersion:'vinculos-multiplos-salvamento-cabecalhos-v4-chunked'
+      };
+      const payload=await callBackendJsonp({
+        action:'salvar_configs',
+        payloadB64: b64EncodeUnicode(JSON.stringify(body))
+      });
+      if(!payload || payload.ok===false) throw new Error((payload && payload.error) || 'Erro ao salvar alterações no lote '+(i+1)+'.');
+      lastPayload=payload;
+      const written = Number(payload.written ?? payload.gravadas ?? payload.saved ?? 0);
+      const removed = Number(payload.removed ?? payload.removidas ?? 0);
+      const skipped = Number(payload.skipped ?? payload.ignoradas ?? 0);
+      const processedRaw = payload.processed ?? payload.processados ?? payload.totalProcessado;
+      const processed = Number.isFinite(Number(processedRaw)) ? Number(processedRaw) : (written + removed + skipped || batch.length);
+      totalWritten += written;
+      totalRemoved += removed;
+      totalSkipped += skipped;
+      totalProcessed += processed;
+    }
 
     DIRTY_VOCATIVOS.clear();
-    if(payload.configs) applyBackendConfigs(payload.configs);
+    if(lastPayload && lastPayload.configs) applyBackendConfigs(lastPayload.configs);
     render();
     updateSaveButton();
 
-    const versionInfo = payload.backendVersion
-      ? ` Backend: ${payload.backendVersion}.`
-      : '';
-    setLoadStatus(`Alterações salvas na aba Página2. Processadas: ${processed}; gravadas: ${written}; removidas: ${removed}; ignoradas: ${skipped}.${versionInfo}`,'ok');
+    const versionInfo = lastPayload && lastPayload.backendVersion ? ' Backend: '+lastPayload.backendVersion+'.' : '';
+    setLoadStatus('Alterações salvas na aba Página2. Processadas: '+totalProcessed+'; gravadas: '+totalWritten+'; removidas: '+totalRemoved+'; ignoradas: '+totalSkipped+'.'+versionInfo,'ok');
   }catch(err){
     console.error(err);
     setLoadStatus('Erro ao salvar: '+err.message,'err');
@@ -1792,7 +1945,6 @@ async function saveDirtyConfigs(){
     updateSaveButton();
   }
 }
-
 async function loadBackendData(resetFilters=true){
   if(!isUrlConfigured()){
     setLoadStatus('Configure a constante APPS_SCRIPT_URL no HTML com a URL /exec do Apps Script.','err');
@@ -1823,7 +1975,7 @@ $('btnReload').addEventListener('click',()=>loadBackendData(true));
 $('btnReset').addEventListener('click',()=>{
   if(confirm('Limpar as configurações dos vocativos exibidos? Depois clique em Salvar alterações para gravar na aba Página2.')){
     const vocs=new Set([...BACKEND_CONFIG_VOCATIVOS, ...BASE_DATA.map(r=>r.vocativo).filter(Boolean)]);
-    CONFIG={nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, linkedByVocativo:{}};
+    CONFIG={nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}};
     vocs.forEach(v=>DIRTY_VOCATIVOS.add(v));
     saveConfig(); render(); updateSaveButton();
     setLoadStatus('Configurações limpas na tela. Clique em Salvar alterações para gravar a limpeza na aba Página2.','loading');
@@ -2404,13 +2556,40 @@ applyBackendConfigs = function(configs){
   saveConfig();
 };
 getConfigForVocativo = function(vocativo){
+  ensureConfigShape();
+  const linkedList = getLinkedVocativos(vocativo);
+  const diasNaoUteis = indexesToDayList(CONFIG.nonBusinessByVocativo[vocativo] || []);
+  const entregasFixas = indexesToDayList(CONFIG.fixedDeliveryByVocativo[vocativo] || []);
+  const ordemEntrega = getDeliveryOrder(vocativo);
+  const entregaMesmoDia = getEntregaMesmoDia(vocativo);
+  const maiorVeiculo = getVehicleRestriction(vocativo);
+  const restricaoCarroceria = getBodyRestriction(vocativo);
+
   return {
-    vocativo,
-    diasNaoUteis: indexesToDayList(CONFIG.nonBusinessByVocativo[vocativo] || []),
-    entregasFixas: indexesToDayList(CONFIG.fixedDeliveryByVocativo[vocativo] || []),
-    vincularCom: getLinkedVocativo(vocativo),
-    maiorVeiculoPermitido: getVehicleRestriction(vocativo),
-    restricaoCarroceria: getBodyRestriction(vocativo)
+    vocativo: vocativo,
+    VOCATIVO: vocativo,
+
+    diasNaoUteis: diasNaoUteis,
+    DIAS_NAO_UTEIS: diasNaoUteis,
+
+    entregasFixas: entregasFixas,
+    ENTREGAS_FIXAS: entregasFixas,
+
+    vincularCom: linkedList.join(','),
+    vincularComLista: linkedList,
+    VINCULAR_COM: linkedList.join(','),
+
+    ordemEntrega: ordemEntrega,
+    ORDEM_ENTREGA: ordemEntrega === '' ? '' : String(ordemEntrega),
+
+    entregaMesmoDia: entregaMesmoDia,
+    ENTREGA_MESMO_DIA: entregaMesmoDia,
+
+    maiorVeiculoPermitido: maiorVeiculo,
+    MAIOR_VEICULO_PERMITIDO: maiorVeiculo,
+
+    restricaoCarroceria: restricaoCarroceria,
+    RESTRICAO_CARROCERIA: restricaoCarroceria
   };
 };
 function injectRestrictionControls(){
