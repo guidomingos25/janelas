@@ -318,6 +318,50 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 .restrictionPill.bad{background:#fff1f2;border-color:#fecaca;color:#991b1b}
 .configSelect{min-height:29px;border-radius:8px;font-size:11px;padding:5px 7px;width:100%}
 .restrictionConfigBlock{background:#f9fafb;border-right:1px solid var(--line2);border-top:1px solid var(--line2);padding:9px 10px;min-width:0}
+
+
+/* ===== Painel de Janelas - visual simples e limpo ===== */
+#pageJanelasSimples .simpleHero{padding:14px 16px;border-top:3px solid var(--brand);box-shadow:none}
+#pageJanelasSimples .simpleHero p{max-width:920px}
+#pageJanelasSimples .simpleWeekGroup{box-shadow:none;border-color:#e5e7eb;background:#fff;margin-top:10px}
+#pageJanelasSimples .simpleWeekHead{background:#fff;color:#111827;border-left:4px solid var(--brand);border-bottom:1px solid var(--line2);padding:10px 13px}
+#pageJanelasSimples .simpleWeekCount{background:#f8fafc;color:#4b5563;border-color:#e5e7eb}
+#pageJanelasSimples .simpleCardGrid{gap:7px;padding:8px;background:#f8fafc}
+#pageJanelasSimples .simpleWindowCard{display:grid;grid-template-columns:minmax(280px,1.25fr) 120px minmax(260px,1fr) minmax(340px,1.35fr);align-items:stretch;min-height:64px;border:1px solid #e5e7eb;border-radius:11px;box-shadow:none;background:#fff;overflow:hidden}
+#pageJanelasSimples .simpleWindowCard:before{display:none}
+#pageJanelasSimples .simpleCell{padding:9px 11px;border-right:1px solid var(--line2);min-width:0;background:#fff;display:flex;flex-direction:column;justify-content:center}
+#pageJanelasSimples .simpleCell:last-child{border-right:0}
+#pageJanelasSimples .simpleCellLabel{font-size:8.5px;text-transform:uppercase;letter-spacing:.055em;font-weight:950;color:#6b7280;margin-bottom:3px;white-space:nowrap}
+#pageJanelasSimples .simpleCellValue{font-size:12px;font-weight:900;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pageJanelasSimples .simpleCellSub{font-size:10px;color:#6b7280;line-height:1.28;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pageJanelasSimples .simpleWindowTitle{font-size:12.5px;font-weight:950;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pageJanelasSimples .simpleWindowSub{font-size:10px;color:#6b7280;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pageJanelasSimples .simpleZoneBadge{width:max-content;background:#f8fafc;color:#4b5563;border-color:#e5e7eb;margin-top:5px;padding:3px 6px;font-size:8px}
+#pageJanelasSimples .simpleZoneBadge.isZone{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
+#pageJanelasSimples .simpleVocList{display:flex;flex-direction:column;gap:4px;max-height:104px;overflow:auto;padding-right:2px}
+#pageJanelasSimples .simpleVocLine{display:grid;grid-template-columns:minmax(120px,.85fr) minmax(0,1.15fr);gap:7px;align-items:center;border-bottom:1px dashed #eef1f5;padding-bottom:4px}
+#pageJanelasSimples .simpleVocLine:last-child{border-bottom:0;padding-bottom:0}
+#pageJanelasSimples .simpleVocLineName{font-size:10.5px;font-weight:950;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#pageJanelasSimples .simpleVocLineInfo{font-size:9.5px;font-weight:800;color:#4b5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;gap:8px;flex-wrap:wrap}
+#pageJanelasSimples .simpleVocLineInfo b{color:#9a3412;font-weight:950}
+@media(max-width:1220px){#pageJanelasSimples .simpleWindowCard{grid-template-columns:minmax(240px,1.2fr) 100px minmax(210px,1fr)}#pageJanelasSimples .simpleWindowCard .simpleCell.simpleRestrictionsCell{grid-column:1/-1;border-top:1px solid var(--line2)}}
+@media(max-width:760px){#pageJanelasSimples .simpleWindowCard{display:block}#pageJanelasSimples .simpleCell{border-right:0;border-bottom:1px solid var(--line2)}#pageJanelasSimples .simpleCell:last-child{border-bottom:0}#pageJanelasSimples .simpleVocLine{grid-template-columns:1fr}}
+
+
+
+/* ===== Painel de Janelas - padronização limpa das restrições ===== */
+#pageJanelasSimples .restrictionLine{display:none!important}
+#pageJanelasSimples .simpleWindowCard{grid-template-columns:minmax(300px,1.18fr) 120px minmax(240px,.95fr) minmax(520px,1.65fr)}
+#pageJanelasSimples .simpleVocList{max-height:132px;gap:0}
+#pageJanelasSimples .simpleVocLine{grid-template-columns:minmax(170px,.78fr) minmax(0,1.7fr);gap:10px;padding:6px 0;border-bottom:1px solid #eef1f5}
+#pageJanelasSimples .simpleVocLineInfo{font-size:9.5px;color:#374151;font-weight:800;gap:6px 12px;white-space:normal;line-height:1.35}
+#pageJanelasSimples .simpleVocLineInfo b{color:#374151}
+#pageJanelasSimples .simpleInfoItem{display:inline-flex;align-items:baseline;gap:4px;color:#111827;white-space:nowrap}
+#pageJanelasSimples .simpleInfoItem em{font-style:normal;color:#6b7280;font-weight:900;text-transform:uppercase;letter-spacing:.035em;font-size:8px}
+#pageJanelasSimples .simpleZoneBadge.isZone,#pageJanelasSimples .simpleZoneBadge{background:#f8fafc;color:#4b5563;border-color:#e5e7eb}
+@media(max-width:1220px){#pageJanelasSimples .simpleWindowCard{grid-template-columns:minmax(240px,1.2fr) 100px minmax(210px,1fr)}#pageJanelasSimples .simpleVocLine{grid-template-columns:minmax(160px,.75fr) minmax(0,1.7fr)}}
+@media(max-width:760px){#pageJanelasSimples .simpleVocLine{grid-template-columns:1fr}.simpleInfoItem{white-space:normal}}
+
 </style>
 </head>
 <body>
@@ -1619,14 +1663,9 @@ function enrich(r){
 }
 function getAll(){ return BASE_DATA.map(enrich); }
 function getLoadDaysForChartAndFilter(row){
-  // Para o gráfico/filtro de dias de carga, quando o usuário força entrega fixa,
-  // a contagem deve refletir o dia de carregamento calculado a partir dessa entrega fixa.
-  // Isso mantém o gráfico sincronizado mesmo quando o card está em vínculo ou quando o prazo fica impossível.
-  const fixed = getFixedDeliveryDays(row.vocativo);
-  if(fixed.length){
-    const pairs = getFixedDeliveryPairs(row, row.transitTime);
-    return [...new Set(pairs.map(p=>p.load).filter(Boolean))];
-  }
+  // O gráfico/filtro "Dia de carga" deve contar sempre os dias reais de CARREGAMENTO
+  // recomendados no planejamento do vocativo, e não os dias de entrega fixa.
+  // Assim, o gráfico "Carregamentos por dia da semana" permanece alinhado com o card.
   return [...new Set((row.loadDays || []).filter(Boolean))];
 }
 function getFiltered(all, options={}){
@@ -2144,23 +2183,20 @@ function jsItemsForGroupAndDay(g, day){
     .filter(p=>p.load===day)
     .map(p=>({vocativo:r.vocativo, cliente:r.cliente, cidade:r.cidadeDestino, uf:r.ufDestino, status:r.status, ...p})));
 }
-function jsRenderVocDetail(vocativo, extraHtml){
-  const order=getDeliveryOrder(vocativo) || '—';
-  const sameDay=getEntregaMesmoDia(vocativo);
+function jsRenderVocDetail(vocativo, extraHtml, showRestrictions){
   const vehicle=(typeof getVehicleRestriction==='function' ? getVehicleRestriction(vocativo) : (typeof getMaxVehicleRestriction==='function' ? getMaxVehicleRestriction(vocativo) : 'SEM RESTRIÇÃO'));
   const body=(typeof getBodyRestriction==='function' ? getBodyRestriction(vocativo) : 'SEM RESTRIÇÃO');
-  const sameClass=sameDay==='SIM' ? 'good' : '';
-  return '<div class="simpleVocDetail">'
-    + '<div class="simpleVocDetailTop"><div class="simpleVocName">'+escapeHtml(vocativo)+'</div><div class="simpleVocOrder">'+escapeHtml(String(order))+'ª entrega</div></div>'
-    + '<div class="simpleVocPills">'
-    + '<span class="simpleVocPill good">Maior veículo: '+escapeHtml(vehicle || 'SEM RESTRIÇÃO')+'</span>'
-    + '<span class="simpleVocPill warn">Carroceria: '+escapeHtml(body || 'SEM RESTRIÇÃO')+'</span>'
-    + '<span class="simpleVocPill '+sameClass+'">Mesmo dia: '+escapeHtml(sameDay)+'</span>'
-    + (extraHtml || '')
-    + '</div></div>';
+  const deliveryText = extraHtml || '';
+  const restrictionText = showRestrictions
+    ? '<span class="simpleInfoItem"><em>Maior veículo</em> '+escapeHtml(vehicle || 'SEM RESTRIÇÃO')+'</span><span class="simpleInfoItem"><em>Carroceria</em> '+escapeHtml(body || 'SEM RESTRIÇÃO')+'</span>'
+    : '';
+  return '<div class="simpleVocLine">'
+    + '<div class="simpleVocLineName">'+escapeHtml(vocativo)+'</div>'
+    + '<div class="simpleVocLineInfo">'+deliveryText+restrictionText+'</div>'
+    + '</div>';
 }
 function jsRenderGroupCard(g, day, items){
-  // Painel de Janelas: a zona só deve aparecer consolidada quando a janela do dia
+  // Painel de Janelas: a zona só aparece consolidada quando a janela do dia
   // realmente tiver mais de um vocativo do grupo vinculado. Se apenas um vocativo
   // tiver carregamento naquele dia, o card permanece individual.
   const activeVocativos=unique(items.map(it=>it.vocativo));
@@ -2168,29 +2204,38 @@ function jsRenderGroupCard(g, day, items){
   const activeClientes=unique(items.map(it=>it.cliente));
   const activeUfs=unique(items.map(it=>it.uf));
   const activeCidades=unique(items.map(it=>it.cidade));
-  const activeLabel=isConsolidatedWindow ? 'Zona de consolidação: ' + activeVocativos.join(' + ') : (activeVocativos[0] || g.label);
-  const badge=isConsolidatedWindow ? '<span class="simpleZoneBadge">Zona consolidada</span>' : '<span class="simpleZoneBadge">Vocativo</span>';
+  const activeLabel=isConsolidatedWindow ? 'Zona consolidada' : (activeVocativos[0] || g.label);
+  const badge=isConsolidatedWindow ? '<span class="simpleZoneBadge isZone">Zona consolidada</span>' : '<span class="simpleZoneBadge">Vocativo</span>';
   const deliveryDays=unique(items.map(it=>it.delivery)).join(' / ') || '—';
-  const deliveries=items.map(it=>{
-    const vehicle=(typeof getVehicleRestriction==='function' ? getVehicleRestriction(it.vocativo) : (typeof getMaxVehicleRestriction==='function' ? getMaxVehicleRestriction(it.vocativo) : 'SEM RESTRIÇÃO'));
-    const body=(typeof getBodyRestriction==='function' ? getBodyRestriction(it.vocativo) : 'SEM RESTRIÇÃO');
-    const order=getDeliveryOrder(it.vocativo) || '—';
-    const sameDay=getEntregaMesmoDia(it.vocativo);
-    return '<div class="simpleDeliveryItem"><span>'+escapeHtml(it.vocativo)+' → '+escapeHtml(it.delivery)+'</span><small>'+fmt(it.travelElapsed)+'d'+(it.linkedAdjusted?' • ajustado':'')+'</small></div>';
-  }).join('');
-  const status=items.some(it=>it.status==='impossivel')?'impossivel':(items.some(it=>it.status==='critico')?'critico':'atende');
-  const statusLabel=status==='impossivel'?'Impossível':(status==='critico'?'Crítico':'Atende');
+  const leadTimes=unique(items.map(it=>fmt(it.travelElapsed)+'d'+(it.linkedAdjusted?' ajust.':''))).join(' / ') || '—';
+  const destination=(activeCidades.join(', ') || 'Sem cidade')+'/'+(activeUfs.join(', ') || 'UF');
   const details=activeVocativos.map(v=>{
     const perVoc=items.filter(it=>it.vocativo===v);
     const entregas=unique(perVoc.map(it=>it.delivery)).join(' / ') || '—';
-    const extra='<span class="simpleVocPill">Entrega: '+escapeHtml(entregas)+'</span>';
-    return jsRenderVocDetail(v, extra);
+    const extra='<span class="simpleInfoItem"><em>Entrega</em> '+escapeHtml(entregas)+'</span>';
+    return jsRenderVocDetail(v, extra, true);
   }).join('');
   return '<article class="simpleWindowCard">'
-    + '<div class="simpleWindowTop"><div><div class="simpleWindowTitle">'+escapeHtml(activeLabel)+'</div><div class="simpleWindowSub">'+escapeHtml(activeClientes.join(', ') || 'Sem cliente')+' • '+escapeHtml(activeCidades.join(', ') || 'Sem cidade')+'/'+escapeHtml(activeUfs.join(', ') || 'UF')+'</div></div>'+badge+'</div>'
-    + '<div class="simpleTimeline"><div class="simpleFlow"><div class="simpleBox load"><span>Carregamento</span><b>'+escapeHtml(day)+'</b></div><div class="simpleArrow">→</div><div class="simpleBox delivery"><span>Entrega desta carga</span><b>'+escapeHtml(deliveryDays)+'</b><div class="simpleDeliveryList">'+deliveries+'</div></div></div></div>'
-    + '<div class="simpleMeta"><div class="metric"><span>Voc.</span><b>'+activeVocativos.length+'</b></div><div class="metric"><span>Cliente</span><b>'+escapeHtml(activeClientes.join(', ') || '—')+'</b></div><div class="metric"><span>Destino</span><b>'+escapeHtml(activeCidades.join(', ') || '—')+'/'+escapeHtml(activeUfs.join(', ') || '—')+'</b></div><div class="metric"><span>Status</span><b>'+statusLabel+'</b></div></div>'
-    + '<div class="simpleVocDetails">'+details+'</div>'
+    + '<div class="simpleCell">'
+      + '<div class="simpleCellLabel">Janela</div>'
+      + '<div class="simpleWindowTitle">'+escapeHtml(activeLabel)+'</div>'
+      + '<div class="simpleWindowSub">'+escapeHtml(activeClientes.join(', ') || 'Sem cliente')+' • '+escapeHtml(destination)+'</div>'
+      + badge
+    + '</div>'
+    + '<div class="simpleCell">'
+      + '<div class="simpleCellLabel">Carga</div>'
+      + '<div class="simpleCellValue">'+escapeHtml(day)+'</div>'
+      + '<div class="simpleCellSub">Dia de carregamento</div>'
+    + '</div>'
+    + '<div class="simpleCell">'
+      + '<div class="simpleCellLabel">Entrega</div>'
+      + '<div class="simpleCellValue">'+escapeHtml(deliveryDays)+'</div>'
+      + '<div class="simpleCellSub">Prazo: '+escapeHtml(leadTimes)+'</div>'
+    + '</div>'
+    + '<div class="simpleCell simpleRestrictionsCell">'
+      + '<div class="simpleCellLabel">'+(isConsolidatedWindow ? 'Vocativos e restrições' : 'Vocativo e restrições')+'</div>'
+      + '<div class="simpleVocList">'+details+'</div>'
+    + '</div>'
     + '</article>';
 }
 function renderSimpleWindows(){
@@ -2806,11 +2851,9 @@ renderAux = function(){
     if(sub && item && !sub.parentElement.querySelector('.restrictionLine')) sub.insertAdjacentHTML('afterend', renderRestrictionPills(item.groupVocativos || []));
   });
 };
-const _jsRenderGroupCardBase = jsRenderGroupCard;
-jsRenderGroupCard = function(g, day, items){
-  const html=_jsRenderGroupCardBase(g, day, items);
-  return html.replace('</div>'+ (g.isLinked ? '<span class="simpleZoneBadge">Zona consolidada</span>' : '<span class="simpleZoneBadge">Vocativo</span>') +'</div>', renderRestrictionPills(g.vocativos)+'</div>'+ (g.isLinked ? '<span class="simpleZoneBadge">Zona consolidada</span>' : '<span class="simpleZoneBadge">Vocativo</span>') +'</div>');
-};
+// Painel de Janelas: não injeta badges coloridos de restrição no cabeçalho.
+// As informações de Maior veículo e Carroceria são exibidas de forma padronizada
+// dentro da coluna "Vocativo e restrições" para todos os vocativos.
 auxExportCSV = function(){
   if(!AUX_RESULT.length){ auxSetStatus('Não há dados para exportar nos filtros atuais.','err'); return; }
   const header=['Filial Emissora VF','Cliente','Vocativo / Consolidacao','Vocativos considerados','Vocativos carregados na janela','Vocativos elegiveis na janela','Mes','Data do carregamento','Periodo das NFs','Notas','Peso somado','Veiculo necessario','Capacidade real do veiculo','Limite '+auxGetLimitPercent()+'%','Ocupacao real','Dias de carga','Maior veiculo permitido','Restricao carroceria','Limitado por restricao'];
