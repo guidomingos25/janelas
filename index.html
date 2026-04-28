@@ -192,20 +192,25 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 .linkConfigRow{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .linkConfigMiniLabel{font-size:9px;font-weight:900;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
 .linkConfigHint{font-size:9.5px;color:#6b7280;line-height:1.25;margin-top:4px}
-.linkDropdown{position:relative;width:100%}
-.linkDropdownBtn{width:100%;min-height:30px;background:#fff!important;color:#374151!important;border:1px solid var(--line)!important;border-radius:8px!important;box-shadow:none!important;padding:6px 8px!important;font-size:10.5px!important;font-weight:900!important;display:flex;align-items:center;justify-content:space-between;gap:7px;text-align:left;white-space:nowrap;overflow:hidden;transform:none!important;filter:none!important}
+.linkDropdown{position:relative;width:min(360px,100%);max-width:100%}
+.linkDropdownBtn{width:100%;max-width:100%;min-height:30px;background:#fff!important;color:#374151!important;border:1px solid var(--line)!important;border-radius:8px!important;box-shadow:none!important;padding:6px 8px!important;font-size:10.5px!important;font-weight:900!important;display:flex;align-items:center;justify-content:space-between;gap:7px;text-align:left;white-space:nowrap;overflow:hidden;transform:none!important;filter:none!important}
 .linkDropdownBtn:hover{border-color:var(--brand)!important;background:#fff7ed!important;transform:none!important;filter:none!important}
 .linkDropdown.open .linkDropdownBtn{border-color:var(--brand)!important;box-shadow:0 0 0 3px rgba(240,90,0,.12)!important}
 .linkDropdownText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .linkDropdownCaret{font-size:9px;color:#6b7280;flex:0 0 auto}
-.linkDropdownMenu{display:none;position:absolute;z-index:120;left:0;right:0;top:calc(100% + 5px);background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 34px rgba(17,24,39,.22);padding:8px;min-width:260px;max-height:270px;overflow:auto}
+.linkDropdownMenu{display:none;position:absolute;z-index:120;left:0;right:auto;top:calc(100% + 5px);background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 34px rgba(17,24,39,.22);padding:8px;width:min(360px,calc(100vw - 36px));min-width:0;max-width:calc(100vw - 36px);max-height:310px;overflow:hidden}
+.linkDropdownSearch{width:100%;min-height:30px!important;border-radius:8px!important;font-size:11px!important;padding:6px 8px!important;margin-bottom:7px!important}
+.linkDropdownOptions{max-height:238px;overflow-y:scroll;overflow-x:hidden;padding-right:4px;scrollbar-width:thin}
+.linkDropdownOptions::-webkit-scrollbar{width:9px}
+.linkDropdownOptions::-webkit-scrollbar-track{background:#f1f5f9;border-radius:999px}
+.linkDropdownOptions::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px;border:2px solid #f1f5f9}
 .linkDropdown.open .linkDropdownMenu{display:block}
 .linkDropdownOption{display:flex;align-items:center;gap:7px;padding:7px 6px;border-radius:8px;cursor:pointer;font-size:10.5px;color:#374151;font-weight:800;line-height:1.2}
 .linkDropdownOption:hover{background:#fff7ed}
 .linkDropdownOption input{width:14px;height:14px;margin:0;accent-color:var(--brand);flex:0 0 auto}
 .linkDropdownOption.isNone{border-bottom:1px solid var(--line2);margin-bottom:5px;padding-bottom:8px;color:#9a3412;font-weight:950}
-.linkDropdownOptionText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(max-width:760px){.linkDropdownMenu{position:fixed;left:14px;right:14px;top:auto;bottom:18px;max-height:52vh}}
+.linkDropdownOptionText{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;max-width:100%}
+@media(max-width:760px){.linkDropdownMenu{position:fixed;left:14px;right:14px;top:auto;bottom:18px;max-height:58vh}.linkDropdownOptions{max-height:42vh}}
 .linkOrderSelect,.linkSameDaySelect{min-height:28px;border-radius:8px;font-size:11px;padding:5px 7px;width:100%}
 .linkBadge{display:inline-block;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900}
 @media(max-width:760px){
@@ -270,9 +275,9 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 .simpleWeekTitle{font-size:15px;font-weight:950;letter-spacing:-.01em}
 .simpleWeekCount{font-size:11px;font-weight:900;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.12);border-radius:999px;padding:5px 8px;white-space:nowrap}
 .simpleCardGrid{display:grid;grid-template-columns:1fr;gap:6px;padding:8px;background:#f8fafc}
-.simpleWindowCard{background:#fff;border:1px solid var(--line);border-radius:11px;box-shadow:0 1px 5px rgba(17,24,39,.035);overflow:hidden;position:relative;display:grid;grid-template-columns:minmax(260px,1.25fr) 116px 26px minmax(260px,1.15fr) minmax(240px,.95fr);align-items:stretch;min-height:58px}
+.simpleWindowCard{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 5px rgba(17,24,39,.035);overflow:hidden;position:relative;display:grid;grid-template-columns:minmax(280px,1.18fr) 112px 24px minmax(260px,1.05fr) minmax(300px,1fr);align-items:stretch;min-height:58px}
 .simpleWindowCard:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand)}
-.simpleWindowTop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 10px 7px 14px;border-right:1px solid var(--line2);background:linear-gradient(180deg,#fff,#fafafa);min-width:0}
+.simpleWindowTop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 10px 8px 14px;border-right:1px solid var(--line2);background:linear-gradient(180deg,#fff,#fafafa);min-width:0}
 .simpleWindowTitle{font-size:12.5px;font-weight:950;color:var(--dark2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
 .simpleWindowSub{margin-top:1px;font-size:9.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .simpleZoneBadge{display:inline-flex;align-items:center;gap:4px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:999px;padding:3px 6px;font-size:8.5px;font-weight:950;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap}
@@ -284,17 +289,26 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 .simpleBox span{display:block;font-size:8.5px;text-transform:uppercase;letter-spacing:.045em;font-weight:950;color:#6b7280;white-space:nowrap}
 .simpleBox b{display:block;margin-top:1px;font-size:13px;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .simpleArrow{display:flex;align-items:center;justify-content:center;color:var(--brand);font-weight:950;font-size:14px;border-right:1px solid var(--line2);background:#fff}
-.simpleDeliveryList{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center}
+.simpleDeliveryList{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap;align-items:center;max-height:42px;overflow:auto;padding-right:2px}
 .simpleDeliveryItem{display:inline-flex;align-items:center;justify-content:space-between;gap:5px;border-radius:999px;background:#fff;padding:3px 6px;border:1px solid #dcfce7;font-size:9.5px;color:#166534;font-weight:850;max-width:100%}
 .simpleDeliveryItem span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .simpleDeliveryItem small{color:#64748b;font-weight:800;white-space:nowrap}
+.simpleVocDetails{grid-column:1/-1;display:grid;grid-template-columns:1fr;gap:4px;padding:7px 9px 8px 14px;background:#fff;border-top:1px solid var(--line2)}
+.simpleVocDetail{display:grid;grid-template-columns:minmax(180px,.95fr) minmax(0,2.3fr);gap:8px;align-items:center;border:1px solid var(--line2);border-left:3px solid #fed7aa;border-radius:9px;background:#f8fafc;padding:6px 8px;min-width:0}
+.simpleVocDetailTop{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:0;min-width:0}
+.simpleVocName{font-size:10.5px;font-weight:950;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.simpleVocOrder{font-size:8.5px;font-weight:950;color:#9a3412;background:#fff7ed;border:1px solid #fed7aa;border-radius:999px;padding:2px 5px;white-space:nowrap}
+.simpleVocPills{display:flex;gap:4px;flex-wrap:wrap;align-items:center;min-width:0}
+.simpleVocPill{display:inline-flex;align-items:center;gap:3px;border:1px solid #e5e7eb;background:#fff;color:#374151;border-radius:999px;padding:3px 6px;font-size:9px;font-weight:900;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.simpleVocPill.warn{background:#fff7ed;border-color:#fed7aa;color:#9a3412}
+.simpleVocPill.good{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
 .simpleMeta{display:grid;grid-template-columns:.5fr .9fr .9fr .6fr;gap:0;background:#fff;min-width:0}
 .simpleMeta .metric{padding:7px 8px;background:#fff;border-right:1px solid var(--line2);border-bottom:0}
 .simpleMeta .metric:last-child{border-right:0}
 .simpleMeta .metric span{font-size:8px}
 .simpleMeta .metric b{font-size:11.5px;overflow:hidden;text-overflow:ellipsis}
 .simpleEmptyDay{padding:10px;color:var(--muted);font-size:12px;background:#fff}
-@media(max-width:1220px){.simpleFilters{grid-template-columns:repeat(2,1fr)}.simpleWindowCard{grid-template-columns:minmax(220px,1.2fr) 96px 22px minmax(210px,1fr)}.simpleMeta{grid-column:1/-1;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line2)}}
+@media(max-width:1220px){.simpleFilters{grid-template-columns:repeat(2,1fr)}.simpleWindowCard{grid-template-columns:minmax(220px,1.2fr) 96px 22px minmax(210px,1fr)}.simpleMeta{grid-column:1/-1;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line2)}.simpleVocDetail{grid-template-columns:1fr}}
 @media(max-width:760px){.simpleFilters{grid-template-columns:1fr}.simpleWindowCard{display:block}.simpleWindowTop,.simpleBox,.simpleArrow{border-right:0;border-bottom:1px solid var(--line2)}.simpleArrow{height:18px}.simpleMeta{grid-template-columns:1fr 1fr}}
 
 
@@ -319,7 +333,7 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
     </div>
   </div>
 </header>
-<div class="pageNav"><button id="tabPlanejamento" class="active" type="button">Planejamento de janelas</button><button id="tabJanelasSimples" type="button">Janelas simples</button><button id="tabAuxVeiculos" type="button">Peso x veículos</button></div>
+<div class="pageNav"><button id="tabPlanejamento" class="active" type="button">Planejamento de janelas</button><button id="tabJanelasSimples" type="button">Painel de Janelas</button><button id="tabAuxVeiculos" type="button">Peso x veículos</button></div>
 <main>
   <div id="pagePlanejamento" class="appPage active">
   <section class="card toolbar">
@@ -397,8 +411,8 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 
   <section id="pageJanelasSimples" class="appPage">
     <section class="card simpleHero">
-      <h2>Visualização simples de janelas</h2>
-      <p>Cards separados por dia da semana de carregamento. Quando houver vocativos vinculados, o card é consolidado como zona de consolidação e mostra as entregas separadas conforme a ordem configurada.</p>
+      <h2>Painel de Janelas</h2>
+      <p>Visão operacional das janelas por dia de carregamento, com zona de entrega consolidada e particularidades de cada vocativo organizadas no mesmo card.</p>
       <div class="simpleFilters">
         <div><label>Dia da semana</label><select id="jsDia" multiple><option value="DOM">DOM</option><option value="SEG">SEG</option><option value="TER">TER</option><option value="QUA">QUA</option><option value="QUI">QUI</option><option value="SEX">SEX</option><option value="SAB">SAB</option></select><div class="filterHint">Vazio = todos</div></div>
         <div><label>Cliente</label><select id="jsCliente" multiple></select><div class="filterHint">Vazio = todos</div></div>
@@ -623,6 +637,17 @@ function setLinkedVocativos(vocativo, partners){
 
   const finalGroups = [getGroupVocativos(vocativo)];
   remainingPreviousGroup.forEach(v=>finalGroups.push(getGroupVocativos(v)));
+
+  // Quando um vocativo fica sem vínculo, a ordem não deve permanecer como 1ª, 2ª etc.
+  // Sem grupo consolidado, o campo Ordem volta automaticamente para Auto.
+  affected.forEach(v=>{
+    if(!v) return;
+    const groupNow = getGroupVocativos(v);
+    if(groupNow.length < 2){
+      delete CONFIG.deliveryOrderByVocativo[v];
+    }
+  });
+
   finalGroups.forEach(g=>ensureDeliveryOrdersForGroup(g));
 
   affected.forEach(v=>{
@@ -638,21 +663,43 @@ function markGroupDirty(vocativo){
 function ensureDeliveryOrdersForGroup(group){
   const list=unique((group || []).filter(Boolean));
   if(list.length < 2) return;
-  const used=new Set();
-  list.forEach(v=>{
-    const n=Number(CONFIG.deliveryOrderByVocativo[v]);
-    if(Number.isFinite(n) && n>0 && !used.has(Math.floor(n))) used.add(Math.floor(n));
+  const ordered=[...list].sort((a,b)=>{
+    const oa=Number(CONFIG.deliveryOrderByVocativo[a] || 9999);
+    const ob=Number(CONFIG.deliveryOrderByVocativo[b] || 9999);
+    if(oa!==ob) return oa-ob;
+    return String(a).localeCompare(String(b),'pt-BR');
   });
-  let next=1;
-  list.forEach(v=>{
-    const n=Number(CONFIG.deliveryOrderByVocativo[v]);
-    if(Number.isFinite(n) && n>0) return;
-    while(used.has(next)) next++;
-    CONFIG.deliveryOrderByVocativo[v]=next;
-    used.add(next);
-  });
-  list.forEach(v=>{
+  ordered.forEach((v,idx)=>{
+    CONFIG.deliveryOrderByVocativo[v]=idx+1;
     CONFIG.sameDayDeliveryByVocativo[v]=normalizeYesNoFront(CONFIG.sameDayDeliveryByVocativo[v] || 'NÃO');
+  });
+}
+function reorderDeliveryOrderInGroup(vocativo, targetOrder){
+  ensureConfigShape();
+  const group=getGroupVocativos(vocativo).filter(Boolean);
+  const n=Number(targetOrder);
+  if(group.length < 2){
+    if(Number.isFinite(n) && n>0) CONFIG.deliveryOrderByVocativo[vocativo]=Math.floor(n);
+    else delete CONFIG.deliveryOrderByVocativo[vocativo];
+    return;
+  }
+  const ordered=[...group].sort((a,b)=>{
+    const oa=Number(CONFIG.deliveryOrderByVocativo[a] || 9999);
+    const ob=Number(CONFIG.deliveryOrderByVocativo[b] || 9999);
+    if(oa!==ob) return oa-ob;
+    return String(a).localeCompare(String(b),'pt-BR');
+  });
+  const without=ordered.filter(v=>v!==vocativo);
+  if(Number.isFinite(n) && n>0){
+    const idx=Math.max(0, Math.min(without.length, Math.floor(n)-1));
+    without.splice(idx,0,vocativo);
+  }else{
+    without.push(vocativo);
+  }
+  without.forEach((v,idx)=>{
+    CONFIG.deliveryOrderByVocativo[v]=idx+1;
+    CONFIG.sameDayDeliveryByVocativo[v]=normalizeYesNoFront(CONFIG.sameDayDeliveryByVocativo[v] || 'NÃO');
+    DIRTY_VOCATIVOS.add(v);
   });
 }
 function getLinkedVocativos(vocativo){
@@ -679,9 +726,7 @@ function getDeliveryOrder(vocativo){
 }
 function setDeliveryOrder(vocativo, value){
   ensureConfigShape();
-  const n=Number(value);
-  if(Number.isFinite(n) && n>0) CONFIG.deliveryOrderByVocativo[vocativo]=Math.floor(n);
-  else delete CONFIG.deliveryOrderByVocativo[vocativo];
+  reorderDeliveryOrderInGroup(vocativo, value);
   markGroupDirty(vocativo);
 }
 function getEntregaMesmoDia(vocativo){
@@ -1195,49 +1240,66 @@ function resolveDeliveryFromLoad(row, loadDay, transit, allowedDays){
 }
 function fixedDeliveryCheck(row, transit, combo, options={}){
   const fixed = getFixedDeliveryDays(row.vocativo);
-  if(!fixed.length) return {ok:true, fixed:[]};
+  if(!fixed.length) return {ok:true, fixed:[], usedFixed:[]};
 
   const allowExtraLoads = !!options.allowExtraLoads;
+  const flexibleFixed = fixed.length > 1;
 
-  // Regra normal: cada dia fixo de entrega exige sua própria janela de carga.
-  // Regra em vínculo: o grupo pode precisar de mais janelas para atender outro vocativo;
-  // nesse caso este vocativo precisa conter as suas janelas fixas dentro do combo comum.
-  if(!allowExtraLoads && combo.length !== fixed.length){
-    return {
-      ok:false,
-      fixed,
-      reason:`Entrega fixa exige ${fixed.length} janela(s) de carregamento para ${fixed.map(i=>DAYS[i]).join(', ')}`
-    };
-  }
-  if(allowExtraLoads && combo.length < fixed.length){
-    return {
-      ok:false,
-      fixed,
-      reason:`O vínculo precisa de pelo menos ${fixed.length} janela(s) para atender as entregas fixas de ${row.vocativo}`
-    };
+  // Quando existe apenas 1 entrega fixa, mantém a lógica rígida anterior.
+  // Quando existem 2+ entregas fixas, elas passam a ser dias permitidos de entrega:
+  // a aplicação pode usar uma quantidade menor de carregamentos, desde que o prazo seja atendido.
+  if(!flexibleFixed){
+    if(!allowExtraLoads && combo.length !== fixed.length){
+      return {
+        ok:false,
+        fixed,
+        usedFixed:[],
+        reason:`Entrega fixa exige ${fixed.length} janela(s) de carregamento para ${fixed.map(i=>DAYS[i]).join(', ')}`
+      };
+    }
+    if(allowExtraLoads && combo.length < fixed.length){
+      return {
+        ok:false,
+        fixed,
+        usedFixed:[],
+        reason:`O vínculo precisa de pelo menos ${fixed.length} janela(s) para atender as entregas fixas de ${row.vocativo}`
+      };
+    }
   }
 
-  const delivered = combo
+  const planned = combo
     .map(loadDay => fixedDeliveryFromLoad(loadDay, transit, fixed))
-    .filter(Boolean)
-    .map(x => x.day);
+    .filter(Boolean);
 
-  const deliveredSet = new Set(delivered);
-  const missing = fixed.filter(day => !deliveredSet.has(day));
-
-  if(missing.length){
+  if(planned.length !== combo.length){
     return {
       ok:false,
       fixed,
-      reason:`As janelas de carga selecionadas não geram entrega fixa em ${fixed.map(i=>DAYS[i]).join(', ')}`
+      usedFixed:[...new Set(planned.map(x => x.day))],
+      reason:`As janelas de carga selecionadas não geram entrega nos dias fixos ${fixed.map(i=>DAYS[i]).join(', ')}`
     };
   }
 
-  return {ok:true, fixed};
+  const deliveredSet = new Set(planned.map(x => x.day));
+
+  if(!flexibleFixed){
+    const missing = fixed.filter(day => !deliveredSet.has(day));
+    if(missing.length){
+      return {
+        ok:false,
+        fixed,
+        usedFixed:[...deliveredSet],
+        reason:`As janelas de carga selecionadas não geram entrega fixa em ${fixed.map(i=>DAYS[i]).join(', ')}`
+      };
+    }
+  }
+
+  return {ok:true, fixed, usedFixed:[...deliveredSet].sort((a,b)=>a-b)};
 }
 function candidateLoadCounts(row){
   const fixedCount = getFixedDeliveryDays(row.vocativo).length;
-  if(fixedCount) return [fixedCount];
+  if(fixedCount === 1) return [1];
+  if(fixedCount > 1) return Array.from({length:fixedCount},(_,i)=>i+1);
   return [1,2,3,4,5,6];
 }
 function calcDeadlineParts(r){
@@ -1319,31 +1381,39 @@ function evaluateFixedDeliveryForRow(row, deadline, transit){
     return {ok:false, reason:'Nenhuma entrega fixa selecionada', cargas:0, combo:[], loadDays:[], deliveryDays:[], windowPairs:[], worst:999, worstCalendar:999, total:999, avg:999, worstReceiptDay:'—', worstLoadDay:'—', worstDeliveryDay:'—'};
   }
 
-  const candidates=[];
+  const counts = candidateLoadCounts(row);
   const fallbackOptions=[];
-  for(const c of comb(LOAD_INDEXES, fixedCount)){
-    const ev=evaluateComboForRow(row, deadline, transit, c);
-    const hasAllFixedPairs = ev.windowPairs && ev.windowPairs.length === fixedCount;
-    if(hasAllFixedPairs) fallbackOptions.push(ev);
-    if(ev.ok) candidates.push(ev);
-  }
 
-  if(candidates.length){
-    candidates.sort(compareEvalByPrazoThenInicio);
-    const best=candidates[0];
-    const reason = saturdayLoadCount(best.combo)
-      ? `Entrega fixa: ${fixedCount} dia(s) selecionado(s). Sábado mantido por necessidade de prazo.`
-      : `Entrega fixa: ${fixedCount} dia(s) selecionado(s). Carga antecipada para dia útil quando possível.`;
-    return {...best, reason, cargas:best.combo.length, avg:best.total/RECEIPT_INDEXES.length};
+  for(const k of counts){
+    const candidates=[];
+    for(const c of comb(LOAD_INDEXES, k)){
+      const ev=evaluateComboForRow(row, deadline, transit, c);
+      const hasValidFixedPairs = ev.windowPairs && ev.windowPairs.length === c.length;
+      if(hasValidFixedPairs) fallbackOptions.push(ev);
+      if(ev.ok) candidates.push(ev);
+    }
+
+    if(candidates.length){
+      candidates.sort(compareEvalByPrazoThenInicio);
+      const best=candidates[0];
+      const usedDays = [...new Set((best.windowPairs || []).map(p=>p.delivery))];
+      const reasonBase = fixedCount > 1
+        ? `Entrega fixa: ${fixedCount} dia(s) selecionado(s), usando ${best.combo.length} janela(s) otimizada(s)`
+        : `Entrega fixa: ${fixedCount} dia(s) selecionado(s)`;
+      const reason = saturdayLoadCount(best.combo)
+        ? `${reasonBase}. Sábado mantido por necessidade de prazo.`
+        : `${reasonBase}. Carga antecipada para dia útil quando possível.`;
+      return {...best, reason, cargas:best.combo.length, avg:best.total/RECEIPT_INDEXES.length, fixedDeliveryUsed:usedDays};
+    }
   }
 
   if(fallbackOptions.length){
     fallbackOptions.sort(compareFallbackByPrazoThenSabado);
     const best=fallbackOptions[0];
-    return {...best, ok:false, reason:`Não atende o prazo usando ${fixedCount} entrega(s) fixa(s), mas as janelas carga→entrega foram calculadas`, cargas:best.combo.length, avg:best.total===999?999:best.total/RECEIPT_INDEXES.length};
+    return {...best, ok:false, reason:`Não atende o prazo com as entregas fixas selecionadas, mas as melhores janelas carga→entrega foram calculadas`, cargas:best.combo.length, avg:best.total===999?999:best.total/RECEIPT_INDEXES.length};
   }
 
-  return {ok:false, reason:'Nenhuma combinação de carga gera as entregas fixas selecionadas', cargas:fixedCount, combo:[], loadDays:[], deliveryDays:[], windowPairs:[], worst:999, worstCalendar:999, total:999, avg:999, worstReceiptDay:'—', worstLoadDay:'—', worstDeliveryDay:'—'};
+  return {ok:false, reason:'Nenhuma combinação de carga gera entrega nos dias fixos selecionados', cargas:fixedCount, combo:[], loadDays:[], deliveryDays:[], windowPairs:[], worst:999, worstCalendar:999, total:999, avg:999, worstReceiptDay:'—', worstLoadDay:'—', worstDeliveryDay:'—'};
 }
 
 function evaluateWindows(row, deadline, transit, forcedCombo){
@@ -1368,7 +1438,7 @@ function evaluateWindows(row, deadline, transit, forcedCombo){
     const sharedCount = linkedSchedule ? (linkedSchedule.commonCombo || []).length : rowForcedCombo.length;
     const groupCount = linkedSchedule ? (linkedSchedule.groupCombo || rowForcedCombo).length : rowForcedCombo.length;
     const baseReason = fixedCount
-      ? `Entrega fixa: ${fixedCount} dia(s) selecionado(s), exigindo ${fixedCount} janela(s) de carga`
+      ? `Entrega fixa: ${fixedCount} dia(s) selecionado(s), usando ${rowForcedCombo.length} janela(s) calculada(s)`
       : (linkedSchedule && groupCount > rowForcedCombo.length
         ? `Carga vinculada otimizada: ${rowForcedCombo.length} janela(s) para este vocativo, dentro de ${groupCount} janela(s) do grupo; ${sharedCount} janela(s) compartilhada(s) com entrega escalonada`
         : (linkedPlan && linkedPlan.complete
@@ -1387,37 +1457,40 @@ function evaluateWindows(row, deadline, transit, forcedCombo){
     if(candidates.length){
       candidates.sort(compareEvalByPrazoThenInicio);
       const best=candidates[0];
-      const reason = fixedCount ? `Entrega fixa: ${fixedCount} dia(s) selecionado(s), ${fixedCount} janela(s) de carga calculada(s)` : '';
+      const reason = fixedCount ? `Entrega fixa: ${fixedCount} dia(s) selecionado(s), ${best.combo.length} janela(s) de carga calculada(s)` : '';
       return {...best, cargas:k, avg:best.total/RECEIPT_INDEXES.length, reason};
     }
   }
 
-  const fallbackK = fixedCount || 6;
+  const fallbackCounts = fixedCount ? candidateLoadCounts(row) : [6];
   let fallback = null;
   const fallbackOptions = [];
 
-  for(const c of comb(LOAD_INDEXES, fallbackK)){
-    const ev = evaluateComboForRow(row, deadline, transit, c);
-    if(fixedCount){
-      const hasAllFixedPairs = ev.windowPairs && ev.windowPairs.length === fixedCount;
-      if(hasAllFixedPairs) fallbackOptions.push(ev);
-    } else {
-      fallbackOptions.push(ev);
-    }
-  }
+  fallbackCounts.forEach(k=>{
+    comb(LOAD_INDEXES, k).forEach(c=>{
+      const ev = evaluateComboForRow(row, deadline, transit, c);
+      if(fixedCount){
+        const hasValidFixedPairs = ev.windowPairs && ev.windowPairs.length === c.length;
+        if(hasValidFixedPairs) fallbackOptions.push(ev);
+      } else {
+        fallbackOptions.push(ev);
+      }
+    });
+  });
 
   if(fallbackOptions.length){
     fallbackOptions.sort(compareFallbackByPrazoThenSabado);
     fallback = fallbackOptions[0];
   } else {
+    const fallbackK = fallbackCounts[fallbackCounts.length-1] || 6;
     const fallbackCombo = comb(LOAD_INDEXES, fallbackK)[0] || LOAD_INDEXES.slice();
     fallback = evaluateComboForRow(row, deadline, transit, fallbackCombo);
   }
 
   const reason = fallback.reason || (fixedCount
-    ? `Não atende o prazo usando ${fixedCount} entrega(s) fixa(s) e ${fixedCount} janela(s) de carga`
+    ? `Não atende o prazo com as entregas fixas selecionadas`
     : 'Não atende dentro do prazo com as restrições atuais');
-  return {...fallback, ok:false, cargas:fallbackK, avg:fallback.total===999?999:fallback.total/RECEIPT_INDEXES.length, reason};
+  return {...fallback, ok:false, cargas:(fallback.combo || []).length, avg:fallback.total===999?999:fallback.total/RECEIPT_INDEXES.length, reason};
 }
 function scoreLinkedEval(e, deadline){
   if(!e) return {over:9999, worst:9999, total:9999};
@@ -1472,10 +1545,10 @@ function bestComboForLinkedRowIncluding(row, requiredCombo, linkedPlan){
   return null;
 }
 function compareLinkedSchedulesOk(a,b){
-  return (a.groupLoads-b.groupLoads) || (a.assignedLoads-b.assignedLoads) || (a.linkedWeekPenalty-b.linkedWeekPenalty) || (a.linkedGap-b.linkedGap) || (a.linkedExtraDelay-b.linkedExtraDelay) || (a.worst-b.worst) || (a.total-b.total) || (earlyLoadScore(a.commonCombo)-earlyLoadScore(b.commonCombo)) || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo)) || String(comboKey(a.groupCombo)).localeCompare(String(comboKey(b.groupCombo)));
+  return (a.assignedLoads-b.assignedLoads) || (a.firstDeliveryLoads-b.firstDeliveryLoads) || (a.maxRowLoads-b.maxRowLoads) || (a.groupLoads-b.groupLoads) || (b.rowsWithSingleCommon-a.rowsWithSingleCommon) || (a.linkedWeekPenalty-b.linkedWeekPenalty) || (a.linkedGap-b.linkedGap) || (a.linkedExtraDelay-b.linkedExtraDelay) || (a.worst-b.worst) || (a.total-b.total) || (earlyLoadScore(a.commonCombo)-earlyLoadScore(b.commonCombo)) || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo)) || String(comboKey(a.groupCombo)).localeCompare(String(comboKey(b.groupCombo)));
 }
 function compareLinkedSchedulesFallback(a,b){
-  return (a.maxOver-b.maxOver) || (a.groupLoads-b.groupLoads) || (a.assignedLoads-b.assignedLoads) || (a.worst-b.worst) || (a.total-b.total) || (a.linkedWeekPenalty-b.linkedWeekPenalty) || (a.linkedGap-b.linkedGap) || (a.linkedExtraDelay-b.linkedExtraDelay) || (earlyLoadScore(a.commonCombo)-earlyLoadScore(b.commonCombo)) || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo));
+  return (a.maxOver-b.maxOver) || (a.assignedLoads-b.assignedLoads) || (a.firstDeliveryLoads-b.firstDeliveryLoads) || (a.maxRowLoads-b.maxRowLoads) || (a.groupLoads-b.groupLoads) || (a.worst-b.worst) || (a.total-b.total) || (a.linkedWeekPenalty-b.linkedWeekPenalty) || (a.linkedGap-b.linkedGap) || (a.linkedExtraDelay-b.linkedExtraDelay) || (earlyLoadScore(a.commonCombo)-earlyLoadScore(b.commonCombo)) || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo));
 }
 function makeLinkedScheduleCandidate(groupRows, commonCombo){
   if(!commonCombo || !commonCombo.length) return null;
@@ -1496,15 +1569,30 @@ function makeLinkedScheduleCandidate(groupRows, commonCombo){
   const groupCombo=groupRows.reduce((acc,r)=>comboUnion(acc, comboByVoc[r.vocativo] || []), []);
   const assignedLoads=groupRows.reduce((sum,r)=>sum + ((comboByVoc[r.vocativo] || []).length), 0);
   const rowsWithSingleCommon=groupRows.filter(r=>comboKey(comboByVoc[r.vocativo])===comboKey(commonCombo)).length;
-  return { comboByVoc, groupCombo, commonCombo:commonCombo.slice(), linkedPlan, ok:scored.ok, maxOver:scored.maxOver, worst:scored.worst, total:scored.total, assignedLoads, groupLoads:groupCombo.length, rowsWithSingleCommon, linkedWeekPenalty: linkedPlan.weekPenalty, linkedGap: linkedPlan.gap, linkedExtraDelay: linkedPlan.extraDelay, evals:scored.evals };
+  const orderedRows=getOrderedLinkedRows(groupRows);
+  const firstVoc=orderedRows[0] ? orderedRows[0].vocativo : '';
+  const firstDeliveryLoads=firstVoc && comboByVoc[firstVoc] ? comboByVoc[firstVoc].length : 99;
+  const maxRowLoads=Math.max(...groupRows.map(r=>(comboByVoc[r.vocativo] || []).length));
+  return { comboByVoc, groupCombo, commonCombo:commonCombo.slice(), linkedPlan, ok:scored.ok, maxOver:scored.maxOver, worst:scored.worst, total:scored.total, assignedLoads, groupLoads:groupCombo.length, rowsWithSingleCommon, firstDeliveryLoads, maxRowLoads, linkedWeekPenalty: linkedPlan.weekPenalty, linkedGap: linkedPlan.gap, linkedExtraDelay: linkedPlan.extraDelay, evals:scored.evals };
 }
 function findBestLinkedSchedule(row){
   const groupRows=getRepresentativeRowsForLink(row.vocativo);
   if(groupRows.length<2) return null;
+
+  // Regra para 2 ou mais vocativos vinculados:
+  // busca o MENOR NÚMERO TOTAL de janelas de carregamento na semana.
+  // Não para mais na primeira combinação comum que atende, pois em grupos com 3+ vocativos
+  // uma combinação com mais dias compartilhados pode reduzir a união total de carregamentos do grupo
+  // e ainda permitir que cada vocativo mantenha somente as janelas necessárias para cumprir o prazo.
   const cacheKey=groupRows.map(r=>r.vocativo).sort((a,b)=>a.localeCompare(b,'pt-BR')).join('|||') + '::' + groupRows.map(r=>`${r.vocativo}:${getDeliveryOrder(r.vocativo)||''}:${getEntregaMesmoDia(r.vocativo)}`).join('|');
   if(LINKED_SCHEDULE_CACHE.has(cacheKey)) return LINKED_SCHEDULE_CACHE.get(cacheKey);
+
   const okCandidates=[];
   let bestFallback=null;
+
+  // Avalia todas as combinações possíveis de janelas compartilhadas.
+  // A comparação final prioriza groupLoads, então o grupo fica com o mínimo possível de carregamentos,
+  // enquanto bestComboForLinkedRowIncluding mantém cada vocativo com a menor quantidade necessária.
   for(let k=1;k<=6;k++){
     comb(LOAD_INDEXES,k).forEach(combo=>{
       const candidate=makeLinkedScheduleCandidate(groupRows, combo);
@@ -1512,8 +1600,8 @@ function findBestLinkedSchedule(row){
       if(candidate.ok) okCandidates.push(candidate);
       if(!bestFallback || compareLinkedSchedulesFallback(candidate,bestFallback)<0) bestFallback=candidate;
     });
-    if(okCandidates.length) break;
   }
+
   let best=null;
   if(okCandidates.length){ okCandidates.sort(compareLinkedSchedulesOk); best=okCandidates[0]; }
   else best=bestFallback;
@@ -1634,7 +1722,7 @@ function renderLinkSelect(voc){
   const orderValue=String(getDeliveryOrder(voc) || '');
   const sameDay=getEntregaMesmoDia(voc);
   const selectedText = selected.size
-    ? `${selected.size} vínculo(s): ${[...selected].slice(0,2).join(', ')}${selected.size>2?'...':''}`
+    ? `${selected.size} vínculo(s)`
     : 'SEM VÍNCULO';
   return `<div class="linkConfigGrid">
     <div>
@@ -1642,8 +1730,11 @@ function renderLinkSelect(voc){
       <div class="linkDropdown" data-link-dropdown="${escapeHtml(voc)}">
         <button type="button" class="linkDropdownBtn" data-link-dd-button="${escapeHtml(voc)}"><span class="linkDropdownText">${escapeHtml(selectedText)}</span><span class="linkDropdownCaret">▾</span></button>
         <div class="linkDropdownMenu">
-          <label class="linkDropdownOption isNone"><input type="checkbox" data-link-none="${escapeHtml(voc)}" ${selected.size?'':'checked'}><span class="linkDropdownOptionText">SEM VÍNCULO</span></label>
-          ${options.map(v=>`<label class="linkDropdownOption"><input type="checkbox" data-link-check="${escapeHtml(voc)}" value="${escapeHtml(v)}" ${selected.has(v)?'checked':''}><span class="linkDropdownOptionText">${escapeHtml(v)}</span></label>`).join('')}
+          <input type="text" class="linkDropdownSearch" data-link-search="${escapeHtml(voc)}" placeholder="Pesquisar vocativo...">
+          <div class="linkDropdownOptions">
+            <label class="linkDropdownOption isNone"><input type="checkbox" data-link-none="${escapeHtml(voc)}" ${selected.size?'':'checked'}><span class="linkDropdownOptionText">SEM VÍNCULO</span></label>
+            ${options.map(v=>`<label class="linkDropdownOption" data-link-option-text="${escapeHtml(v)}"><input type="checkbox" data-link-check="${escapeHtml(voc)}" value="${escapeHtml(v)}" ${selected.has(v)?'checked':''}><span class="linkDropdownOptionText">${escapeHtml(v)}</span></label>`).join('')}
+          </div>
         </div>
       </div>
       <div class="linkConfigHint">Selecione um ou mais vocativos, ou marque SEM VÍNCULO.</div>
@@ -1723,7 +1814,18 @@ function bindCardEvents(){
       const box=btn.closest('.linkDropdown');
       const wasOpen=box && box.classList.contains('open');
       cards.querySelectorAll('.linkDropdown.open').forEach(x=>{ if(x!==box) x.classList.remove('open'); });
-      if(box) box.classList.toggle('open', !wasOpen);
+      if(box){ box.classList.toggle('open', !wasOpen); const search=box.querySelector('[data-link-search]'); if(box.classList.contains('open') && search){ search.value=''; search.dispatchEvent(new Event('input')); setTimeout(()=>search.focus(),0); } }
+    });
+  });
+  cards.querySelectorAll('input[data-link-search]').forEach(input=>{
+    input.addEventListener('click',ev=>ev.stopPropagation());
+    input.addEventListener('input',()=>{
+      const q=norm(input.value);
+      const menu=input.closest('.linkDropdownMenu');
+      if(!menu) return;
+      menu.querySelectorAll('[data-link-option-text]').forEach(opt=>{
+        opt.style.display = !q || norm(opt.dataset.linkOptionText || opt.textContent).includes(q) ? '' : 'none';
+      });
     });
   });
   cards.querySelectorAll('input[data-link-none]').forEach(input=>{
@@ -1789,9 +1891,9 @@ document.addEventListener("click", (ev)=>{
 
 function exportCSV(){
   const rows=getFiltered(getAll());
-  const cols=[['cliente','Cliente'],['vocativo','Vocativo'],['ufOrigem','UF Origem'],['cidadeDestino','Cidade destino'],['ufDestino','UF Destino'],['prazoExwReal','Prazo EXW real'],['prazoFcaReal','Prazo FCA real'],['menorPrazo','Menor prazo'],['transitTime','Transit time'],['status','Status'],['cargas','Cargas semanais'],['ciclos','Ciclos carga entrega'],['entregaFixa','Entrega fixa'],['vinculo','Vinculado com'],['ordemEntrega','Ordem entrega'],['entregaMesmoDia','Entrega mesmo dia'],['diasNaoUteis','Dias nao uteis vocativo'],['loadDays','Dias carga'],['deliveryDays','Dias entrega'],['worst','Pior prazo util'],['worstCalendar','Pior prazo corrido'],['worstReceiptDay','Dia recebimento critico'],['worstLoadDay','Dia carga do pior prazo'],['worstDeliveryDay','Dia entrega do pior prazo'],['folga','Folga']];
+  const cols=[['cliente','Cliente'],['vocativo','Vocativo'],['ufOrigem','UF Origem'],['cidadeDestino','Cidade destino'],['ufDestino','UF Destino'],['prazoExwReal','Prazo EXW real'],['prazoFcaReal','Prazo FCA real'],['menorPrazo','Menor prazo'],['transitTime','Transit time'],['status','Status'],['cargas','Cargas semanais'],['ciclos','Ciclos carga entrega'],['entregaFixa','Entrega fixa'],['vinculo','Vinculado com'],['ordemEntrega','Ordem entrega'],['maiorVeiculo','Maior veículo'],['entregaMesmoDia','Entrega mesmo dia'],['diasNaoUteis','Dias nao uteis vocativo'],['loadDays','Dias carga'],['deliveryDays','Dias entrega'],['worst','Pior prazo util'],['worstCalendar','Pior prazo corrido'],['worstReceiptDay','Dia recebimento critico'],['worstLoadDay','Dia carga do pior prazo'],['worstDeliveryDay','Dia entrega do pior prazo'],['folga','Folga']];
   const lines=[cols.map(c=>c[1]).join(';')];
-  rows.forEach(r=>{ lines.push(cols.map(([key])=>{ let v=r[key]; if(key==='ciclos') v=r.windowPairs.map(p=>`${p.load}->${p.delivery}`).join(' | '); if(key==='entregaFixa') v=getFixedDeliveryDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(key==='vinculo') v=getLinkedVocativos(r.vocativo).join(', '); if(key==='ordemEntrega') v=getDeliveryOrder(r.vocativo); if(key==='entregaMesmoDia') v=getEntregaMesmoDia(r.vocativo); if(key==='diasNaoUteis') v=getNonBusinessDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(Array.isArray(v)) v=v.join(', '); return `"${String(v ?? '').replace(/"/g,'""')}"`; }).join(';')); });
+  rows.forEach(r=>{ lines.push(cols.map(([key])=>{ let v=r[key]; if(key==='ciclos') v=r.windowPairs.map(p=>`${p.load}->${p.delivery}`).join(' | '); if(key==='entregaFixa') v=getFixedDeliveryDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(key==='vinculo') v=getLinkedVocativos(r.vocativo).join(', '); if(key==='ordemEntrega') v=getDeliveryOrder(r.vocativo); if(key==='maiorVeiculo') v=getMaxVehicleRestriction(r.vocativo); if(key==='entregaMesmoDia') v=getEntregaMesmoDia(r.vocativo); if(key==='diasNaoUteis') v=getNonBusinessDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(Array.isArray(v)) v=v.join(', '); return `"${String(v ?? '').replace(/"/g,'""')}"`; }).join(';')); });
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='planejamento_janelas_vocativo.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
 function mapImportedRow(x){
@@ -1986,9 +2088,11 @@ $('btnReset').addEventListener('click',()=>{
 const jsDia = $('jsDia'), jsCliente = $('jsCliente'), jsUf = $('jsUf'), jsCidade = $('jsCidade'), jsVocativo = $('jsVocativo'), jsCards = $('jsCards');
 
 function jsGroupKeyForRow(r){
-  const linked=getLinkedVocativo(r.vocativo);
-  if(linked){
-    return [r.vocativo, linked].sort((a,b)=>a.localeCompare(b,'pt-BR')).join('|||');
+  // Apenas para exibição na página Janelas simples: usa o grupo completo de vínculos,
+  // sem alterar nenhuma regra de cálculo da aplicação.
+  const group=getGroupVocativos(r.vocativo).filter(Boolean);
+  if(group.length>1){
+    return group.sort((a,b)=>a.localeCompare(b,'pt-BR')).join('|||');
   }
   return r.vocativo;
 }
@@ -2040,15 +2144,53 @@ function jsItemsForGroupAndDay(g, day){
     .filter(p=>p.load===day)
     .map(p=>({vocativo:r.vocativo, cliente:r.cliente, cidade:r.cidadeDestino, uf:r.ufDestino, status:r.status, ...p})));
 }
+function jsRenderVocDetail(vocativo, extraHtml){
+  const order=getDeliveryOrder(vocativo) || '—';
+  const sameDay=getEntregaMesmoDia(vocativo);
+  const vehicle=(typeof getVehicleRestriction==='function' ? getVehicleRestriction(vocativo) : (typeof getMaxVehicleRestriction==='function' ? getMaxVehicleRestriction(vocativo) : 'SEM RESTRIÇÃO'));
+  const body=(typeof getBodyRestriction==='function' ? getBodyRestriction(vocativo) : 'SEM RESTRIÇÃO');
+  const sameClass=sameDay==='SIM' ? 'good' : '';
+  return '<div class="simpleVocDetail">'
+    + '<div class="simpleVocDetailTop"><div class="simpleVocName">'+escapeHtml(vocativo)+'</div><div class="simpleVocOrder">'+escapeHtml(String(order))+'ª entrega</div></div>'
+    + '<div class="simpleVocPills">'
+    + '<span class="simpleVocPill good">Maior veículo: '+escapeHtml(vehicle || 'SEM RESTRIÇÃO')+'</span>'
+    + '<span class="simpleVocPill warn">Carroceria: '+escapeHtml(body || 'SEM RESTRIÇÃO')+'</span>'
+    + '<span class="simpleVocPill '+sameClass+'">Mesmo dia: '+escapeHtml(sameDay)+'</span>'
+    + (extraHtml || '')
+    + '</div></div>';
+}
 function jsRenderGroupCard(g, day, items){
-  const badge=g.isLinked ? '<span class="simpleZoneBadge">Zona consolidada</span>' : '<span class="simpleZoneBadge">Vocativo</span>';
+  // Painel de Janelas: a zona só deve aparecer consolidada quando a janela do dia
+  // realmente tiver mais de um vocativo do grupo vinculado. Se apenas um vocativo
+  // tiver carregamento naquele dia, o card permanece individual.
+  const activeVocativos=unique(items.map(it=>it.vocativo));
+  const isConsolidatedWindow=activeVocativos.length>1;
+  const activeClientes=unique(items.map(it=>it.cliente));
+  const activeUfs=unique(items.map(it=>it.uf));
+  const activeCidades=unique(items.map(it=>it.cidade));
+  const activeLabel=isConsolidatedWindow ? 'Zona de consolidação: ' + activeVocativos.join(' + ') : (activeVocativos[0] || g.label);
+  const badge=isConsolidatedWindow ? '<span class="simpleZoneBadge">Zona consolidada</span>' : '<span class="simpleZoneBadge">Vocativo</span>';
   const deliveryDays=unique(items.map(it=>it.delivery)).join(' / ') || '—';
-  const deliveries=items.map(it=>'<div class="simpleDeliveryItem"><span>'+escapeHtml(it.vocativo)+' → '+escapeHtml(it.delivery)+'</span><small>'+fmt(it.travelElapsed)+'d'+(it.linkedAdjusted?' • ajustado':'')+'</small></div>').join('');
-  const statusLabel=g.status==='impossivel'?'Impossível':(g.status==='critico'?'Crítico':'Atende');
+  const deliveries=items.map(it=>{
+    const vehicle=(typeof getVehicleRestriction==='function' ? getVehicleRestriction(it.vocativo) : (typeof getMaxVehicleRestriction==='function' ? getMaxVehicleRestriction(it.vocativo) : 'SEM RESTRIÇÃO'));
+    const body=(typeof getBodyRestriction==='function' ? getBodyRestriction(it.vocativo) : 'SEM RESTRIÇÃO');
+    const order=getDeliveryOrder(it.vocativo) || '—';
+    const sameDay=getEntregaMesmoDia(it.vocativo);
+    return '<div class="simpleDeliveryItem"><span>'+escapeHtml(it.vocativo)+' → '+escapeHtml(it.delivery)+'</span><small>'+fmt(it.travelElapsed)+'d'+(it.linkedAdjusted?' • ajustado':'')+'</small></div>';
+  }).join('');
+  const status=items.some(it=>it.status==='impossivel')?'impossivel':(items.some(it=>it.status==='critico')?'critico':'atende');
+  const statusLabel=status==='impossivel'?'Impossível':(status==='critico'?'Crítico':'Atende');
+  const details=activeVocativos.map(v=>{
+    const perVoc=items.filter(it=>it.vocativo===v);
+    const entregas=unique(perVoc.map(it=>it.delivery)).join(' / ') || '—';
+    const extra='<span class="simpleVocPill">Entrega: '+escapeHtml(entregas)+'</span>';
+    return jsRenderVocDetail(v, extra);
+  }).join('');
   return '<article class="simpleWindowCard">'
-    + '<div class="simpleWindowTop"><div><div class="simpleWindowTitle">'+escapeHtml(g.label)+'</div><div class="simpleWindowSub">'+escapeHtml(g.clientes.join(', ') || 'Sem cliente')+' • '+escapeHtml(g.cidades.join(', ') || 'Sem cidade')+'/'+escapeHtml(g.ufs.join(', ') || 'UF')+'</div></div>'+badge+'</div>'
+    + '<div class="simpleWindowTop"><div><div class="simpleWindowTitle">'+escapeHtml(activeLabel)+'</div><div class="simpleWindowSub">'+escapeHtml(activeClientes.join(', ') || 'Sem cliente')+' • '+escapeHtml(activeCidades.join(', ') || 'Sem cidade')+'/'+escapeHtml(activeUfs.join(', ') || 'UF')+'</div></div>'+badge+'</div>'
     + '<div class="simpleTimeline"><div class="simpleFlow"><div class="simpleBox load"><span>Carregamento</span><b>'+escapeHtml(day)+'</b></div><div class="simpleArrow">→</div><div class="simpleBox delivery"><span>Entrega desta carga</span><b>'+escapeHtml(deliveryDays)+'</b><div class="simpleDeliveryList">'+deliveries+'</div></div></div></div>'
-    + '<div class="simpleMeta"><div class="metric"><span>Voc.</span><b>'+g.vocativos.length+'</b></div><div class="metric"><span>Cliente</span><b>'+escapeHtml(g.clientes.join(', ') || '—')+'</b></div><div class="metric"><span>Destino</span><b>'+escapeHtml(g.cidades.join(', ') || '—')+'/'+escapeHtml(g.ufs.join(', ') || '—')+'</b></div><div class="metric"><span>Status</span><b>'+statusLabel+'</b></div></div>'
+    + '<div class="simpleMeta"><div class="metric"><span>Voc.</span><b>'+activeVocativos.length+'</b></div><div class="metric"><span>Cliente</span><b>'+escapeHtml(activeClientes.join(', ') || '—')+'</b></div><div class="metric"><span>Destino</span><b>'+escapeHtml(activeCidades.join(', ') || '—')+'/'+escapeHtml(activeUfs.join(', ') || '—')+'</b></div><div class="metric"><span>Status</span><b>'+statusLabel+'</b></div></div>'
+    + '<div class="simpleVocDetails">'+details+'</div>'
     + '</article>';
 }
 function renderSimpleWindows(){
@@ -2510,6 +2652,7 @@ function vehicleRestrictionRank(value){ const idx=VEHICLE_RESTRICTION_OPTIONS.in
 CONFIG.maxVehicleByVocativo = CONFIG.maxVehicleByVocativo || {};
 CONFIG.bodyRestrictionByVocativo = CONFIG.bodyRestrictionByVocativo || {};
 function getVehicleRestriction(vocativo){ return normalizeVehicleRestriction((CONFIG.maxVehicleByVocativo || {})[vocativo] || 'SEM RESTRIÇÃO'); }
+function getMaxVehicleRestriction(vocativo){ return getVehicleRestriction(vocativo); }
 function getBodyRestriction(vocativo){ return normalizeBodyRestriction((CONFIG.bodyRestrictionByVocativo || {})[vocativo] || 'SEM RESTRIÇÃO'); }
 function setVehicleRestriction(vocativo, value){
   CONFIG.maxVehicleByVocativo = CONFIG.maxVehicleByVocativo || {};
