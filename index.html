@@ -377,6 +377,13 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 .filialSelectStatus.ok{color:#166534;font-weight:900}
 .filialBadgeTop{display:inline-flex!important;align-items:center;gap:7px;background:#fff7ed!important;color:#9a3412!important;border:1px solid #fed7aa!important;box-shadow:none!important}
 .filialBadgeTop strong{color:#111827}
+.loadModeChoices{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.loadModeChoice{border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 11px;display:flex;gap:8px;align-items:flex-start;cursor:pointer;text-transform:none;letter-spacing:0;margin:0}
+.loadModeChoice:hover{border-color:var(--brand);background:#fff7ed}
+.loadModeChoice input{margin-top:2px;accent-color:var(--brand);width:auto;min-height:0;box-shadow:none}
+.loadModeChoice b{display:block;color:#111827;font-size:12px}
+.loadModeChoice span{display:block;color:#6b7280;font-size:10.5px;line-height:1.35;margin-top:2px;font-weight:800}
+@media(max-width:760px){.loadModeChoices{grid-template-columns:1fr}}
 
 
 
@@ -430,7 +437,7 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
     </div>
     <div class="headerNote">
       <b>Regras ativas</b><br>
-      Recebimento conta dentro do prazo, porém o início do prazo só é simulado de segunda a sexta, pois não há recebimento aos sábados e domingos. O primeiro carregamento só pode ocorrer no dia seguinte. Carregamentos: segunda a sábado. Entrega padrão: segunda a sexta. Se marcar entrega fixa, a entrega é forçada nos dias escolhidos, inclusive sábado e domingo; cada dia fixo exige uma janela de carregamento correspondente. Vocativos vinculados usam uma combinação comum de carregamento, com suporte a múltiplos vocativos, ordem de entrega e opção de entrega no mesmo dia.
+      Recebimento conta dentro do prazo, porém o início do prazo só é simulado de segunda a sexta, pois não há recebimento aos sábados e domingos. O primeiro carregamento só pode ocorrer no dia seguinte. Carregamentos: conforme regime selecionado na entrada da filial. Entrega padrão: segunda a sexta. Se marcar entrega fixa, a entrega é forçada nos dias escolhidos, inclusive sábado e domingo; cada dia fixo exige uma janela de carregamento correspondente. Vocativos vinculados usam uma combinação comum de carregamento, com suporte a múltiplos vocativos, ordem de entrega e opção de entrega no mesmo dia.
     </div>
   </div>
 </header>
@@ -567,6 +574,11 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyLE7UaWexN2R5X
 let BASE_DATA = [];
 const DAYS = ['DOM','SEG','TER','QUA','QUI','SEX','SAB'];
 const LOAD_INDEXES = [1,2,3,4,5,6];
+let ACTIVE_LOAD_INDEXES = LOAD_INDEXES.slice();
+function getLoadIndexes(){ return (ACTIVE_LOAD_INDEXES && ACTIVE_LOAD_INDEXES.length ? ACTIVE_LOAD_INDEXES : LOAD_INDEXES).slice(); }
+function normalizeLoadMode(value){ return String(value || '').trim() === 'SEG_SEX' ? 'SEG_SEX' : 'SEG_SAB'; }
+function getLoadModeLabel(value=SELECTED_LOAD_MODE){ return normalizeLoadMode(value) === 'SEG_SEX' ? 'Segunda a sexta' : 'Segunda a sábado'; }
+function applyLoadMode(value){ SELECTED_LOAD_MODE = normalizeLoadMode(value); ACTIVE_LOAD_INDEXES = SELECTED_LOAD_MODE === 'SEG_SEX' ? [1,2,3,4,5] : [1,2,3,4,5,6]; }
 // Sua empresa recebe notas/materiais somente de segunda a sexta.
 // Por isso, o prazo nunca é simulado como iniciado no sábado ou domingo.
 // O carregamento continua permitido de segunda a sábado, sempre a partir do dia seguinte.
@@ -579,7 +591,10 @@ let DIRTY_VOCATIVOS = new Set();
 let BACKEND_CONFIG_VOCATIVOS = new Set();
 let LINKED_SCHEDULE_CACHE = new Map();
 const FILIAL_KEY = 'planejamento_janelas_filial_selecionada_v1';
+const LOAD_MODE_KEY = 'planejamento_janelas_regime_carga_v1';
 let SELECTED_FILIAL = '';
+let SELECTED_LOAD_MODE = normalizeLoadMode((()=>{ try{ return localStorage.getItem(LOAD_MODE_KEY) || 'SEG_SAB'; }catch(e){ return 'SEG_SAB'; } })());
+applyLoadMode(SELECTED_LOAD_MODE);
 let FILIAIS_DISPONIVEIS = [];
 
 function loadConfig(){
@@ -1317,7 +1332,7 @@ function getFixedDeliveryPairs(row, transit){
   const fixed = getFixedDeliveryDays(row.vocativo);
   const transitDays = Math.max(0, Math.ceil(num(transit)));
   return fixed.map(fixedDay => {
-    const options = LOAD_INDEXES.map(loadDay => {
+    const options = getLoadIndexes().map(loadDay => {
       const travelElapsed = diffForwardDays(loadDay, fixedDay);
       if(travelElapsed < transitDays) return null;
       const idealLoad = (fixedDay - transitDays + 700) % 7;
@@ -1406,8 +1421,8 @@ function fixedDeliveryCheck(row, transit, combo, options={}){
 function candidateLoadCounts(row){
   const fixedCount = getFixedDeliveryDays(row.vocativo).length;
   if(fixedCount === 1) return [1];
-  if(fixedCount > 1) return Array.from({length:fixedCount},(_,i)=>i+1);
-  return [1,2,3,4,5,6];
+  if(fixedCount > 1) return Array.from({length:Math.min(fixedCount, getLoadIndexes().length)},(_,i)=>i+1);
+  return Array.from({length:getLoadIndexes().length},(_,i)=>i+1);
 }
 function calcDeadlineParts(r){
   const exw=num(r.prazoEXWBase), coleta=num(r.prazoColeta), cons=num(r.prazoConsolidacaoFCA);
@@ -1493,7 +1508,7 @@ function evaluateFixedDeliveryForRow(row, deadline, transit){
 
   for(const k of counts){
     const candidates=[];
-    for(const c of comb(LOAD_INDEXES, k)){
+    for(const c of comb(getLoadIndexes(),k)){
       const ev=evaluateComboForRow(row, deadline, transit, c);
       const hasValidFixedPairs = ev.windowPairs && ev.windowPairs.length === c.length;
       if(hasValidFixedPairs) fallbackOptions.push(ev);
@@ -1557,7 +1572,7 @@ function evaluateWindows(row, deadline, transit, forcedCombo){
   const counts = candidateLoadCounts(row);
   for(const k of counts){
     const candidates=[];
-    for(const c of comb(LOAD_INDEXES,k)){
+    for(const c of comb(getLoadIndexes(),k)){
       const ev=evaluateComboForRow(row, deadline, transit, c);
       if(ev.ok) candidates.push(ev);
     }
@@ -1569,12 +1584,12 @@ function evaluateWindows(row, deadline, transit, forcedCombo){
     }
   }
 
-  const fallbackCounts = fixedCount ? candidateLoadCounts(row) : [6];
+  const fallbackCounts = fixedCount ? candidateLoadCounts(row) : [getLoadIndexes().length];
   let fallback = null;
   const fallbackOptions = [];
 
   fallbackCounts.forEach(k=>{
-    comb(LOAD_INDEXES, k).forEach(c=>{
+    comb(getLoadIndexes(),k).forEach(c=>{
       const ev = evaluateComboForRow(row, deadline, transit, c);
       if(fixedCount){
         const hasValidFixedPairs = ev.windowPairs && ev.windowPairs.length === c.length;
@@ -1589,8 +1604,8 @@ function evaluateWindows(row, deadline, transit, forcedCombo){
     fallbackOptions.sort(compareFallbackByPrazoThenSabado);
     fallback = fallbackOptions[0];
   } else {
-    const fallbackK = fallbackCounts[fallbackCounts.length-1] || 6;
-    const fallbackCombo = comb(LOAD_INDEXES, fallbackK)[0] || LOAD_INDEXES.slice();
+    const fallbackK = fallbackCounts[fallbackCounts.length-1] || getLoadIndexes().length;
+    const fallbackCombo = comb(getLoadIndexes(), fallbackK)[0] || getLoadIndexes().slice();
     fallback = evaluateComboForRow(row, deadline, transit, fallbackCombo);
   }
 
@@ -1628,7 +1643,7 @@ function getRepresentativeRowsForLink(vocativo){
 }
 function enumerateCombosForLinkedRow(row){
   const out=[];
-  candidateLoadCounts(row).forEach(k=>{ comb(LOAD_INDEXES,k).forEach(c=>out.push(c)); });
+  candidateLoadCounts(row).forEach(k=>{ comb(getLoadIndexes(),k).forEach(c=>out.push(c)); });
   return out;
 }
 function bestComboForLinkedRowIncluding(row, requiredCombo, linkedPlan){
@@ -1638,7 +1653,7 @@ function bestComboForLinkedRowIncluding(row, requiredCombo, linkedPlan){
   const fallback=[];
   const counts=candidateLoadCounts(row).filter(k=>k>=required.length);
   counts.forEach(k=>{
-    comb(LOAD_INDEXES,k).forEach(combo=>{
+    comb(getLoadIndexes(),k).forEach(combo=>{
       if(!comboIncludesAll(combo, required)) return;
       const ev=evaluateComboForRow(row, parts.menorPrazo, row.transitTime, combo, {allowExtraLoads:true, linkedDeliveryPlan:linkedPlan});
       const pack={combo:combo.slice(), ev, score:scoreLinkedEval(ev, parts.menorPrazo)};
@@ -1700,8 +1715,8 @@ function findBestLinkedSchedule(row){
   // Avalia todas as combinações possíveis de janelas compartilhadas.
   // A comparação final prioriza groupLoads, então o grupo fica com o mínimo possível de carregamentos,
   // enquanto bestComboForLinkedRowIncluding mantém cada vocativo com a menor quantidade necessária.
-  for(let k=1;k<=6;k++){
-    comb(LOAD_INDEXES,k).forEach(combo=>{
+  for(let k=1;k<=getLoadIndexes().length;k++){
+    comb(getLoadIndexes(),k).forEach(combo=>{
       const candidate=makeLinkedScheduleCandidate(groupRows, combo);
       if(!candidate) return;
       if(candidate.ok) okCandidates.push(candidate);
@@ -2048,6 +2063,14 @@ function getLastFilial(){
 function setLastFilial(filial){
   try{ localStorage.setItem(FILIAL_KEY, filial || ''); }catch(e){}
 }
+function getLastLoadMode(){
+  try{ return normalizeLoadMode(localStorage.getItem(LOAD_MODE_KEY) || SELECTED_LOAD_MODE || 'SEG_SAB'); }catch(e){ return 'SEG_SAB'; }
+}
+function setLastLoadMode(mode){
+  const normalized=normalizeLoadMode(mode);
+  try{ localStorage.setItem(LOAD_MODE_KEY, normalized); }catch(e){}
+  applyLoadMode(normalized);
+}
 function ensureFilialModal(){
   let overlay=document.getElementById('filialModalOverlay');
   if(overlay) return overlay;
@@ -2058,12 +2081,25 @@ function ensureFilialModal(){
     <div class="filialModal" role="dialog" aria-modal="true" aria-labelledby="filialModalTitle">
       <div class="filialModalTop">
         <h2 id="filialModalTitle">Selecione a filial</h2>
-        <p>A aplicação carregará somente os registros da filial selecionada e também salvará as configurações separadas por filial.</p>
+        <p>A aplicação carregará somente os registros da filial selecionada. Escolha também se esta filial calcula carregamentos de segunda a sexta ou de segunda a sábado.</p>
       </div>
       <div class="filialModalBody">
         <div>
           <label>Filial</label>
           <select id="filialSelectInicial"><option value="">Carregando filiais...</option></select>
+        </div>
+        <div>
+          <label>Dias permitidos para carregamento</label>
+          <div class="loadModeChoices">
+            <label class="loadModeChoice">
+              <input type="radio" name="loadModeInicial" value="SEG_SEX">
+              <span><b>Segunda a sexta</b><span>Usa somente SEG, TER, QUA, QUI e SEX.</span></span>
+            </label>
+            <label class="loadModeChoice">
+              <input type="radio" name="loadModeInicial" value="SEG_SAB">
+              <span><b>Segunda a sábado</b><span>Usa SEG, TER, QUA, QUI, SEX e SAB.</span></span>
+            </label>
+          </div>
         </div>
         <div id="filialSelectStatus" class="filialSelectStatus">Buscando filiais na Página1...</div>
         <div class="filialModalActions">
@@ -2075,8 +2111,11 @@ function ensureFilialModal(){
   document.body.appendChild(overlay);
   overlay.querySelector('#filialBtnEntrar').addEventListener('click',()=>{
     const filial=overlay.querySelector('#filialSelectInicial').value;
+    const modeEl=overlay.querySelector('input[name="loadModeInicial"]:checked');
+    const loadMode=modeEl ? modeEl.value : '';
     if(!filial){ setFilialModalStatus('Selecione uma filial para continuar.','err'); return; }
-    selectFilialAndLoad(filial);
+    if(!loadMode){ setFilialModalStatus('Selecione os dias permitidos para carregamento.','err'); return; }
+    selectFilialAndLoad(filial, loadMode);
   });
   overlay.querySelector('#filialBtnRecarregar').addEventListener('click',()=>loadFiliaisDisponiveis(true));
   return overlay;
@@ -2093,6 +2132,9 @@ function renderFilialOptions(){
   const last=getLastFilial();
   sel.innerHTML='<option value="">Selecione...</option>'+FILIAIS_DISPONIVEIS.map(f=>`<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
   if(last && FILIAIS_DISPONIVEIS.includes(last)) sel.value=last;
+  const mode=getLastLoadMode();
+  const radio=document.querySelector('input[name="loadModeInicial"][value="'+mode+'"]');
+  if(radio) radio.checked=true;
 }
 async function loadFiliaisDisponiveis(force=false){
   ensureFilialModal();
@@ -2127,18 +2169,19 @@ function updateFilialButton(){
     btn.addEventListener('click',()=>openFilialSelection(true));
     nav.appendChild(btn);
   }
-  btn.innerHTML='Filial: <strong>'+escapeHtml(SELECTED_FILIAL || 'Selecionar')+'</strong>';
+  btn.innerHTML='Filial: <strong>'+escapeHtml(SELECTED_FILIAL || 'Selecionar')+'</strong> &nbsp;•&nbsp; Carga: <strong>'+escapeHtml(getLoadModeLabel())+'</strong>';
 }
 async function openFilialSelection(forceList=false){
   const overlay=ensureFilialModal();
   overlay.classList.add('open');
   await loadFiliaisDisponiveis(!!forceList);
 }
-async function selectFilialAndLoad(filial){
+async function selectFilialAndLoad(filial, loadMode){
   filial=String(filial||'').trim();
   if(!filial) return;
   SELECTED_FILIAL=filial;
   setLastFilial(filial);
+  setLastLoadMode(loadMode || getLastLoadMode());
   DIRTY_VOCATIVOS.clear();
   CONFIG={nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, maxVehicleByVocativo:{}, bodyRestrictionByVocativo:{}};
   saveConfig();
@@ -2271,7 +2314,7 @@ async function loadBackendData(resetFilters=true){
     BASE_DATA=[]; render(); return;
   }
   try{
-    setLoadStatus('Carregando dados do Google Planilhas para a filial '+SELECTED_FILIAL+'...','loading');
+    setLoadStatus('Carregando dados do Google Planilhas para a filial '+SELECTED_FILIAL+' com carregamento '+getLoadModeLabel().toLowerCase()+'...','loading');
     const payload=await loadViaJsonp();
     if(!payload || payload.ok===false) throw new Error(payload?.error || 'Resposta inválida do Apps Script.');
     const rows=(payload.rows || payload.data || []).map(mapImportedRow).filter(r=>r.cliente || r.vocativo);
@@ -2280,7 +2323,7 @@ async function loadBackendData(resetFilters=true){
     if(resetFilters){ clearSelect(fCliente); clearSelect(fVocativo); clearSelect(fUf); clearSelect(fCidade); clearSelect(fStatus); clearSelect(fCargas); clearSelect(fDiaCarga); }
     render();
     updateSaveButton();
-    setLoadStatus(`${rows.length.toLocaleString('pt-BR')} registros carregados da filial ${SELECTED_FILIAL}. Configurações da Página2 aplicadas. Atualizado em ${new Date().toLocaleString('pt-BR')}.`,'ok');
+    setLoadStatus(`${rows.length.toLocaleString('pt-BR')} registros carregados da filial ${SELECTED_FILIAL}. Regime de carga: ${getLoadModeLabel()}. Configurações da Página2 aplicadas. Atualizado em ${new Date().toLocaleString('pt-BR')}.`,'ok');
   }catch(err){
     console.error(err);
     setLoadStatus('Erro ao carregar: '+err.message,'err');
