@@ -1065,14 +1065,23 @@ function showCombinationImpact(vocativo){
   LAST_ALL_ROWS=all;
   const current=all.find(x=>x.vocativo===vocativo);
   const linkedNames=getGroupVocativos(vocativo).filter(v=>v!==vocativo);
-  const impacted=linkedNames.map(v=>all.find(x=>x.vocativo===v)).filter(x=>x && x.status==='impossivel');
+  const impactedCurrent = current && current.status==='impossivel' ? [current] : [];
+  const impactedLinked = linkedNames.map(v=>all.find(x=>x.vocativo===v)).filter(x=>x && x.status==='impossivel');
+  const impacted=[...impactedCurrent, ...impactedLinked];
 
   if(impacted.length){
-    const messages=impacted.map(row=>`Atenção: a alteração realizada em ${current?.vocativo || vocativo} tornou o vocativo vinculado ${row.vocativo} impossível de atender o prazo.`);
+    const messages=[];
+    if(impactedCurrent.length){
+      messages.push(`A alteração realizada tornou o vocativo ${current.vocativo} impossível de atender o prazo.`);
+    }
+    impactedLinked.forEach(row=>{
+      messages.push(`Atenção: a alteração realizada em ${current?.vocativo || vocativo} tornou o vocativo vinculado ${row.vocativo} impossível de atender o prazo.`);
+    });
     setLoadStatus(`${messages[0]} Revise janelas, entregas fixas, dias não úteis, ordem de entrega ou vínculo.`, 'err');
     showDeadlineModal(messages);
   }
 }
+
 function fmt(v){ if(v===null || v===undefined || v===999 || v===-999 || !Number.isFinite(Number(v))) return '—'; return Number(v).toLocaleString('pt-BR',{maximumFractionDigits:1}); }
 function fmtWorstReceipt(r){
   if(!r || !r.worstReceiptDay) return '—';
@@ -1573,10 +1582,12 @@ function evaluateWindows(row, deadline, transit, forcedCombo){
     const baseReason = fixedCount
       ? `Entrega fixa: ${fixedCount} dia(s) selecionado(s), usando ${rowForcedCombo.length} janela(s) calculada(s)`
       : (linkedSchedule && groupCount > rowForcedCombo.length
-        ? `Carga vinculada otimizada: ${rowForcedCombo.length} janela(s) para este vocativo, dentro de ${groupCount} janela(s) do grupo; ${sharedCount} janela(s) compartilhada(s) com entrega escalonada`
-        : (linkedPlan && linkedPlan.complete
-          ? 'Carga vinculada: mesmo(s) dia(s) de carregamento, com entrega do parceiro no próximo dia possível posterior'
-          : 'Carga vinculada: mesmo(s) dia(s) de carregamento do vocativo parceiro'));
+        ? `Carga vinculada otimizada: ${rowForcedCombo.length} janela(s) para este vocativo dentro da matriz progressiva de ${groupCount} janela(s) do grupo; ${sharedCount} primeira(s) janela(s) alinhada(s)`
+        : (linkedSchedule && linkedSchedule.sharedOnly
+          ? 'Carga vinculada: matriz progressiva comum do grupo, com todos os vocativos alinhados nas mesmas datas de carregamento'
+          : (linkedPlan && linkedPlan.complete
+            ? 'Carga vinculada: dias comuns obrigatórios do grupo, com entrega do parceiro no próximo dia possível posterior'
+            : 'Carga vinculada: mesmo(s) dia(s) de carregamento do vocativo parceiro')));
     return {...forced, cargas:rowForcedCombo.length, avg:forced.total===999?999:forced.total/RECEIPT_INDEXES.length, linkedDeliveryPlan:linkedPlan, linkedGroupCombo: linkedSchedule ? linkedSchedule.groupCombo : rowForcedCombo, reason: forced.ok ? baseReason : (forced.reason || 'Não atende no vínculo atual')};
   }
 
@@ -1647,6 +1658,29 @@ function comboIncludesAll(combo, required){
   const set=new Set((combo || []).map(Number));
   return (required || []).every(day=>set.has(Number(day)));
 }
+function orderedPermutations(arr){
+  const values=[...new Set((arr || []).map(Number).filter(d=>getLoadIndexes().includes(d)))];
+  const out=[];
+  function walk(rest,prefix){
+    if(!rest.length){ out.push(prefix.slice()); return; }
+    for(let i=0;i<rest.length;i++){
+      walk(rest.slice(0,i).concat(rest.slice(i+1)), prefix.concat(rest[i]));
+    }
+  }
+  walk(values,[]);
+  return out;
+}
+function linkedSequenceScore(seq){
+  // Pontua a matriz na ordem progressiva real.
+  // Ex.: [SAB, TER] é diferente de [TER, SAB], porque a 1ª janela usada por quem precisa de 1 carga muda.
+  const days=(seq || []).map(Number);
+  let score=0;
+  for(let i=0;i<6;i++){
+    const d=days[i] ?? 99;
+    score += d * Math.pow(100, 5-i);
+  }
+  return score;
+}
 function getRepresentativeRowsForLink(vocativo){
   const groupVocs=[...new Set(getGroupVocativos(vocativo))];
   if(groupVocs.length<2) return [];
@@ -1657,41 +1691,81 @@ function enumerateCombosForLinkedRow(row){
   candidateLoadCounts(row).forEach(k=>{ comb(getLoadIndexes(),k).forEach(c=>out.push(c)); });
   return out;
 }
-function bestComboForLinkedRowIncluding(row, requiredCombo, linkedPlan){
-  const required=[...new Set((requiredCombo || []).map(Number))].sort((a,b)=>a-b);
+function bestPrefixForLinkedRow(row, groupSequence, linkedPlan){
+  const matrix=[...new Set((groupSequence || []).map(Number).filter(d=>getLoadIndexes().includes(d)))];
+  if(!matrix.length) return null;
   const parts=calcDeadlineParts(row);
-  const candidates=[];
   const fallback=[];
-  const counts=candidateLoadCounts(row).filter(k=>k>=required.length);
-  counts.forEach(k=>{
-    comb(getLoadIndexes(),k).forEach(combo=>{
-      if(!comboIncludesAll(combo, required)) return;
-      const ev=evaluateComboForRow(row, parts.menorPrazo, row.transitTime, combo, {allowExtraLoads:true, linkedDeliveryPlan:linkedPlan});
-      const pack={combo:combo.slice(), ev, score:scoreLinkedEval(ev, parts.menorPrazo)};
-      fallback.push(pack);
-      if(ev && ev.ok) candidates.push(pack);
-    });
-  });
-  const sorter=(a,b)=>(a.combo.length-b.combo.length) || (earlyLoadScore(a.combo)-earlyLoadScore(b.combo)) || (saturdayLoadCount(a.combo)-saturdayLoadCount(b.combo)) || (a.score.worst-b.score.worst) || (a.score.total-b.score.total) || String(comboKey(a.combo)).localeCompare(String(comboKey(b.combo)));
-  if(candidates.length){ candidates.sort(sorter); return candidates[0]; }
-  if(fallback.length){ fallback.sort((a,b)=>(a.score.over-b.score.over) || sorter(a,b)); return fallback[0]; }
+
+  // Regra de vínculo: cada vocativo só pode usar o prefixo da matriz comum.
+  // Se a matriz for [SAB, TER, QUI], quem precisa de 1 janela usa SAB;
+  // quem precisa de 2 usa SAB+TER; quem precisa de 3 usa SAB+TER+QUI.
+  for(let k=1;k<=matrix.length;k++){
+    const combo=matrix.slice(0,k);
+    const ev=evaluateComboForRow(row, parts.menorPrazo, row.transitTime, combo, {allowExtraLoads:true, linkedDeliveryPlan:linkedPlan});
+    const pack={combo:combo.slice(), ev, score:scoreLinkedEval(ev, parts.menorPrazo)};
+    fallback.push(pack);
+    if(ev && ev.ok) return pack;
+  }
+
+  if(fallback.length){
+    fallback.sort((a,b)=>(a.score.over-b.score.over) || (a.score.worst-b.score.worst) || (a.score.total-b.score.total) || (a.combo.length-b.combo.length));
+    return fallback[0];
+  }
   return null;
 }
+function linkedExtraLoads(candidate){
+  const rows = Math.max(1, (candidate && candidate.rowCount) || 1);
+  const shared = (candidate && candidate.commonCombo ? candidate.commonCombo.length : 0) * rows;
+  return Math.max(0, ((candidate && candidate.assignedLoads) || 0) - shared);
+}
 function compareLinkedSchedulesOk(a,b){
-  return (a.assignedLoads-b.assignedLoads) || (a.firstDeliveryLoads-b.firstDeliveryLoads) || (a.maxRowLoads-b.maxRowLoads) || (a.groupLoads-b.groupLoads) || (b.rowsWithSingleCommon-a.rowsWithSingleCommon) || (a.linkedWeekPenalty-b.linkedWeekPenalty) || (a.linkedGap-b.linkedGap) || (a.linkedExtraDelay-b.linkedExtraDelay) || (a.worst-b.worst) || (a.total-b.total) || (earlyLoadScore(a.commonCombo)-earlyLoadScore(b.commonCombo)) || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo)) || String(comboKey(a.groupCombo)).localeCompare(String(comboKey(b.groupCombo)));
+  // Regra de vínculo em matriz progressiva:
+  // 1) minimiza a quantidade total de janelas realmente usadas pelos vocativos;
+  // 2) minimiza o maior número de janelas exigido por um vocativo;
+  // 3) preserva a otimização do 1º vocativo da ordem de entrega;
+  // 4) só depois compara tamanho da matriz do grupo e qualidade de prazo.
+  return (a.assignedLoads-b.assignedLoads)
+    || (a.maxRowLoads-b.maxRowLoads)
+    || (a.firstDeliveryLoads-b.firstDeliveryLoads)
+    || (a.groupLoads-b.groupLoads)
+    || (linkedExtraLoads(a)-linkedExtraLoads(b))
+    || (b.rowsWithSingleCommon-a.rowsWithSingleCommon)
+    || (a.linkedWeekPenalty-b.linkedWeekPenalty)
+    || (a.linkedGap-b.linkedGap)
+    || (a.linkedExtraDelay-b.linkedExtraDelay)
+    || (a.worst-b.worst)
+    || (a.total-b.total)
+    || (linkedSequenceScore(a.groupCombo)-linkedSequenceScore(b.groupCombo))
+    || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo))
+    || String(comboKey(a.groupCombo)).localeCompare(String(comboKey(b.groupCombo)));
 }
 function compareLinkedSchedulesFallback(a,b){
-  return (a.maxOver-b.maxOver) || (a.assignedLoads-b.assignedLoads) || (a.firstDeliveryLoads-b.firstDeliveryLoads) || (a.maxRowLoads-b.maxRowLoads) || (a.groupLoads-b.groupLoads) || (a.worst-b.worst) || (a.total-b.total) || (a.linkedWeekPenalty-b.linkedWeekPenalty) || (a.linkedGap-b.linkedGap) || (a.linkedExtraDelay-b.linkedExtraDelay) || (earlyLoadScore(a.commonCombo)-earlyLoadScore(b.commonCombo)) || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo));
+  return (a.maxOver-b.maxOver)
+    || (a.assignedLoads-b.assignedLoads)
+    || (a.maxRowLoads-b.maxRowLoads)
+    || (a.firstDeliveryLoads-b.firstDeliveryLoads)
+    || (a.groupLoads-b.groupLoads)
+    || (linkedExtraLoads(a)-linkedExtraLoads(b))
+    || (a.worst-b.worst)
+    || (a.total-b.total)
+    || (a.linkedWeekPenalty-b.linkedWeekPenalty)
+    || (a.linkedGap-b.linkedGap)
+    || (a.linkedExtraDelay-b.linkedExtraDelay)
+    || (linkedSequenceScore(a.groupCombo)-linkedSequenceScore(b.groupCombo))
+    || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo));
 }
-function makeLinkedScheduleCandidate(groupRows, commonCombo){
-  if(!commonCombo || !commonCombo.length) return null;
-  const linkedPlan=buildLinkedDeliveryPlan(groupRows, commonCombo);
+function makeLinkedScheduleCandidate(groupRows, groupSequence){
+  const matrix=[...new Set((groupSequence || []).map(Number).filter(d=>getLoadIndexes().includes(d)))];
+  if(!matrix.length) return null;
+
+  const linkedPlan=buildLinkedDeliveryPlan(groupRows, matrix);
   if(!linkedPlan || !linkedPlan.complete) return null;
 
   const comboByVoc={};
   let hardInvalid=false;
   groupRows.forEach(r=>{
-    const best=bestComboForLinkedRowIncluding(r, commonCombo, linkedPlan);
+    const best=bestPrefixForLinkedRow(r, matrix, linkedPlan);
     if(!best || !best.combo || !best.combo.length){ hardInvalid=true; return; }
     comboByVoc[r.vocativo]=best.combo.slice();
   });
@@ -1699,39 +1773,60 @@ function makeLinkedScheduleCandidate(groupRows, commonCombo){
 
   const scored=scoreLinkedPlanForDeadlinesByCombos(groupRows, comboByVoc, linkedPlan);
   if(scored.hardInvalid) return null;
-  const groupCombo=groupRows.reduce((acc,r)=>comboUnion(acc, comboByVoc[r.vocativo] || []), []);
+
   const assignedLoads=groupRows.reduce((sum,r)=>sum + ((comboByVoc[r.vocativo] || []).length), 0);
-  const rowsWithSingleCommon=groupRows.filter(r=>comboKey(comboByVoc[r.vocativo])===comboKey(commonCombo)).length;
+  const minRowLoads=Math.min(...groupRows.map(r=>(comboByVoc[r.vocativo] || []).length));
+  const commonCombo=matrix.slice(0, Math.max(0,minRowLoads));
+  const rowsWithSingleCommon=groupRows.filter(r=>(comboByVoc[r.vocativo] || []).length===commonCombo.length).length;
   const orderedRows=getOrderedLinkedRows(groupRows);
   const firstVoc=orderedRows[0] ? orderedRows[0].vocativo : '';
   const firstDeliveryLoads=firstVoc && comboByVoc[firstVoc] ? comboByVoc[firstVoc].length : 99;
   const maxRowLoads=Math.max(...groupRows.map(r=>(comboByVoc[r.vocativo] || []).length));
-  return { comboByVoc, groupCombo, commonCombo:commonCombo.slice(), linkedPlan, ok:scored.ok, maxOver:scored.maxOver, worst:scored.worst, total:scored.total, assignedLoads, groupLoads:groupCombo.length, rowsWithSingleCommon, firstDeliveryLoads, maxRowLoads, linkedWeekPenalty: linkedPlan.weekPenalty, linkedGap: linkedPlan.gap, linkedExtraDelay: linkedPlan.extraDelay, evals:scored.evals };
+
+  return {
+    comboByVoc,
+    groupCombo:matrix.slice(),
+    commonCombo,
+    linkedPlan,
+    ok:scored.ok,
+    maxOver:scored.maxOver,
+    worst:scored.worst,
+    total:scored.total,
+    assignedLoads,
+    groupLoads:matrix.length,
+    rowsWithSingleCommon,
+    firstDeliveryLoads,
+    maxRowLoads,
+    linkedWeekPenalty: linkedPlan.weekPenalty,
+    linkedGap: linkedPlan.gap,
+    linkedExtraDelay: linkedPlan.extraDelay,
+    evals:scored.evals,
+    rowCount:groupRows.length,
+    sharedOnly: commonCombo.length===matrix.length
+  };
 }
 function findBestLinkedSchedule(row){
   const groupRows=getRepresentativeRowsForLink(row.vocativo);
   if(groupRows.length<2) return null;
 
-  // Regra para 2 ou mais vocativos vinculados:
-  // busca o MENOR NÚMERO TOTAL de janelas de carregamento na semana.
-  // Não para mais na primeira combinação comum que atende, pois em grupos com 3+ vocativos
-  // uma combinação com mais dias compartilhados pode reduzir a união total de carregamentos do grupo
-  // e ainda permitir que cada vocativo mantenha somente as janelas necessárias para cumprir o prazo.
-  const cacheKey=groupRows.map(r=>r.vocativo).sort((a,b)=>a.localeCompare(b,'pt-BR')).join('|||') + '::' + groupRows.map(r=>`${r.vocativo}:${getDeliveryOrder(r.vocativo)||''}:${getEntregaMesmoDia(r.vocativo)}`).join('|');
+  // Matriz progressiva para vocativos vinculados:
+  // se a matriz do grupo for SEG/QUA/SAB, qualquer vocativo com 1 janela usa SEG,
+  // com 2 janelas usa SEG/QUA e com 3 janelas usa SEG/QUA/SAB.
+  // Assim, os vocativos nunca criam dias diferentes para a mesma camada de carregamento.
+  const cacheKey=groupRows.map(r=>r.vocativo).sort((a,b)=>a.localeCompare(b,'pt-BR')).join('|||') + '::' + groupRows.map(r=>`${r.vocativo}:${getDeliveryOrder(r.vocativo)||''}:${getEntregaMesmoDia(r.vocativo)}`).join('|') + '::' + getLoadIndexes().join(',');
   if(LINKED_SCHEDULE_CACHE.has(cacheKey)) return LINKED_SCHEDULE_CACHE.get(cacheKey);
 
   const okCandidates=[];
   let bestFallback=null;
 
-  // Avalia todas as combinações possíveis de janelas compartilhadas.
-  // A comparação final prioriza groupLoads, então o grupo fica com o mínimo possível de carregamentos,
-  // enquanto bestComboForLinkedRowIncluding mantém cada vocativo com a menor quantidade necessária.
   for(let k=1;k<=getLoadIndexes().length;k++){
     comb(getLoadIndexes(),k).forEach(combo=>{
-      const candidate=makeLinkedScheduleCandidate(groupRows, combo);
-      if(!candidate) return;
-      if(candidate.ok) okCandidates.push(candidate);
-      if(!bestFallback || compareLinkedSchedulesFallback(candidate,bestFallback)<0) bestFallback=candidate;
+      orderedPermutations(combo).forEach(sequence=>{
+        const candidate=makeLinkedScheduleCandidate(groupRows, sequence);
+        if(!candidate) return;
+        if(candidate.ok) okCandidates.push(candidate);
+        if(!bestFallback || compareLinkedSchedulesFallback(candidate,bestFallback)<0) bestFallback=candidate;
+      });
     });
   }
 
@@ -1741,7 +1836,6 @@ function findBestLinkedSchedule(row){
   LINKED_SCHEDULE_CACHE.set(cacheKey,best || null);
   return best || null;
 }
-
 function enrich(r){
   const parts=calcDeadlineParts(r);
   const linkedSchedule=findBestLinkedSchedule(r);
