@@ -213,6 +213,11 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 @media(max-width:760px){.linkDropdownMenu{position:fixed;left:14px;right:14px;top:auto;bottom:18px;max-height:58vh}.linkDropdownOptions{max-height:42vh}}
 .linkOrderSelect,.linkSameDaySelect{min-height:28px;border-radius:8px;font-size:11px;padding:5px 7px;width:100%}
 .linkBadge{display:inline-block;background:#eef2ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:900}
+.linkFilterToggle{display:inline-flex;align-items:center;gap:6px;margin-top:6px;border:1px solid #fed7aa;background:#fff7ed;color:#9a3412;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:950;cursor:pointer;user-select:none;white-space:nowrap}
+.linkFilterToggle input{width:13px;height:13px;margin:0;accent-color:var(--brand)}
+.linkFilterToggle.active{background:var(--brand);border-color:var(--brand);color:#fff}
+.linkFilterToggle.disabled{opacity:.55;cursor:not-allowed;background:#f8fafc;border-color:#e5e7eb;color:#6b7280}
+.linkFilterToggle.disabled input{cursor:not-allowed}
 @media(max-width:760px){
   main{padding-left:10px;padding-right:10px}
   header{padding-left:14px;padding-right:14px}
@@ -590,6 +595,7 @@ let CONFIG = loadConfig();
 let DIRTY_VOCATIVOS = new Set();
 let BACKEND_CONFIG_VOCATIVOS = new Set();
 let LINKED_SCHEDULE_CACHE = new Map();
+let ACTIVE_LINK_FILTER_VOCATIVO = '';
 const FILIAL_KEY = 'planejamento_janelas_filial_selecionada_v1';
 const LOAD_MODE_KEY = 'planejamento_janelas_regime_carga_v1';
 let SELECTED_FILIAL = '';
@@ -1920,6 +1926,27 @@ function getLoadDaysForChartAndFilter(row){
   // Assim, o gráfico "Carregamentos por dia da semana" permanece alinhado com o card.
   return [...new Set((row.loadDays || []).filter(Boolean))];
 }
+function getLinkedFilterRows(all, filtered){
+  if(!ACTIVE_LINK_FILTER_VOCATIVO) return filtered;
+  const group = getGroupVocativos(ACTIVE_LINK_FILTER_VOCATIVO).filter(Boolean);
+  if(group.length <= 1){ ACTIVE_LINK_FILTER_VOCATIVO = ''; return filtered; }
+  const groupNorm = new Set(group.map(norm));
+  const rows = (all || []).filter(r=>groupNorm.has(norm(r.vocativo)));
+  if(!rows.length){ ACTIVE_LINK_FILTER_VOCATIVO = ''; return filtered; }
+  return rows.slice().sort((a,b)=>group.indexOf(a.vocativo)-group.indexOf(b.vocativo));
+}
+function isLinkedFilterActiveFor(vocativo){
+  if(!ACTIVE_LINK_FILTER_VOCATIVO) return false;
+  return getGroupVocativos(ACTIVE_LINK_FILTER_VOCATIVO).map(norm).includes(norm(vocativo));
+}
+function renderLinkedFilterToggle(vocativo){
+  const group = getGroupVocativos(vocativo).filter(Boolean);
+  const hasLinked = group.length > 1;
+  const active = isLinkedFilterActiveFor(vocativo);
+  const label = hasLinked ? (active ? 'Exibindo vinculados' : 'Ver vinculados') : 'Sem vínculos';
+  return '<label class="linkFilterToggle '+(active?'active':'')+' '+(hasLinked?'':'disabled')+'" title="'+(hasLinked ? 'Filtrar temporariamente este grupo de vocativos vinculados' : 'Este vocativo não possui vínculos')+'"><input type="checkbox" data-link-filter-voc="'+escapeHtml(vocativo)+'" '+(active?'checked':'')+' '+(hasLinked?'':'disabled')+'>'+label+'</label>';
+}
+
 function getFiltered(all, options={}){
   const busca=norm(fBusca.value);
   const ignoreLoadDay = !!options.ignoreLoadDay;
@@ -1948,15 +1975,17 @@ function render(){
   opt(fVocativo, unique(vocBase.map(r=>r.vocativo)), 'Todos');
   const filteredBeforeLoadDay=getFiltered(all,{ignoreLoadDay:true});
   const filtered=getFiltered(all);
-  $('kReg').textContent=filtered.length.toLocaleString('pt-BR');
-  $('kVoc').textContent=unique(filtered.map(r=>r.vocativo)).length.toLocaleString('pt-BR');
-  $('kOk').textContent=filtered.filter(r=>r.status==='atende').length.toLocaleString('pt-BR');
-  $('kCrit').textContent=filtered.filter(r=>r.status==='critico').length.toLocaleString('pt-BR');
-  $('kBad').textContent=filtered.filter(r=>r.status==='impossivel').length.toLocaleString('pt-BR');
-  $('kMedia').textContent=filtered.length ? (filtered.reduce((s,r)=>s+r.cargas,0)/filtered.length).toFixed(1).replace('.',',') : '0';
-  renderBars(filtered);
-  renderLoadDayBars(filteredBeforeLoadDay);
-  renderCards(filtered);
+  const displayRows=getLinkedFilterRows(all, filtered);
+  const displayRowsBeforeLoadDay=ACTIVE_LINK_FILTER_VOCATIVO ? displayRows : filteredBeforeLoadDay;
+  $('kReg').textContent=displayRows.length.toLocaleString('pt-BR');
+  $('kVoc').textContent=unique(displayRows.map(r=>r.vocativo)).length.toLocaleString('pt-BR');
+  $('kOk').textContent=displayRows.filter(r=>r.status==='atende').length.toLocaleString('pt-BR');
+  $('kCrit').textContent=displayRows.filter(r=>r.status==='critico').length.toLocaleString('pt-BR');
+  $('kBad').textContent=displayRows.filter(r=>r.status==='impossivel').length.toLocaleString('pt-BR');
+  $('kMedia').textContent=displayRows.length ? (displayRows.reduce((s,r)=>s+r.cargas,0)/displayRows.length).toFixed(1).replace('.',',') : '0';
+  renderBars(displayRows);
+  renderLoadDayBars(displayRowsBeforeLoadDay);
+  renderCards(displayRows);
   if($('pageJanelasSimples')?.classList.contains('active')) renderSimpleWindows();
 }
 function renderBars(rows){
@@ -2045,7 +2074,7 @@ function renderCards(rows){
     return `<article class="card vocCard status-${r.status}" data-voc-card="${escapeHtml(r.vocativo)}">
       <div class="vocTop">
         <div><div class="vocTitle">${escapeHtml(r.vocativo)}</div><div class="vocSub">${escapeHtml(r.cliente)} • ${escapeHtml(r.cidadeDestino)}/${escapeHtml(r.ufDestino)} • Origem ${escapeHtml(r.ufOrigem)}</div></div>
-        <div>${badge}</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">${badge}${renderLinkedFilterToggle(r.vocativo)}</div>
       </div>
       ${reason}
       <div class="metrics">
@@ -2089,6 +2118,15 @@ function renderCards(rows){
   bindCardEvents();
 }
 function bindCardEvents(){
+  cards.querySelectorAll('input[data-link-filter-voc]').forEach(input=>{
+    input.addEventListener('change',()=>{
+      const voc=input.dataset.linkFilterVoc;
+      ACTIVE_LINK_FILTER_VOCATIVO = input.checked ? voc : '';
+      render();
+      const el=document.querySelector(`[data-voc-card="${cssEsc(voc)}"]`);
+      if(el) el.scrollIntoView({block:'nearest'});
+    });
+  });
   cards.querySelectorAll('input[data-type]').forEach(input=>{
     input.addEventListener('change',()=>{
       const voc=input.dataset.voc, type=input.dataset.type;
