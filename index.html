@@ -1297,17 +1297,34 @@ function scoreLinkedPlanForDeadlinesByCombos(groupRows, comboByVoc, plan){
   const hardInvalid = evals.some(x => !x.combo.length || !x.ev || x.ev.worst===999 || x.ev.total===999);
   return { hardInvalid, ok: !hardInvalid && evals.every(x=>x.ev.ok) && plan.complete, maxOver: hardInvalid ? 9999 : Math.max(...evals.map(x=>x.score.over)), worst: hardInvalid ? 9999 : Math.max(...evals.map(x=>x.score.worst)), total: hardInvalid ? 999999 : evals.reduce((sum,x)=>sum+x.score.total,0), evals };
 }
+function preferredLoadDayForFixedDelivery(fixedDay, transit){
+  // Regra corrigida para ENTREGA FIXA:
+  // o carregamento deve respeitar o transit time da mesma forma que a entrega livre.
+  // Primeiro calcula o dia ideal de carga: entrega fixa - transit time.
+  // Se esse dia não for permitido no regime da filial, volta para o dia de carga permitido
+  // mais próximo antes dele.
+  // Ex.: TT 1 + entrega SEG => ideal DOM; no regime SEG-SEX vira SEX, no regime SEG-SAB vira SAB.
+  const allowedLoads = getLoadIndexes();
+  if(!allowedLoads.length) return null;
+  const transitDays = Math.max(0, Math.ceil(num(transit)));
+  let day = (Number(fixedDay) - transitDays + 700) % 7;
+  for(let guard=0; guard<14; guard++){
+    if(allowedLoads.includes(day)) return day;
+    day = (day + 6) % 7;
+  }
+  return null;
+}
+
 function fixedDeliveryFromLoad(loadDay, transit, fixedDays){
-  // Entrega fixa é calculada mantendo o dia de entrega selecionado.
-  // A carga pode ocorrer antes do dia ideal quando isso ainda atende o transit time,
-  // para evitar sábado sempre que houver alternativa viável em dia útil.
-  // Ex.: entrega QUI + transit time 4 teria carga ideal DOM; como DOM não carrega,
-  // a aplicação testa SÁB, mas também permite SEX se o prazo continuar atendido.
+  // Entrega fixa agora escolhe somente o par carga → entrega mais próximo do transit time.
+  // Isso impede cargas antecipadas demais, como SEG → QUI com TT 1, quando o correto é QUA → QUI.
   if(!fixedDays.length) return null;
   const transitDays=Math.max(0, Math.ceil(num(transit)));
 
   const options = fixedDays
     .map(fixedDay => {
+      const preferredLoad = preferredLoadDayForFixedDelivery(fixedDay, transitDays);
+      if(preferredLoad === null || Number(loadDay) !== Number(preferredLoad)) return null;
       const calendarTravel = diffForwardDays(loadDay, fixedDay);
       if(calendarTravel < transitDays) return null;
       const idealLoad=(fixedDay - transitDays + 700) % 7;
@@ -1328,31 +1345,25 @@ function fixedDeliveryFromLoad(loadDay, transit, fixedDays){
 }
 
 function getFixedDeliveryPairs(row, transit){
-  // Pares sugeridos para entrega fixa, evitando sábado quando existir alternativa viável em dia útil.
+  // Pares sugeridos para entrega fixa respeitando o transit time e o regime de carga da filial.
   const fixed = getFixedDeliveryDays(row.vocativo);
   const transitDays = Math.max(0, Math.ceil(num(transit)));
   return fixed.map(fixedDay => {
-    const options = getLoadIndexes().map(loadDay => {
-      const travelElapsed = diffForwardDays(loadDay, fixedDay);
-      if(travelElapsed < transitDays) return null;
-      const idealLoad = (fixedDay - transitDays + 700) % 7;
-      return {
-        loadDay,
-        deliveryDay: fixedDay,
-        load: DAYS[loadDay],
-        delivery: DAYS[fixedDay],
-        travelElapsed,
-        transitTime: transitDays,
-        adjustedFromSunday: idealLoad === 0 && loadDay === 6,
-        calendarSpanFromLoad: travelElapsed + 1
-      };
-    }).filter(Boolean);
-    options.sort((a,b)=>
-      (a.loadDay - b.loadDay) ||
-      (Number(a.loadDay===6) - Number(b.loadDay===6)) ||
-      (a.travelElapsed - b.travelElapsed)
-    );
-    return options[0];
+    const loadDay = preferredLoadDayForFixedDelivery(fixedDay, transitDays);
+    if(loadDay === null) return null;
+    const travelElapsed = diffForwardDays(loadDay, fixedDay);
+    if(travelElapsed < transitDays) return null;
+    const idealLoad = (fixedDay - transitDays + 700) % 7;
+    return {
+      loadDay,
+      deliveryDay: fixedDay,
+      load: DAYS[loadDay],
+      delivery: DAYS[fixedDay],
+      travelElapsed,
+      transitTime: transitDays,
+      adjustedFromSunday: idealLoad === 0 && loadDay === 6,
+      calendarSpanFromLoad: travelElapsed + 1
+    };
   }).filter(Boolean);
 }
 function resolveDeliveryFromLoad(row, loadDay, transit, allowedDays){
