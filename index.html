@@ -596,6 +596,72 @@ let DIRTY_VOCATIVOS = new Set();
 let BACKEND_CONFIG_VOCATIVOS = new Set();
 let LINKED_SCHEDULE_CACHE = new Map();
 let ACTIVE_LINK_FILTER_VOCATIVO = '';
+
+// ===== Otimizações de desempenho do front-end =====
+// Mantém as mesmas regras, mas evita recalcular planejamento e reabrir caches a cada filtro.
+let BASE_DATA_VERSION = 0;
+let PLANNING_CACHE_VERSION = 0;
+let ENRICHED_ROWS_CACHE_KEY = '';
+let ENRICHED_ROWS_CACHE = null;
+let RENDER_FRAME_ID = 0;
+let SIMPLE_RENDER_FRAME_ID = 0;
+let AUX_RENDER_TIMER_ID = 0;
+let ENRICH_ROW_CACHE = new Map();
+let RENDER_SKIP_FILTER_REFRESH_ONCE = false;
+let RENDER_PENDING_AFTER = [];
+
+function invalidatePlanningCaches(full=false){
+  if(full){
+    PLANNING_CACHE_VERSION++;
+    if(ENRICH_ROW_CACHE && typeof ENRICH_ROW_CACHE.clear === 'function') ENRICH_ROW_CACHE.clear();
+    if(LINKED_SCHEDULE_CACHE && typeof LINKED_SCHEDULE_CACHE.clear === 'function') LINKED_SCHEDULE_CACHE.clear();
+  }
+  ENRICHED_ROWS_CACHE_KEY = '';
+  ENRICHED_ROWS_CACHE = null;
+  if(typeof auxClearCaches === 'function') auxClearCaches();
+}
+function bumpBaseDataVersion(){
+  BASE_DATA_VERSION++;
+  invalidatePlanningCaches(true);
+}
+function scheduleRender(){
+  if(RENDER_FRAME_ID) cancelAnimationFrame(RENDER_FRAME_ID);
+  RENDER_FRAME_ID = requestAnimationFrame(()=>{
+    RENDER_FRAME_ID = 0;
+    const callbacks = RENDER_PENDING_AFTER.splice(0);
+    render();
+    callbacks.forEach(fn=>{ try{ fn(); }catch(e){ console.error(e); } });
+  });
+}
+function scheduleRenderFast(callback){
+  RENDER_SKIP_FILTER_REFRESH_ONCE = true;
+  if(typeof callback === 'function') RENDER_PENDING_AFTER.push(callback);
+  scheduleRender();
+}
+function afterCardConfigChange(voc, options={}){
+  saveConfig();
+  if(voc) markDirty(voc);
+  const shouldImpact = options.impact !== false;
+  const shouldScroll = !!options.scroll;
+  scheduleRenderFast(()=>{
+    if(shouldImpact && voc) showCombinationImpact(voc);
+    if(shouldScroll && voc){
+      const el=document.querySelector(`[data-voc-card="${cssEsc(voc)}"]`);
+      if(el) el.scrollIntoView({block:'nearest'});
+    }
+  });
+}
+function scheduleSimpleRender(){
+  if(SIMPLE_RENDER_FRAME_ID) cancelAnimationFrame(SIMPLE_RENDER_FRAME_ID);
+  SIMPLE_RENDER_FRAME_ID = requestAnimationFrame(()=>{
+    SIMPLE_RENDER_FRAME_ID = 0;
+    renderSimpleWindows();
+  });
+}
+function scheduleAuxRender(delay=60){
+  clearTimeout(AUX_RENDER_TIMER_ID);
+  AUX_RENDER_TIMER_ID = setTimeout(()=>renderAux(), delay);
+}
 const FILIAL_KEY = 'planejamento_janelas_filial_selecionada_v1';
 const LOAD_MODE_KEY = 'planejamento_janelas_regime_carga_v1';
 let SELECTED_FILIAL = '';
@@ -625,7 +691,7 @@ function ensureConfigShape(){
   CONFIG.deliveryOrderByVocativo = CONFIG.deliveryOrderByVocativo || {};
   CONFIG.sameDayDeliveryByVocativo = CONFIG.sameDayDeliveryByVocativo || {};
 }
-function saveConfig(){ ensureConfigShape(); localStorage.setItem(CFG_KEY, JSON.stringify(CONFIG)); }
+function saveConfig(){ ensureConfigShape(); localStorage.setItem(CFG_KEY, JSON.stringify(CONFIG)); invalidatePlanningCaches(); }
 function dayToIndex(day){
   const s=norm(day);
   const map={DOM:0,SEG:1,TER:2,QUA:3,QUI:4,SEX:5,SAB:6};
@@ -938,8 +1004,18 @@ function clearSelect(sel){ if(sel) [...sel.options].forEach(o=>{ o.selected=fals
 function opt(sel, values, allLabel){
   const current = sel.multiple ? getSelectedValues(sel) : [sel.value].filter(Boolean);
   if(allLabel) sel.dataset.allLabel = allLabel;
-  sel.innerHTML = values.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-  setSelectValues(sel, current.filter(v=>values.includes(v)));
+  const normalizedValues = (values || []).map(v=>String(v));
+  const optionKey = normalizedValues.join('');
+  const validCurrent = current.filter(v=>normalizedValues.includes(String(v)));
+  if(sel.dataset.optionKey === optionKey){
+    // Evita reconstruir opções/dropdowns quando só o filtro mudou, mantendo a UX igual.
+    setSelectValues(sel, validCurrent);
+    updateMultiSelectDropdown(sel);
+    return;
+  }
+  sel.dataset.optionKey = optionKey;
+  sel.innerHTML = normalizedValues.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  setSelectValues(sel, validCurrent);
   updateMultiSelectDropdown(sel);
 }
 function getSelectLabel(sel, value){
@@ -1011,7 +1087,8 @@ function updateMultiSelectDropdown(sel){
   if(!sel._msReady){ return; }
   const wrap=sel._msWrap;
   wrap.querySelector('.msButtonText').textContent=getMultiSummary(sel);
-  renderMultiOptions(sel);
+  // Só redesenha a lista quando o dropdown está aberto; ao abrir, renderMultiOptions é chamado.
+  if(wrap.classList.contains('open')) renderMultiOptions(sel);
 }
 function refreshAllMultiSelectDropdowns(){
   document.querySelectorAll('select[multiple]').forEach(updateMultiSelectDropdown);
@@ -1988,7 +2065,37 @@ function enrich(r){
   const status = !w.ok ? 'impossivel' : folga<=1 ? 'critico' : 'atende';
   return {...r,...parts,...w,folga,status,nonBusiness:getNonBusinessDays(r.vocativo),fixedDelivery:getFixedDeliveryDays(r.vocativo),linkedWith:getLinkedVocativo(r.vocativo),linkedWithList:getLinkedVocativos(r.vocativo),deliveryOrder:getDeliveryOrder(r.vocativo),entregaMesmoDia:getEntregaMesmoDia(r.vocativo)};
 }
-function getAll(){ return BASE_DATA.map(enrich); }
+function configSignatureForVocativo(voc){
+  ensureConfigShape();
+  const group = getGroupVocativos(voc).filter(Boolean).sort((a,b)=>String(a).localeCompare(String(b),'pt-BR'));
+  const cfg = CONFIG || {};
+  return group.map(v=>[
+    v,
+    (cfg.nonBusinessByVocativo && cfg.nonBusinessByVocativo[v] || []).join('-'),
+    (cfg.fixedDeliveryByVocativo && cfg.fixedDeliveryByVocativo[v] || []).join('-'),
+    (cfg.linkedByVocativo && cfg.linkedByVocativo[v] || []).join('~'),
+    (cfg.deliveryOrderByVocativo && cfg.deliveryOrderByVocativo[v]) || '',
+    (cfg.sameDayDeliveryByVocativo && cfg.sameDayDeliveryByVocativo[v]) || '',
+    (cfg.maxVehicleByVocativo && cfg.maxVehicleByVocativo[v]) || '',
+    (cfg.bodyRestrictionByVocativo && cfg.bodyRestrictionByVocativo[v]) || ''
+  ].join(':')).join('|');
+}
+function getCachedEnrich(r){
+  const voc = r && r.vocativo ? r.vocativo : '';
+  const key = [BASE_DATA_VERSION, PLANNING_CACHE_VERSION, getLoadIndexes().join(','), voc, (r && r.__idx !== undefined ? r.__idx : ''), configSignatureForVocativo(voc)].join('§');
+  const cached = ENRICH_ROW_CACHE.get(voc);
+  if(cached && cached.key === key) return cached.value;
+  const value = enrich(r);
+  ENRICH_ROW_CACHE.set(voc, {key, value});
+  return value;
+}
+function getAll(){
+  const key = BASE_DATA_VERSION + '|' + PLANNING_CACHE_VERSION + '|' + getLoadIndexes().join(',') + '|' + BASE_DATA.length + '|' + JSON.stringify(CONFIG || {});
+  if(ENRICHED_ROWS_CACHE && ENRICHED_ROWS_CACHE_KEY === key) return ENRICHED_ROWS_CACHE;
+  ENRICHED_ROWS_CACHE = BASE_DATA.map((row, idx)=>{ if(row && row.__idx === undefined) row.__idx = idx; return getCachedEnrich(row); });
+  ENRICHED_ROWS_CACHE_KEY = key;
+  return ENRICHED_ROWS_CACHE;
+}
 function getLoadDaysForChartAndFilter(row){
   // O gráfico/filtro "Dia de carga" deve contar sempre os dias reais de CARREGAMENTO
   // recomendados no planejamento do vocativo, e não os dias de entrega fixa.
@@ -2032,16 +2139,18 @@ function getFiltered(all, options={}){
   );
 }
 function render(){
-  LINKED_SCHEDULE_CACHE.clear();
-  auxClearCaches();
   const all=getAll();
   LAST_ALL_ROWS=all;
-  opt(fCliente, unique(all.map(r=>r.cliente)), 'Todos');
-  opt(fUf, unique(all.map(r=>r.ufDestino)), 'Todas');
-  const cityBase=all.filter(r=>matchesSelected(fUf,r.ufDestino));
-  opt(fCidade, unique(cityBase.map(r=>r.cidadeDestino)), 'Todas');
-  const vocBase=all.filter(r=>matchesSelected(fCliente,r.cliente) && matchesSelected(fUf,r.ufDestino) && matchesSelected(fCidade,r.cidadeDestino));
-  opt(fVocativo, unique(vocBase.map(r=>r.vocativo)), 'Todos');
+  const skipFilterRefresh = RENDER_SKIP_FILTER_REFRESH_ONCE;
+  RENDER_SKIP_FILTER_REFRESH_ONCE = false;
+  if(!skipFilterRefresh){
+    opt(fCliente, unique(all.map(r=>r.cliente)), 'Todos');
+    opt(fUf, unique(all.map(r=>r.ufDestino)), 'Todas');
+    const cityBase=all.filter(r=>matchesSelected(fUf,r.ufDestino));
+    opt(fCidade, unique(cityBase.map(r=>r.cidadeDestino)), 'Todas');
+    const vocBase=all.filter(r=>matchesSelected(fCliente,r.cliente) && matchesSelected(fUf,r.ufDestino) && matchesSelected(fCidade,r.cidadeDestino));
+    opt(fVocativo, unique(vocBase.map(r=>r.vocativo)), 'Todos');
+  }
   const filteredBeforeLoadDay=getFiltered(all,{ignoreLoadDay:true});
   const filtered=getFiltered(all);
   const displayRows=getLinkedFilterRows(all, filtered);
@@ -2087,7 +2196,8 @@ function renderLoadDayBars(rows){
       const vals=getSelectedValues(fDiaCarga);
       if(vals.includes(day)) setSelectValues(fDiaCarga, vals.filter(v=>v!==day));
       else setSelectValues(fDiaCarga, [...vals, day]);
-      render();
+      updateMultiSelectDropdown(fDiaCarga);
+      scheduleRender();
     });
   });
 }
@@ -2105,7 +2215,6 @@ function renderDayToggles(voc, type){
 }
 function renderLinkSelect(voc){
   const selected=new Set(getLinkedVocativos(voc));
-  const options=unique(BASE_DATA.map(r=>r.vocativo)).filter(v=>v && v!==voc);
   const groupSize=getGroupVocativos(voc).length || 1;
   const maxOrder=Math.max(6, groupSize + 2);
   const orderValue=String(getDeliveryOrder(voc) || '');
@@ -2120,10 +2229,7 @@ function renderLinkSelect(voc){
         <button type="button" class="linkDropdownBtn" data-link-dd-button="${escapeHtml(voc)}"><span class="linkDropdownText">${escapeHtml(selectedText)}</span><span class="linkDropdownCaret">▾</span></button>
         <div class="linkDropdownMenu">
           <input type="text" class="linkDropdownSearch" data-link-search="${escapeHtml(voc)}" placeholder="Pesquisar vocativo...">
-          <div class="linkDropdownOptions">
-            <label class="linkDropdownOption isNone"><input type="checkbox" data-link-none="${escapeHtml(voc)}" ${selected.size?'':'checked'}><span class="linkDropdownOptionText">SEM VÍNCULO</span></label>
-            ${options.map(v=>`<label class="linkDropdownOption" data-link-option-text="${escapeHtml(v)}"><input type="checkbox" data-link-check="${escapeHtml(voc)}" value="${escapeHtml(v)}" ${selected.has(v)?'checked':''}><span class="linkDropdownOptionText">${escapeHtml(v)}</span></label>`).join('')}
-          </div>
+          <div class="linkDropdownOptions" data-link-options="${escapeHtml(voc)}"></div>
         </div>
       </div>
       <div class="linkConfigHint">Selecione um ou mais vocativos, ou marque SEM VÍNCULO.</div>
@@ -2133,6 +2239,37 @@ function renderLinkSelect(voc){
       <div><div class="linkConfigMiniLabel">Mesmo dia?</div><select class="linkSameDaySelect" data-sameday-voc="${escapeHtml(voc)}"><option value="NÃO" ${sameDay==='NÃO'?'selected':''}>Não</option><option value="SIM" ${sameDay==='SIM'?'selected':''}>Sim</option></select></div>
     </div>
   </div>`;
+}
+
+function populateLinkDropdownOptions(voc, box){
+  if(!box || !voc) return;
+  const holder=box.querySelector('[data-link-options]');
+  if(!holder) return;
+  const selected=new Set(getLinkedVocativos(voc));
+  const options=unique(BASE_DATA.map(r=>r.vocativo)).filter(v=>v && v!==voc);
+  const signature = selected.size + '|' + [...selected].sort().join('') + '|' + BASE_DATA_VERSION;
+  if(holder.dataset.renderSignature === signature && holder.childElementCount) return;
+  holder.dataset.renderSignature = signature;
+  holder.innerHTML = `<label class="linkDropdownOption isNone"><input type="checkbox" data-link-none="${escapeHtml(voc)}" ${selected.size?'':'checked'}><span class="linkDropdownOptionText">SEM VÍNCULO</span></label>`
+    + options.map(v=>`<label class="linkDropdownOption" data-link-option-text="${escapeHtml(v)}"><input type="checkbox" data-link-check="${escapeHtml(voc)}" value="${escapeHtml(v)}" ${selected.has(v)?'checked':''}><span class="linkDropdownOptionText">${escapeHtml(v)}</span></label>`).join('');
+  const none=holder.querySelector('input[data-link-none]');
+  if(none){
+    none.addEventListener('change',()=>{
+      if(none.checked){
+        setLinkedVocativos(voc, []);
+        afterCardConfigChange(voc);
+      }else{
+        none.checked = !getLinkedVocativos(voc).length;
+      }
+    });
+  }
+  holder.querySelectorAll('input[data-link-check]').forEach(input=>{
+    input.addEventListener('change',()=>{
+      const partners=[...holder.querySelectorAll(`input[data-link-check="${cssEsc(voc)}"]:checked`)].map(x=>x.value).filter(Boolean);
+      setLinkedVocativos(voc, partners);
+      afterCardConfigChange(voc);
+    });
+  });
 }
 
 function renderCards(rows){
@@ -2191,9 +2328,10 @@ function bindCardEvents(){
     input.addEventListener('change',()=>{
       const voc=input.dataset.linkFilterVoc;
       ACTIVE_LINK_FILTER_VOCATIVO = input.checked ? voc : '';
-      render();
-      const el=document.querySelector(`[data-voc-card="${cssEsc(voc)}"]`);
-      if(el) el.scrollIntoView({block:'nearest'});
+      scheduleRenderFast(()=>{
+        const el=document.querySelector(`[data-voc-card="${cssEsc(voc)}"]`);
+        if(el) el.scrollIntoView({block:'nearest'});
+      });
     });
   });
   cards.querySelectorAll('input[data-type]').forEach(input=>{
@@ -2202,7 +2340,7 @@ function bindCardEvents(){
       const checked=[...cards.querySelectorAll(`input[data-voc="${cssEsc(voc)}"][data-type="${type}"]:checked`)].map(x=>Number(x.dataset.day)).sort((a,b)=>a-b);
       if(type==='off'){ if(checked.length) CONFIG.nonBusinessByVocativo[voc]=checked; else delete CONFIG.nonBusinessByVocativo[voc]; }
       else { if(checked.length) CONFIG.fixedDeliveryByVocativo[voc]=checked; else delete CONFIG.fixedDeliveryByVocativo[voc]; }
-      saveConfig(); markDirty(voc); render(); showCombinationImpact(voc);
+      afterCardConfigChange(voc);
     });
   });
   cards.querySelectorAll('[data-link-dd-button]').forEach(btn=>{
@@ -2212,7 +2350,12 @@ function bindCardEvents(){
       const box=btn.closest('.linkDropdown');
       const wasOpen=box && box.classList.contains('open');
       cards.querySelectorAll('.linkDropdown.open').forEach(x=>{ if(x!==box) x.classList.remove('open'); });
-      if(box){ box.classList.toggle('open', !wasOpen); const search=box.querySelector('[data-link-search]'); if(box.classList.contains('open') && search){ search.value=''; search.dispatchEvent(new Event('input')); setTimeout(()=>search.focus(),0); } }
+      if(box){
+        box.classList.toggle('open', !wasOpen);
+        const search=box.querySelector('[data-link-search]');
+        if(box.classList.contains('open')) populateLinkDropdownOptions(btn.dataset.linkDdButton, box);
+        if(box.classList.contains('open') && search){ search.value=''; search.dispatchEvent(new Event('input')); setTimeout(()=>search.focus(),0); }
+      }
     });
   });
   cards.querySelectorAll('input[data-link-search]').forEach(input=>{
@@ -2231,8 +2374,7 @@ function bindCardEvents(){
       const voc=input.dataset.linkNone;
       if(input.checked){
         setLinkedVocativos(voc, []);
-        saveConfig();
-        render(); showCombinationImpact(voc);
+        afterCardConfigChange(voc);
       }else{
         input.checked = !getLinkedVocativos(voc).length;
       }
@@ -2243,24 +2385,21 @@ function bindCardEvents(){
       const voc=input.dataset.linkCheck;
       const partners=[...cards.querySelectorAll(`input[data-link-check="${cssEsc(voc)}"]:checked`)].map(x=>x.value).filter(Boolean);
       setLinkedVocativos(voc, partners);
-      saveConfig();
-      render(); showCombinationImpact(voc);
+      afterCardConfigChange(voc);
     });
   });
   cards.querySelectorAll('select[data-order-voc]').forEach(sel=>{
     sel.addEventListener('change',()=>{
       const voc=sel.dataset.orderVoc;
       setDeliveryOrder(voc, sel.value);
-      saveConfig();
-      render(); showCombinationImpact(voc);
+      afterCardConfigChange(voc);
     });
   });
   cards.querySelectorAll('select[data-sameday-voc]').forEach(sel=>{
     sel.addEventListener('change',()=>{
       const voc=sel.dataset.samedayVoc;
       setEntregaMesmoDia(voc, sel.value);
-      saveConfig();
-      render(); showCombinationImpact(voc);
+      afterCardConfigChange(voc);
     });
   });
   cards.querySelectorAll('button[data-action]' ).forEach(btn=>{
@@ -2276,7 +2415,7 @@ function bindCardEvents(){
         setLinkedVocativos(voc, []);
         oldGroup.forEach(markDirty);
       }
-      saveConfig(); markDirty(voc); render(); showCombinationImpact(voc);
+      afterCardConfigChange(voc);
       const el=document.querySelector(`[data-voc-card="${cssEsc(voc)}"]`); if(el) el.scrollIntoView({block:'nearest'});
     });
   });
@@ -2592,7 +2731,7 @@ async function loadBackendData(resetFilters=true){
   if(!SELECTED_FILIAL){ await openFilialSelection(false); return; }
   if(!isUrlConfigured()){
     setLoadStatus('Configure a constante APPS_SCRIPT_URL no HTML com a URL /exec do Apps Script.','err');
-    BASE_DATA=[]; render(); return;
+    BASE_DATA=[]; bumpBaseDataVersion(); render(); return;
   }
   try{
     setLoadStatus('Carregando dados do Google Planilhas para a filial '+SELECTED_FILIAL+' com carregamento '+getLoadModeLabel().toLowerCase()+'...','loading');
@@ -2600,6 +2739,7 @@ async function loadBackendData(resetFilters=true){
     if(!payload || payload.ok===false) throw new Error(payload?.error || 'Resposta inválida do Apps Script.');
     const rows=(payload.rows || payload.data || []).map(mapImportedRow).filter(r=>r.cliente || r.vocativo);
     BASE_DATA=rows;
+    bumpBaseDataVersion();
     applyBackendConfigs(payload.configs || {});
     if(resetFilters){ clearSelect(fCliente); clearSelect(fVocativo); clearSelect(fUf); clearSelect(fCidade); clearSelect(fStatus); clearSelect(fCargas); clearSelect(fDiaCarga); }
     render();
@@ -2608,11 +2748,11 @@ async function loadBackendData(resetFilters=true){
   }catch(err){
     console.error(err);
     setLoadStatus('Erro ao carregar: '+err.message,'err');
-    BASE_DATA=[]; render();
+    BASE_DATA=[]; bumpBaseDataVersion(); render();
   }
 }
-[fCliente,fVocativo,fUf,fCidade,fStatus,fCargas,fDiaCarga].forEach(el=>el.addEventListener('change',()=>{ updateMultiSelectDropdown(el); render(); }));
-fBusca.addEventListener('input',render);
+[fCliente,fVocativo,fUf,fCidade,fStatus,fCargas,fDiaCarga].forEach(el=>el.addEventListener('change',()=>{ updateMultiSelectDropdown(el); scheduleRender(); }));
+fBusca.addEventListener('input',()=>scheduleRender());
 $('btnExport').addEventListener('click',exportCSV);
 $('btnSave').addEventListener('click',saveDirtyConfigs);
 $('btnReload').addEventListener('click',()=>loadBackendData(true));
@@ -2743,7 +2883,6 @@ function jsRenderGroupCard(g, day, items){
 }
 function renderSimpleWindows(){
   if(!jsCards) return;
-  LINKED_SCHEDULE_CACHE.clear();
   const allRows=getAll();
   jsRefreshFilters(allRows);
   const groups=jsBuildGroups(allRows).filter(jsGroupMatches);
@@ -3206,13 +3345,13 @@ function setVehicleRestriction(vocativo, value){
   CONFIG.maxVehicleByVocativo = CONFIG.maxVehicleByVocativo || {};
   const v=normalizeVehicleRestriction(value);
   if(v==='SEM RESTRIÇÃO') delete CONFIG.maxVehicleByVocativo[vocativo]; else CONFIG.maxVehicleByVocativo[vocativo]=v;
-  markDirty(vocativo); saveConfig();
+  markDirty(vocativo);
 }
 function setBodyRestriction(vocativo, value){
   CONFIG.bodyRestrictionByVocativo = CONFIG.bodyRestrictionByVocativo || {};
   const v=normalizeBodyRestriction(value);
   if(v==='SEM RESTRIÇÃO') delete CONFIG.bodyRestrictionByVocativo[vocativo]; else CONFIG.bodyRestrictionByVocativo[vocativo]=v;
-  markDirty(vocativo); saveConfig();
+  markDirty(vocativo);
 }
 function getGroupVehicleRestriction(vocativos){
   const selected=(vocativos || []).map(getVehicleRestriction).filter(v=>v && v!=='SEM RESTRIÇÃO');
@@ -3296,11 +3435,11 @@ function injectRestrictionControls(){
   });
   document.querySelectorAll('select[data-max-vehicle-voc]').forEach(sel=>{
     if(sel._restrictionBound) return; sel._restrictionBound=true;
-    sel.addEventListener('change',()=>{ setVehicleRestriction(sel.dataset.maxVehicleVoc, sel.value); render(); });
+    sel.addEventListener('change',()=>{ const voc=sel.dataset.maxVehicleVoc; setVehicleRestriction(voc, sel.value); afterCardConfigChange(voc,{impact:false}); });
   });
   document.querySelectorAll('select[data-body-restriction-voc]').forEach(sel=>{
     if(sel._restrictionBound) return; sel._restrictionBound=true;
-    sel.addEventListener('change',()=>{ setBodyRestriction(sel.dataset.bodyRestrictionVoc, sel.value); render(); });
+    sel.addEventListener('change',()=>{ const voc=sel.dataset.bodyRestrictionVoc; setBodyRestriction(voc, sel.value); afterCardConfigChange(voc,{impact:false}); });
   });
 }
 const _renderCardsBase = renderCards;
@@ -3309,7 +3448,7 @@ cards.addEventListener('click', e=>{
   const btn=e.target.closest('button[data-action="clear"]');
   if(!btn) return;
   const voc=btn.dataset.voc;
-  if(voc){ delete CONFIG.maxVehicleByVocativo[voc]; delete CONFIG.bodyRestrictionByVocativo[voc]; markDirty(voc); saveConfig(); }
+  if(voc){ delete CONFIG.maxVehicleByVocativo[voc]; delete CONFIG.bodyRestrictionByVocativo[voc]; afterCardConfigChange(voc,{impact:false}); }
 }, true);
 const _auxVehicleForWeightBase = auxVehicleForWeight;
 auxVehicleForWeight = function(weight, maxAllowed='SEM RESTRIÇÃO'){
@@ -3392,13 +3531,13 @@ refreshAllMultiSelectDropdowns();
 $('tabPlanejamento').addEventListener('click',()=>setActivePage('planejamento'));
 $('tabJanelasSimples').addEventListener('click',()=>setActivePage('janelas'));
 $('tabAuxVeiculos').addEventListener('click',()=>setActivePage('aux'));
-[jsDia,jsCliente,jsUf,jsCidade,jsVocativo].forEach(el=>el.addEventListener('change',()=>{ updateMultiSelectDropdown(el); renderSimpleWindows(); }));
+[jsDia,jsCliente,jsUf,jsCidade,jsVocativo].forEach(el=>el.addEventListener('change',()=>{ updateMultiSelectDropdown(el); scheduleSimpleRender(); }));
 $('jsLimpar').addEventListener('click',()=>{ [jsDia,jsCliente,jsUf,jsCidade,jsVocativo].forEach(clearSelect); refreshAllMultiSelectDropdowns(); renderSimpleWindows(); });
 auxFile.addEventListener('change',e=>{ const file=e.target.files && e.target.files[0]; if(file) auxReadFile(file).catch(err=>{ console.error(err); auxSetStatus('Erro ao ler Excel: '+err.message,'err'); }); });
-auxFilial.addEventListener('change',()=>{ updateMultiSelectDropdown(auxFilial); renderAux(); });
-auxCliente.addEventListener('change',()=>{ updateMultiSelectDropdown(auxCliente); renderAux(); });
-auxMes.addEventListener('change',()=>{ updateMultiSelectDropdown(auxMes); renderAux(); });
-auxPercentual.addEventListener('change',()=>{ AUX_BUCKETS_CACHE_KEY=''; AUX_BUCKETS_CACHE_VALUE=null; renderAux(); });
+auxFilial.addEventListener('change',()=>{ updateMultiSelectDropdown(auxFilial); scheduleAuxRender(); });
+auxCliente.addEventListener('change',()=>{ updateMultiSelectDropdown(auxCliente); scheduleAuxRender(); });
+auxMes.addEventListener('change',()=>{ updateMultiSelectDropdown(auxMes); scheduleAuxRender(); });
+auxPercentual.addEventListener('change',()=>{ AUX_BUCKETS_CACHE_KEY=''; AUX_BUCKETS_CACHE_VALUE=null; scheduleAuxRender(); });
 $('auxProcessar').addEventListener('click',renderAux);
 $('auxExportar').addEventListener('click',auxExportCSV);
 
