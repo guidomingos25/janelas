@@ -1285,14 +1285,65 @@ function compareLinkedPlanScores(a,b){
   return (a.maxOver-b.maxOver) || (a.worst-b.worst) || (a.total-b.total) || (a.plan.weekPenalty-b.plan.weekPenalty) || (a.plan.gap-b.plan.gap) || (a.plan.extraDelay-b.plan.extraDelay) || (a.plan.changed-b.plan.changed);
 }
 function buildLinkedDeliveryPlanForCombos(groupRows, comboByVoc){
-  const emptyPlan=cloneLinkedPlanPlanBase();
-  if(!Array.isArray(groupRows) || groupRows.length < 2) return emptyPlan;
-  const combos=groupRows.map(r=>comboByVoc[r.vocativo] || []);
-  if(combos.some(c=>!c.length)) return {...emptyPlan, complete:false, commonCombo:[]};
-  let shared=combos[0].slice();
-  for(let i=1;i<combos.length;i++) shared=comboIntersection(shared, combos[i]);
-  if(!shared.length) return {...emptyPlan, complete:false, commonCombo:[]};
-  const plan=buildLinkedDeliveryPlan(groupRows, shared);
+  const plan=cloneLinkedPlanPlanBase();
+  if(!Array.isArray(groupRows) || groupRows.length < 2) return plan;
+
+  const combosByVoc={};
+  groupRows.forEach(r=>{
+    combosByVoc[r.vocativo]=[...new Set((comboByVoc[r.vocativo] || []).map(Number).filter(d=>getLoadIndexes().includes(d)))].sort((a,b)=>a-b);
+  });
+
+  const allLoadDays=[...new Set(Object.values(combosByVoc).flat())].sort((a,b)=>a-b);
+  if(!allLoadDays.length || Object.values(combosByVoc).some(c=>!c.length)){
+    return {...plan, complete:false, commonCombo:[]};
+  }
+
+  let shared=Object.values(combosByVoc)[0].slice();
+  for(const combo of Object.values(combosByVoc).slice(1)) shared=comboIntersection(shared, combo);
+
+  const orderedRows=getOrderedLinkedRows(groupRows);
+
+  for(const loadDay of allLoadDays){
+    // Regra importante: a ordem de entrega é recalculada por janela de carregamento.
+    // Participam da sequência somente os vocativos que realmente usam esse dia de carga.
+    // Se um vocativo cadastrado como 2ª/3ª entrega for o único naquela carga, ele vira 1ª entrega da janela
+    // e não recebe acréscimo de dia por causa de outros vocativos vinculados que não carregam nessa data.
+    const participants=orderedRows.filter(row => (combosByVoc[row.vocativo] || []).includes(Number(loadDay)));
+    if(!participants.length) continue;
+
+    let previous=null;
+    const descriptionParts=[];
+
+    for(let idx=0; idx<participants.length; idx++){
+      const row=participants[idx];
+      const base=resolveDeliveryFromLoad(row, loadDay, row.transitTime, allowedDeliveryDays(row));
+      if(!base){ plan.complete=false; return {...plan, commonCombo:shared}; }
+
+      let delivery={...base, linkedAdjusted:false};
+      if(idx>0){
+        const sameDay=getEntregaMesmoDia(row.vocativo)==='SIM';
+        const minElapsed=Number(previous.travelElapsed) + (sameDay ? 0 : 1);
+        if(Number(base.travelElapsed) < minElapsed){
+          delivery=deliveryFromLoadAtOrAfterElapsed(row, loadDay, row.transitTime, minElapsed);
+          if(!delivery){ plan.complete=false; return {...plan, commonCombo:shared}; }
+          delivery.linkedAdjusted=true;
+        }
+      }
+
+      plan.map[deliveryPlanKey(row.vocativo, loadDay)] = delivery;
+      if(previous){
+        plan.weekPenalty += deliveryWeekPenalty(previous, delivery);
+        plan.gap += Math.max(0, Number(delivery.travelElapsed) - Number(previous.travelElapsed));
+      }
+      plan.extraDelay += Math.max(0, Number(delivery.travelElapsed) - Number(base.travelElapsed));
+      if(delivery.linkedAdjusted) plan.changed += 1;
+      descriptionParts.push(`${row.vocativo} entrega ${DAYS[delivery.day]}${idx>0 && getEntregaMesmoDia(row.vocativo)==='SIM' ? ' (mesmo dia permitido)' : ''}`);
+      previous=delivery;
+    }
+
+    plan.descriptions.push(`${DAYS[loadDay]}: ${descriptionParts.join(' → ')}`);
+  }
+
   return {...plan, commonCombo:shared};
 }
 function scoreLinkedPlanForDeadlinesByCombos(groupRows, comboByVoc, plan){
@@ -1759,17 +1810,35 @@ function makeLinkedScheduleCandidate(groupRows, groupSequence){
   const matrix=[...new Set((groupSequence || []).map(Number).filter(d=>getLoadIndexes().includes(d)))];
   if(!matrix.length) return null;
 
-  const linkedPlan=buildLinkedDeliveryPlan(groupRows, matrix);
-  if(!linkedPlan || !linkedPlan.complete) return null;
+  let linkedPlan=cloneLinkedPlanPlanBase();
+  let comboByVoc={};
+  let lastComboKey='';
 
-  const comboByVoc={};
-  let hardInvalid=false;
-  groupRows.forEach(r=>{
-    const best=bestPrefixForLinkedRow(r, matrix, linkedPlan);
-    if(!best || !best.combo || !best.combo.length){ hardInvalid=true; return; }
-    comboByVoc[r.vocativo]=best.combo.slice();
-  });
-  if(hardInvalid) return null;
+  // Escolhe o prefixo de cada vocativo e depois recalcula o plano vinculado
+  // considerando somente os vocativos que participam de cada janela específica.
+  // Isso evita empurrar a 2ª/3ª entrega quando, naquela carga, há somente um vocativo.
+  for(let iter=0; iter<5; iter++){
+    const nextComboByVoc={};
+    let hardInvalid=false;
+
+    groupRows.forEach(r=>{
+      const best=bestPrefixForLinkedRow(r, matrix, linkedPlan);
+      if(!best || !best.combo || !best.combo.length){ hardInvalid=true; return; }
+      nextComboByVoc[r.vocativo]=best.combo.slice();
+    });
+
+    if(hardInvalid) return null;
+
+    const nextKey=groupRows.map(r=>`${r.vocativo}:${comboKey(nextComboByVoc[r.vocativo] || [])}`).join('|');
+    const nextPlan=buildLinkedDeliveryPlanForCombos(groupRows, nextComboByVoc);
+    if(!nextPlan || !nextPlan.complete) return null;
+
+    comboByVoc=nextComboByVoc;
+    linkedPlan=nextPlan;
+
+    if(nextKey===lastComboKey) break;
+    lastComboKey=nextKey;
+  }
 
   const scored=scoreLinkedPlanForDeadlinesByCombos(groupRows, comboByVoc, linkedPlan);
   if(scored.hardInvalid) return null;
