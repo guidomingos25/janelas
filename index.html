@@ -1471,11 +1471,10 @@ function fixedDeliveryFromLoad(loadDay, transit, fixedDays, options={}){
       const preferredLoad = preferredLoadDayForFixedDelivery(fixedDay, transitDays);
       if(preferredLoad === null) return null;
       const calendarTravel = diffForwardDays(loadDay, fixedDay);
-      // No vínculo com entrega fixa, quando há folga ou entrega no mesmo dia do parceiro,
-      // a validação considera a janela carga→entrega de forma inclusiva.
-      // Ex.: carga QUA + entrega QUI possui janela de 2 dias (QUA/QUI), suficiente para TT 2.
-      // Fora do vínculo, mantém a regra rígida original: dias corridos após o carregamento.
-      const atendeTransit = allowSlack ? ((calendarTravel + 1) >= transitDays) : (calendarTravel >= transitDays);
+      // Regra corrigida: mesmo em vocativos vinculados com entrega fixa,
+      // o intervalo carga → entrega precisa respeitar o transit time real.
+      // Ex.: TT 2 + entrega QUI exige carga até TER; QUA → QUI NÃO atende.
+      const atendeTransit = calendarTravel >= transitDays;
       if(!atendeTransit) return null;
       if(!allowSlack && Number(loadDay) !== Number(preferredLoad)) return null;
       const idealLoad=(fixedDay - transitDays + 700) % 7;
@@ -1828,6 +1827,44 @@ function orderedPermutations(arr){
   walk(values,[]);
   return out;
 }
+function orderedFixedLinkedSequences(arr, groupRows){
+  // Otimização segura: reduz permutações, mas mantém somente ordens de matriz
+  // baseadas em dias reais de CARREGAMENTO. Não usa o dia fixo de entrega como
+  // âncora de carga, porque isso pode violar transit time.
+  const values=[...new Set((arr || []).map(Number).filter(d=>getLoadIndexes().includes(d)))];
+  const seen=new Set();
+  const out=[];
+  function push(seq){
+    const clean=[];
+    (seq || []).map(Number).forEach(d=>{ if(values.includes(d) && !clean.includes(d)) clean.push(d); });
+    values.forEach(d=>{ if(!clean.includes(d)) clean.push(d); });
+    if(clean.length !== values.length) return;
+    const key=clean.join(',');
+    if(!seen.has(key)){ seen.add(key); out.push(clean); }
+  }
+
+  push(values.slice().sort((a,b)=>a-b));
+
+  const orderedRows=getOrderedLinkedRows(groupRows || []);
+  const preferredAll=[];
+  orderedRows.forEach(row=>{
+    getFixedDeliveryDays(row.vocativo).forEach(fd=>{
+      const ld=preferredLoadDayForFixedDelivery(fd, row.transitTime);
+      if(ld!==null && values.includes(Number(ld))) preferredAll.push(Number(ld));
+    });
+  });
+  if(preferredAll.length) push(preferredAll.concat(values));
+
+  orderedRows.forEach(row=>{
+    const preferred=getFixedDeliveryDays(row.vocativo)
+      .map(d=>preferredLoadDayForFixedDelivery(d, row.transitTime))
+      .filter(d=>d!==null && values.includes(Number(d)));
+    if(preferred.length) push(preferred.concat(values));
+  });
+
+  return out.length ? out : [values];
+}
+
 function linkedSequenceScore(seq){
   // Pontua a matriz na ordem progressiva real.
   // Ex.: [SAB, TER] é diferente de [TER, SAB], porque a 1ª janela usada por quem precisa de 1 carga muda.
@@ -1930,24 +1967,43 @@ function linkedExtraLoads(candidate){
 }
 
 function linkedFixedAnchorScore(candidate){
-  // Para entrega fixa vinculada, a matriz comum deve priorizar os próprios dias fixos
-  // do primeiro vocativo da ordem. Ex.: 1ª entrega fixa SEG/QUA + TT 2 permite
-  // carga SEG para entregar QUA e o 2º vocativo pode entregar QUI com folga.
-  // Isso evita preferir carga no sábado apenas por ser o par rígido de uma entrega SEG,
-  // quando uma carga comum na segunda atende o transit time e preserva o vínculo.
+  // Para entrega fixa vinculada, a matriz comum NÃO pode ancorar no próprio dia
+  // de entrega fixa. Ela deve ancorar nos dias de CARGA que respeitam o transit time.
+  // Ex.: TT 2 + entrega QUI => carga TER; QUA->QUI é inválido.
   if(!candidate || !candidate.fixedLinked) return 0;
-  const anchors=(candidate.fixedAnchorDays || []).map(Number).filter(d=>getLoadIndexes().includes(d));
-  const combo=(candidate.groupCombo || []).map(Number);
-  if(!anchors.length || !combo.length) return 9999;
-  const prefix=anchors.slice(0, combo.length);
-  const exact = prefix.length===combo.length && combo.every((d,i)=>d===prefix[i]);
-  if(exact) return 0;
-  let score=5000 + Math.abs(combo.length-prefix.length)*100;
+  const rows=(candidate.orderedRowsForAnchor || []).length
+    ? candidate.orderedRowsForAnchor
+    : [];
+  const combo=(candidate.groupCombo || []).map(Number).filter(d=>getLoadIndexes().includes(d));
+  if(!combo.length) return 9999;
+
+  let anchors=[];
+  if(rows.length){
+    rows.forEach(row=>{
+      getFixedDeliveryDays(row.vocativo).forEach(fd=>{
+        const ld=preferredLoadDayForFixedDelivery(fd, row.transitTime);
+        if(ld!==null && getLoadIndexes().includes(Number(ld))) anchors.push(Number(ld));
+      });
+    });
+  } else {
+    anchors=(candidate.fixedAnchorDays || []).map(Number).filter(d=>getLoadIndexes().includes(d));
+  }
+
+  anchors=[...new Set(anchors)];
+  if(!anchors.length) return 9999;
+
+  const orderedAnchors=anchors.slice().sort((a,b)=>{
+    const ia=combo.indexOf(a), ib=combo.indexOf(b);
+    if(ia!==-1 || ib!==-1) return (ia===-1?99:ia) - (ib===-1?99:ib);
+    return a-b;
+  });
+
+  let score=0;
   combo.forEach((d,i)=>{
-    const target=prefix[i] ?? anchors[anchors.length-1];
+    const target=orderedAnchors[i] ?? orderedAnchors[orderedAnchors.length-1];
     const fwd=(d-target+7)%7;
     const back=(target-d+7)%7;
-    score += Math.min(fwd,back)*10 + d;
+    score += Math.min(fwd,back)*10 + (d===target ? 0 : 1);
   });
   return score;
 }
@@ -2133,6 +2189,7 @@ function makeLinkedScheduleCandidate(groupRows, groupSequence){
     rowCount:groupRows.length,
     fixedLinked,
     fixedAnchorDays,
+    orderedRowsForAnchor: orderedRows,
     sharedOnly: commonCombo.length===matrix.length
   };
 }
@@ -2150,9 +2207,14 @@ function findBestLinkedSchedule(row){
   const okCandidates=[];
   let bestFallback=null;
 
+  const allFixedLinkedGroup = groupRows.every(r=>getFixedDeliveryDays(r.vocativo).length>0);
+
   for(let k=1;k<=getLoadIndexes().length;k++){
     comb(getLoadIndexes(),k).forEach(combo=>{
-      orderedPermutations(combo).forEach(sequence=>{
+      const sequences = allFixedLinkedGroup
+        ? orderedFixedLinkedSequences(combo, groupRows)
+        : orderedPermutations(combo);
+      sequences.forEach(sequence=>{
         const candidate=makeLinkedScheduleCandidate(groupRows, sequence);
         if(!candidate) return;
         if(candidate.ok) okCandidates.push(candidate);
