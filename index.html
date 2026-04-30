@@ -1471,7 +1471,12 @@ function fixedDeliveryFromLoad(loadDay, transit, fixedDays, options={}){
       const preferredLoad = preferredLoadDayForFixedDelivery(fixedDay, transitDays);
       if(preferredLoad === null) return null;
       const calendarTravel = diffForwardDays(loadDay, fixedDay);
-      if(calendarTravel < transitDays) return null;
+      // No vínculo com entrega fixa, quando há folga ou entrega no mesmo dia do parceiro,
+      // a validação considera a janela carga→entrega de forma inclusiva.
+      // Ex.: carga QUA + entrega QUI possui janela de 2 dias (QUA/QUI), suficiente para TT 2.
+      // Fora do vínculo, mantém a regra rígida original: dias corridos após o carregamento.
+      const atendeTransit = allowSlack ? ((calendarTravel + 1) >= transitDays) : (calendarTravel >= transitDays);
+      if(!atendeTransit) return null;
       if(!allowSlack && Number(loadDay) !== Number(preferredLoad)) return null;
       const idealLoad=(fixedDay - transitDays + 700) % 7;
       return {
@@ -1844,26 +1849,65 @@ function enumerateCombosForLinkedRow(row){
   candidateLoadCounts(row).forEach(k=>{ comb(getLoadIndexes(),k).forEach(c=>out.push(c)); });
   return out;
 }
-function bestPrefixForLinkedRow(row, groupSequence, linkedPlan){
+function bestPrefixForLinkedRow(row, groupSequence, linkedPlan, requiredCore=[]){
   const matrix=[...new Set((groupSequence || []).map(Number).filter(d=>getLoadIndexes().includes(d)))];
   if(!matrix.length) return null;
   const parts=calcDeadlineParts(row);
   const fallback=[];
+  const core=[...new Set((requiredCore || []).map(Number).filter(d=>matrix.includes(d)))];
   const hasFixedDelivery = getFixedDeliveryDays(row.vocativo).length > 0;
+  const fixedCount = getFixedDeliveryDays(row.vocativo).length;
 
-  // Regra de vínculo: cada vocativo só pode usar o prefixo da matriz comum.
-  // Se a matriz for [SEG, QUA, SEX], quem precisa de 1 janela usa SEG;
-  // quem precisa de 2 usa SEG+QUA; quem precisa de 3 usa SEG+QUA+SEX.
-  // Para entrega fixa vinculada, o limite de janelas do vocativo é a quantidade
-  // de dias fixos selecionados. Ex.: 2 entregas fixas => 2 carregamentos,
-  // sempre tentando alinhar esses carregamentos no mesmo dia dos vinculados.
-  const maxPrefixK = hasFixedDelivery ? Math.min(getFixedDeliveryDays(row.vocativo).length, matrix.length) : matrix.length;
-  for(let k=1;k<=maxPrefixK;k++){
-    const combo=matrix.slice(0,k);
-    const ev=evaluateComboForRow(row, parts.menorPrazo, row.transitTime, combo, {allowExtraLoads:true, allowFixedDeliverySlack:true, linkedDeliveryPlan:linkedPlan});
-    const pack={combo:combo.slice(), ev, score:scoreLinkedEval(ev, parts.menorPrazo)};
-    fallback.push(pack);
-    if(ev && ev.ok) return pack;
+  // Regra de vínculo para entrega livre: permanece usando o prefixo da matriz comum.
+  // Ex.: matriz [SEG, QUA, SEX] => 1 carga usa SEG; 2 cargas usam SEG+QUA.
+  if(!hasFixedDelivery){
+    for(let k=1;k<=matrix.length;k++){
+      const combo=matrix.slice(0,k);
+      const ev=evaluateComboForRow(row, parts.menorPrazo, row.transitTime, combo, {allowExtraLoads:true, allowFixedDeliverySlack:true, linkedDeliveryPlan:linkedPlan});
+      const pack={combo:combo.slice(), ev, score:scoreLinkedEval(ev, parts.menorPrazo)};
+      fallback.push(pack);
+      if(ev && ev.ok) return pack;
+    }
+  } else {
+    // Regra corrigida para VOCATIVOS VINCULADOS COM ENTREGA FIXA:
+    // não obriga mais o vocativo a pegar somente o prefixo da matriz comum.
+    // Ele pode escolher o melhor subconjunto da matriz do grupo, por exemplo SAB+QUA
+    // em vez de SAB+TER, desde que mantenha a quantidade de janelas das entregas fixas,
+    // respeite o transit time/folga e case melhor com os outros vocativos vinculados.
+    const maxK = Math.min(fixedCount, matrix.length);
+    const minK = maxK; // entrega fixa vinculada: 1 janela para cada entrega fixa selecionada
+    for(let k=minK;k<=maxK;k++){
+      const subsets=comb(matrix,k).map(c=>{
+        const order=new Map(matrix.map((d,i)=>[Number(d),i]));
+        return c.slice().sort((a,b)=>(order.get(Number(a))??99)-(order.get(Number(b))??99));
+      });
+      subsets.forEach(combo=>{
+        if(core.length && !comboIncludesAll(combo, core)) return;
+        const ev=evaluateComboForRow(row, parts.menorPrazo, row.transitTime, combo, {allowExtraLoads:true, allowFixedDeliverySlack:true, linkedDeliveryPlan:linkedPlan});
+        const pack={combo:combo.slice(), ev, score:scoreLinkedEval(ev, parts.menorPrazo)};
+        fallback.push(pack);
+      });
+    }
+
+    const ok=fallback.filter(x=>x.ev && x.ev.ok);
+    if(ok.length){
+      ok.sort((a,b)=>{
+        const aFixed=new Set((a.ev.windowPairs || []).map(p=>p.delivery));
+        const bFixed=new Set((b.ev.windowPairs || []).map(p=>p.delivery));
+        const aMissing=fixedCount - aFixed.size;
+        const bMissing=fixedCount - bFixed.size;
+        return (aMissing-bMissing)
+          || (a.score.over-b.score.over)
+          || (a.score.worst-b.score.worst)
+          || (a.score.total-b.score.total)
+          // Mantém o subconjunto mais alinhado ao fim da matriz quando isso não piora prazo,
+          // permitindo casar com uma janela comum futura de outro vocativo (ex.: usar QUA em vez de TER).
+          || (linkedSequenceScore(b.combo)-linkedSequenceScore(a.combo))
+          || (saturdayLoadCount(a.combo)-saturdayLoadCount(b.combo))
+          || String(comboKey(a.combo)).localeCompare(String(comboKey(b.combo)));
+      });
+      return ok[0];
+    }
   }
 
   if(fallback.length){
@@ -1871,14 +1915,14 @@ function bestPrefixForLinkedRow(row, groupSequence, linkedPlan){
       (a.score.over-b.score.over) ||
       (a.score.worst-b.score.worst) ||
       (a.score.total-b.score.total) ||
-      // Em entrega fixa vinculada impossível, se duas ou mais janelas deixam o cenário
-      // mais próximo do atendimento, não reduzir para uma janela só por desempate.
-      (hasFixedDelivery ? (b.combo.length-a.combo.length) : (a.combo.length-b.combo.length))
+      (hasFixedDelivery ? (b.combo.length-a.combo.length) : (a.combo.length-b.combo.length)) ||
+      (hasFixedDelivery ? (linkedSequenceScore(b.combo)-linkedSequenceScore(a.combo)) : 0)
     );
     return fallback[0];
   }
   return null;
 }
+
 function linkedExtraLoads(candidate){
   const rows = Math.max(1, (candidate && candidate.rowCount) || 1);
   const shared = (candidate && candidate.commonCombo ? candidate.commonCombo.length : 0) * rows;
@@ -1916,6 +1960,7 @@ function compareLinkedSchedulesOk(a,b){
   // 4) preserva a otimização do 1º vocativo da ordem de entrega;
   // 5) só depois compara tamanho da matriz do grupo e qualidade de prazo.
   return (a.assignedLoads-b.assignedLoads)
+    || ((a.commonShortfall||0)-(b.commonShortfall||0))
     || (linkedFixedAnchorScore(a)-linkedFixedAnchorScore(b))
     || (a.maxRowLoads-b.maxRowLoads)
     || (a.firstDeliveryLoads-b.firstDeliveryLoads)
@@ -1938,6 +1983,7 @@ function compareLinkedSchedulesFallback(a,b){
   // sábado/terça quando segunda/quarta atende transit time e dá folga às entregas seguintes.
   const fixedLinked = !!(a && b && a.fixedLinked && b.fixedLinked);
   return (a.maxOver-b.maxOver)
+    || (fixedLinked ? ((a.commonShortfall||0)-(b.commonShortfall||0)) : 0)
     || (a.worst-b.worst)
     || (a.total-b.total)
     || (fixedLinked ? (b.maxRowLoads-a.maxRowLoads) : 0)
@@ -1960,28 +2006,85 @@ function makeLinkedScheduleCandidate(groupRows, groupSequence){
   let linkedPlan=cloneLinkedPlanPlanBase();
   let comboByVoc={};
   let lastComboKey='';
+  const fixedLinkedGroup=groupRows.some(r=>getFixedDeliveryDays(r.vocativo).length>0);
+  const commonTargetLoads = fixedLinkedGroup
+    ? Math.min(...groupRows.map(r=>{
+        const fc=getFixedDeliveryDays(r.vocativo).length;
+        return fc>0 ? fc : 1;
+      }))
+    : 0;
 
-  // Escolhe o prefixo de cada vocativo e depois recalcula o plano vinculado
-  // considerando somente os vocativos que participam de cada janela específica.
-  // Isso evita empurrar a 2ª/3ª entrega quando, naquela carga, há somente um vocativo.
+  // Para vocativos vinculados com entrega fixa, mantém a regra anterior de forçar
+  // os carregamentos no mesmo dia sempre que existir uma combinação viável.
+  // A diferença é que o vocativo com menos janelas agora pode escolher o melhor
+  // subconjunto comum da matriz do grupo, em vez de usar apenas o prefixo.
   for(let iter=0; iter<5; iter++){
-    const nextComboByVoc={};
-    let hardInvalid=false;
+    let chosenComboByVoc=null;
+    let chosenPlan=null;
+    let chosenScore=null;
+    const coreOptions = fixedLinkedGroup && commonTargetLoads>0 && matrix.length>=commonTargetLoads
+      ? comb(matrix, commonTargetLoads).map(c=>{
+          const order=new Map(matrix.map((d,i)=>[Number(d),i]));
+          return c.slice().sort((a,b)=>(order.get(Number(a))??99)-(order.get(Number(b))??99));
+        })
+      : [[]];
 
-    groupRows.forEach(r=>{
-      const best=bestPrefixForLinkedRow(r, matrix, linkedPlan);
-      if(!best || !best.combo || !best.combo.length){ hardInvalid=true; return; }
-      nextComboByVoc[r.vocativo]=best.combo.slice();
+    coreOptions.forEach(core=>{
+      const nextComboByVoc={};
+      let hardInvalid=false;
+
+      groupRows.forEach(r=>{
+        const best=bestPrefixForLinkedRow(r, matrix, linkedPlan, core);
+        if(!best || !best.combo || !best.combo.length){ hardInvalid=true; return; }
+        nextComboByVoc[r.vocativo]=best.combo.slice();
+      });
+      if(hardInvalid) return;
+
+      const nextPlan=buildLinkedDeliveryPlanForCombos(groupRows, nextComboByVoc);
+      if(!nextPlan || !nextPlan.complete) return;
+      const scored=scoreLinkedPlanForDeadlinesByCombos(groupRows, nextComboByVoc, nextPlan);
+      if(scored.hardInvalid) return;
+
+      let common=nextComboByVoc[groupRows[0].vocativo] ? nextComboByVoc[groupRows[0].vocativo].slice() : [];
+      groupRows.slice(1).forEach(r=>{ common=comboIntersection(common, nextComboByVoc[r.vocativo] || []); });
+      const assigned=groupRows.reduce((sum,r)=>sum + ((nextComboByVoc[r.vocativo] || []).length), 0);
+      const scorePack={
+        ok: scored.ok ? 0 : 1,
+        commonShortfall: fixedLinkedGroup ? Math.max(0, commonTargetLoads - common.length) : 0,
+        assignedLoads: assigned,
+        maxOver: scored.maxOver,
+        worst: scored.worst,
+        total: scored.total,
+        weekPenalty: nextPlan.weekPenalty,
+        gap: nextPlan.gap,
+        extraDelay: nextPlan.extraDelay,
+        coreScore: linkedSequenceScore(core),
+        comboKey: groupRows.map(r=>comboKey(nextComboByVoc[r.vocativo] || [])).join('|')
+      };
+      const better = !chosenScore
+        || (scorePack.ok-chosenScore.ok)
+        || (scorePack.commonShortfall-chosenScore.commonShortfall)
+        || (scorePack.assignedLoads-chosenScore.assignedLoads)
+        || (scorePack.maxOver-chosenScore.maxOver)
+        || (scorePack.worst-chosenScore.worst)
+        || (scorePack.total-chosenScore.total)
+        || (scorePack.weekPenalty-chosenScore.weekPenalty)
+        || (scorePack.gap-chosenScore.gap)
+        || (scorePack.extraDelay-chosenScore.extraDelay)
+        || (scorePack.coreScore-chosenScore.coreScore)
+        || String(scorePack.comboKey).localeCompare(String(chosenScore.comboKey)) < 0;
+      if(better){
+        chosenScore=scorePack;
+        chosenComboByVoc=nextComboByVoc;
+        chosenPlan=nextPlan;
+      }
     });
 
-    if(hardInvalid) return null;
+    if(!chosenComboByVoc || !chosenPlan) return null;
 
-    const nextKey=groupRows.map(r=>`${r.vocativo}:${comboKey(nextComboByVoc[r.vocativo] || [])}`).join('|');
-    const nextPlan=buildLinkedDeliveryPlanForCombos(groupRows, nextComboByVoc);
-    if(!nextPlan || !nextPlan.complete) return null;
-
-    comboByVoc=nextComboByVoc;
-    linkedPlan=nextPlan;
+    const nextKey=groupRows.map(r=>`${r.vocativo}:${comboKey(chosenComboByVoc[r.vocativo] || [])}`).join('|');
+    comboByVoc=chosenComboByVoc;
+    linkedPlan=chosenPlan;
 
     if(nextKey===lastComboKey) break;
     lastComboKey=nextKey;
@@ -1991,14 +2094,19 @@ function makeLinkedScheduleCandidate(groupRows, groupSequence){
   if(scored.hardInvalid) return null;
 
   const assignedLoads=groupRows.reduce((sum,r)=>sum + ((comboByVoc[r.vocativo] || []).length), 0);
-  const minRowLoads=Math.min(...groupRows.map(r=>(comboByVoc[r.vocativo] || []).length));
-  const commonCombo=matrix.slice(0, Math.max(0,minRowLoads));
-  const rowsWithSingleCommon=groupRows.filter(r=>(comboByVoc[r.vocativo] || []).length===commonCombo.length).length;
+  let commonCombo=(comboByVoc[groupRows[0].vocativo] || []).slice();
+  groupRows.slice(1).forEach(r=>{ commonCombo=comboIntersection(commonCombo, comboByVoc[r.vocativo] || []); });
+  const rowsWithSingleCommon=groupRows.filter(r=>{
+    const combo=comboByVoc[r.vocativo] || [];
+    return combo.length===commonCombo.length && comboIncludesAll(combo, commonCombo);
+  }).length;
   const orderedRows=getOrderedLinkedRows(groupRows);
   const firstVoc=orderedRows[0] ? orderedRows[0].vocativo : '';
   const firstDeliveryLoads=firstVoc && comboByVoc[firstVoc] ? comboByVoc[firstVoc].length : 99;
   const maxRowLoads=Math.max(...groupRows.map(r=>(comboByVoc[r.vocativo] || []).length));
+  const minRowLoads=Math.min(...groupRows.map(r=>(comboByVoc[r.vocativo] || []).length));
   const fixedLinked=groupRows.some(r=>getFixedDeliveryDays(r.vocativo).length>0);
+  const commonShortfall=fixedLinked ? Math.max(0, minRowLoads - commonCombo.length) : 0;
   const anchorRow=orderedRows.find(r=>getFixedDeliveryDays(r.vocativo).length>0) || orderedRows[0];
   const fixedAnchorDays=anchorRow ? getFixedDeliveryDays(anchorRow.vocativo) : [];
 
@@ -2016,6 +2124,8 @@ function makeLinkedScheduleCandidate(groupRows, groupSequence){
     rowsWithSingleCommon,
     firstDeliveryLoads,
     maxRowLoads,
+    minRowLoads,
+    commonShortfall,
     linkedWeekPenalty: linkedPlan.weekPenalty,
     linkedGap: linkedPlan.gap,
     linkedExtraDelay: linkedPlan.extraDelay,
