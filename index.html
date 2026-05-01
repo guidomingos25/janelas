@@ -493,7 +493,7 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
     <div class="miniPanel">
       <div class="ruleGrid">
         <div class="rule"><b>EXW</b><br>Se “não conta”: EXW + coleta. Caso contrário: EXW + coleta - 1.</div>
-        <div class="rule"><b>FCA</b><br>Se “não conta”: EXW + consolidação FCA + 1. Caso contrário: EXW + consolidação FCA.</div>
+        <div class="rule"><b>FCA</b><br>Se “não conta”: PRAZO FCA + consolidação FCA + 1. Caso contrário: PRAZO FCA + consolidação FCA.</div>
         <div class="rule"><b>Prazo útil</b><br>O prazo conta normalmente em dias corridos, descontando apenas os dias não úteis marcados manualmente no card do vocativo.</div><div class="rule"><b>Entrega fixa</b><br>Quando marcada, a entrega só ocorre nesses dias. Sábado e domingo podem ser selecionados para clientes que recebem nesses dias.</div>
       </div>
     </div>
@@ -1602,10 +1602,10 @@ function candidateLoadCounts(row){
   return Array.from({length:getLoadIndexes().length},(_,i)=>i+1);
 }
 function calcDeadlineParts(r){
-  const exw=num(r.prazoEXWBase), coleta=num(r.prazoColeta), cons=num(r.prazoConsolidacaoFCA);
+  const exw=num(r.prazoEXWBase), fca=num(r.prazoFCAPlanilha), coleta=num(r.prazoColeta), cons=num(r.prazoConsolidacaoFCA);
   const naoConta=isNaoConta(r.contaPrazo);
   const prazoExwReal = exw + coleta - (naoConta ? 0 : 1);
-  const prazoFcaReal = exw + cons + (naoConta ? 1 : 0);
+  const prazoFcaReal = fca + cons + (naoConta ? 1 : 0);
   const menorPrazo = Math.min(prazoExwReal, prazoFcaReal);
   return {prazoExwReal,prazoFcaReal,menorPrazo};
 }
