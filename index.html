@@ -96,7 +96,7 @@ button:disabled{cursor:not-allowed;transform:none;filter:none}
 button.secondary{background:var(--dark);box-shadow:0 5px 12px rgba(17,24,39,.14)}
 button.ghost{background:#fff;color:#374151;border:1px solid var(--line);box-shadow:none}
 button.small{padding:6px 8px;border-radius:8px;font-size:10px}
-.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-top:14px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:14px}
 .kpi{padding:13px 14px;border-radius:15px;position:relative;overflow:hidden}
 .kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand)}
 .kpi span{display:block;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.055em}
@@ -134,6 +134,7 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 .vocCard.status-atende:before{background:var(--good)}
 .vocCard.status-critico:before{background:var(--warn)}
 .vocCard.status-impossivel:before{background:var(--bad)}
+.vocCard.status-nao-atende:before{background:var(--bad)}
 .vocTop{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px 8px 16px;background:linear-gradient(180deg,#fff,#fafafa);border-bottom:1px solid var(--line2)}
 .vocTitle{font-size:14px;font-weight:900;color:var(--dark2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-.01em}
 .vocSub{font-size:10.5px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -499,7 +500,7 @@ html[data-theme="dark"] .connectionStatus.loading{background:#3b2606;border-colo
 html[data-theme="dark"] .kpi:before, html[data-theme="dark"] .vocCard:before, html[data-theme="dark"] .auxGroupCard:before, html[data-theme="dark"] .simpleWeekHead{background:var(--brand)!important}
 html[data-theme="dark"] .kpi.good:before, html[data-theme="dark"] .vocCard.status-atende:before{background:var(--good)!important}
 html[data-theme="dark"] .kpi.warn:before, html[data-theme="dark"] .vocCard.status-critico:before{background:var(--warn)!important}
-html[data-theme="dark"] .kpi.bad:before, html[data-theme="dark"] .vocCard.status-impossivel:before{background:var(--bad)!important}
+html[data-theme="dark"] .kpi.bad:before, html[data-theme="dark"] .vocCard.status-impossivel:before, html[data-theme="dark"] .vocCard.status-nao-atende:before{background:var(--bad)!important}
 html[data-theme="dark"] .kpi.good strong{color:var(--good)!important}html[data-theme="dark"] .kpi.warn strong{color:var(--warn)!important}html[data-theme="dark"] .kpi.bad strong{color:var(--bad)!important}
 html[data-theme="dark"] .rule{background:#0b1220!important;border-color:#1e3a5f!important;border-left-color:var(--brand)!important;color:#cbd5e1!important}
 html[data-theme="dark"] .rule b{color:#7dd3fc!important}
@@ -615,10 +616,12 @@ html[data-theme="dark"] .themeToggle{
 .vocCard.status-atende{--vocAccent:var(--good);}
 .vocCard.status-critico{--vocAccent:var(--warn);}
 .vocCard.status-impossivel{--vocAccent:var(--bad);}
+.vocCard.status-nao-atende{--vocAccent:var(--bad);}
 html[data-theme="dark"] .vocCard{border-left-color:var(--vocAccent)!important;}
 html[data-theme="dark"] .vocCard.status-atende{border-left-color:var(--good)!important;}
 html[data-theme="dark"] .vocCard.status-critico{border-left-color:var(--warn)!important;}
 html[data-theme="dark"] .vocCard.status-impossivel{border-left-color:var(--bad)!important;}
+html[data-theme="dark"] .vocCard.status-nao-atende{border-left-color:var(--bad)!important;}
 .vocCard:before{
   display:none!important;
 }
@@ -660,7 +663,7 @@ html[data-theme="dark"] .vocCard.status-impossivel{border-left-color:var(--bad)!
       <div><label>Vocativo</label><select id="fVocativo" multiple></select><div class="filterHint">Ctrl/clique para múltipla escolha</div></div>
       <div><label>UF</label><select id="fUf" multiple></select><div class="filterHint">Ctrl/clique para múltipla escolha</div></div>
       <div><label>Cidade</label><select id="fCidade" multiple></select><div class="filterHint">Ctrl/clique para múltipla escolha</div></div>
-      <div><label>Status</label><select id="fStatus" multiple><option value="atende">Atende</option><option value="critico">Crítico</option><option value="impossivel">Impossível</option></select><div class="filterHint">Vazio = todos</div></div>
+      <div><label>Status</label><select id="fStatus" multiple><option value="atende">Atende</option><option value="nao_atende">Não atende</option></select><div class="filterHint">Vazio = todos</div></div>
       <div><label>Cargas</label><select id="fCargas" multiple><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option><option value="4">4x</option><option value="5">5x</option><option value="6">6x</option></select><div class="filterHint">Vazio = todas</div></div>
       <div><label>Dia de carga</label><select id="fDiaCarga" multiple><option value="DOM">DOM</option><option value="SEG">SEG</option><option value="TER">TER</option><option value="QUA">QUA</option><option value="QUI">QUI</option><option value="SEX">SEX</option><option value="SAB">SAB</option></select><div class="filterHint">Vazio = todos</div></div>
       <div><label>Busca livre</label><input id="fBusca" type="text" placeholder="Cliente, vocativo, cidade..."></div>
@@ -681,8 +684,7 @@ html[data-theme="dark"] .vocCard.status-impossivel{border-left-color:var(--bad)!
     <div class="card kpi"><span>Registros filtrados</span><strong id="kReg">0</strong></div>
     <div class="card kpi"><span>Vocativos</span><strong id="kVoc">0</strong></div>
     <div class="card kpi good"><span>Atendem</span><strong id="kOk">0</strong></div>
-    <div class="card kpi warn"><span>Críticos</span><strong id="kCrit">0</strong></div>
-    <div class="card kpi bad"><span>Impossíveis</span><strong id="kBad">0</strong></div>
+    <div class="card kpi bad"><span>Não atendem</span><strong id="kBad">0</strong></div>
     <div class="card kpi"><span>Média de cargas</span><strong id="kMedia">0</strong></div>
   </section>
 
@@ -715,8 +717,7 @@ html[data-theme="dark"] .vocCard.status-impossivel{border-left-color:var(--bad)!
     </div>
     <div class="legend">
       <span><i class="dot good"></i>Atende</span>
-      <span><i class="dot warn"></i>Crítico</span>
-      <span><i class="dot bad"></i>Impossível</span>
+      <span><i class="dot bad"></i>Não atende</span>
     </div>
   </section>
 
@@ -2496,6 +2497,17 @@ function renderLinkedFilterToggle(vocativo){
   return '<label class="linkFilterToggle '+(active?'active':'')+' '+(hasLinked?'':'disabled')+'" title="'+(hasLinked ? 'Filtrar temporariamente este grupo de vocativos vinculados' : 'Este vocativo não possui vínculos')+'"><input type="checkbox" data-link-filter-voc="'+escapeHtml(vocativo)+'" '+(active?'checked':'')+' '+(hasLinked?'':'disabled')+'>'+label+'</label>';
 }
 
+function getUiStatus(r){
+  return r && r.status === 'impossivel' ? 'nao_atende' : 'atende';
+}
+function getUiStatusLabel(r){
+  return getUiStatus(r) === 'nao_atende' ? 'Não atende' : 'Atende';
+}
+function matchesStatusFilter(r){
+  const vals=getSelectedValues(fStatus);
+  return !vals.length || vals.includes(getUiStatus(r));
+}
+
 function getFiltered(all, options={}){
   const busca=norm(fBusca.value);
   const ignoreLoadDay = !!options.ignoreLoadDay;
@@ -2505,7 +2517,7 @@ function getFiltered(all, options={}){
     matchesSelected(fVocativo, r.vocativo) &&
     matchesSelected(fUf, r.ufDestino) &&
     matchesSelected(fCidade, r.cidadeDestino) &&
-    matchesSelected(fStatus, r.status) &&
+    matchesStatusFilter(r) &&
     matchesSelected(fCargas, String(r.cargas)) &&
     (ignoreLoadDay || !selectedLoadDays.length || getLoadDaysForChartAndFilter(r).some(d=>selectedLoadDays.includes(d))) &&
     (!busca || norm(`${r.cliente} ${r.vocativo} ${r.cidadeDestino} ${r.ufDestino}`).includes(busca))
@@ -2530,9 +2542,8 @@ function render(){
   const displayRowsBeforeLoadDay=ACTIVE_LINK_FILTER_VOCATIVO ? displayRows : filteredBeforeLoadDay;
   $('kReg').textContent=displayRows.length.toLocaleString('pt-BR');
   $('kVoc').textContent=unique(displayRows.map(r=>r.vocativo)).length.toLocaleString('pt-BR');
-  $('kOk').textContent=displayRows.filter(r=>r.status==='atende').length.toLocaleString('pt-BR');
-  $('kCrit').textContent=displayRows.filter(r=>r.status==='critico').length.toLocaleString('pt-BR');
-  $('kBad').textContent=displayRows.filter(r=>r.status==='impossivel').length.toLocaleString('pt-BR');
+  $('kOk').textContent=displayRows.filter(r=>getUiStatus(r)==='atende').length.toLocaleString('pt-BR');
+  $('kBad').textContent=displayRows.filter(r=>getUiStatus(r)==='nao_atende').length.toLocaleString('pt-BR');
   $('kMedia').textContent=displayRows.length ? (displayRows.reduce((s,r)=>s+r.cargas,0)/displayRows.length).toFixed(1).replace('.',',') : '0';
   renderBars(displayRows);
   renderLoadDayBars(displayRowsBeforeLoadDay);
@@ -2648,9 +2659,11 @@ function populateLinkDropdownOptions(voc, box){
 function renderCards(rows){
   if(!rows.length){ cards.innerHTML='<div class="empty card">Nenhum registro encontrado. Verifique a conexão com o Google Planilhas ou os filtros atuais.</div>'; return; }
   cards.innerHTML=rows.map(r=>{
-    const badge = r.status==='impossivel' ? '<span class="badge bad">Impossível</span>' : r.status==='critico' ? '<span class="badge warn">Crítico</span>' : '<span class="badge good">Atende</span>';
+    const uiStatus = getUiStatus(r);
+    const badge = uiStatus==='nao_atende' ? '<span class="badge bad">Não atende</span>' : '<span class="badge good">Atende</span>';
+    const cardStatusClass = uiStatus==='nao_atende' ? 'status-nao-atende' : 'status-atende';
     const reason = r.reason ? `<div class="smallmuted">${escapeHtml(r.reason)}</div>` : '';
-    return `<article class="card vocCard status-${r.status}" data-voc-card="${escapeHtml(r.vocativo)}">
+    return `<article class="card vocCard ${cardStatusClass}" data-voc-card="${escapeHtml(r.vocativo)}">
       <div class="vocTop">
         <div><div class="vocTitle">${escapeHtml(r.vocativo)}</div><div class="vocSub">${escapeHtml(r.cliente)} • ${escapeHtml(r.cidadeDestino)}/${escapeHtml(r.ufDestino)} • Origem ${escapeHtml(r.ufOrigem)}</div></div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">${badge}${renderLinkedFilterToggle(r.vocativo)}</div>
@@ -2803,7 +2816,7 @@ function exportCSV(){
   const rows=getFiltered(getAll());
   const cols=[['filial','Filial'],['cliente','Cliente'],['vocativo','Vocativo'],['ufOrigem','UF Origem'],['cidadeDestino','Cidade destino'],['ufDestino','UF Destino'],['prazoExwReal','Prazo EXW real'],['prazoFcaReal','Prazo FCA real'],['menorPrazo','Menor prazo'],['transitTime','Transit time'],['status','Status'],['cargas','Cargas semanais'],['ciclos','Ciclos carga entrega'],['entregaFixa','Entrega fixa'],['vinculo','Vinculado com'],['ordemEntrega','Ordem entrega'],['maiorVeiculo','Maior veículo'],['entregaMesmoDia','Entrega mesmo dia'],['diasNaoUteis','Dias nao uteis vocativo'],['loadDays','Dias carga'],['deliveryDays','Dias entrega'],['worst','Pior prazo util'],['worstCalendar','Pior prazo corrido'],['worstReceiptDay','Dia recebimento critico'],['worstLoadDay','Dia carga do pior prazo'],['worstDeliveryDay','Dia entrega do pior prazo'],['folga','Folga']];
   const lines=[cols.map(c=>c[1]).join(';')];
-  rows.forEach(r=>{ lines.push(cols.map(([key])=>{ let v=r[key]; if(key==='ciclos') v=r.windowPairs.map(p=>`${p.load}->${p.delivery}`).join(' | '); if(key==='entregaFixa') v=getFixedDeliveryDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(key==='vinculo') v=getLinkedVocativos(r.vocativo).join(', '); if(key==='ordemEntrega') v=getDeliveryOrder(r.vocativo); if(key==='maiorVeiculo') v=getMaxVehicleRestriction(r.vocativo); if(key==='entregaMesmoDia') v=getEntregaMesmoDia(r.vocativo); if(key==='diasNaoUteis') v=getNonBusinessDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(Array.isArray(v)) v=v.join(', '); return `"${String(v ?? '').replace(/"/g,'""')}"`; }).join(';')); });
+  rows.forEach(r=>{ lines.push(cols.map(([key])=>{ let v=r[key]; if(key==='status') v=getUiStatusLabel(r); if(key==='ciclos') v=r.windowPairs.map(p=>`${p.load}->${p.delivery}`).join(' | '); if(key==='entregaFixa') v=getFixedDeliveryDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(key==='vinculo') v=getLinkedVocativos(r.vocativo).join(', '); if(key==='ordemEntrega') v=getDeliveryOrder(r.vocativo); if(key==='maiorVeiculo') v=getMaxVehicleRestriction(r.vocativo); if(key==='entregaMesmoDia') v=getEntregaMesmoDia(r.vocativo); if(key==='diasNaoUteis') v=getNonBusinessDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(Array.isArray(v)) v=v.join(', '); return `"${String(v ?? '').replace(/"/g,'""')}"`; }).join(';')); });
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='planejamento_janelas_vocativo.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
 function mapImportedRow(x){
