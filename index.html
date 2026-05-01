@@ -698,7 +698,7 @@ html[data-theme="dark"] .vocCard.status-nao-atende{border-left-color:var(--bad)!
       <div class="ruleGrid">
         <div class="rule"><b>EXW</b><br>Se “não conta”: EXW + coleta. Caso contrário: EXW + coleta - 1.</div>
         <div class="rule"><b>FCA</b><br>Se “não conta”: PRAZO FCA + consolidação FCA + 1. Caso contrário: PRAZO FCA + consolidação FCA.</div>
-        <div class="rule"><b>Prazo útil</b><br>O prazo conta normalmente em dias corridos, descontando apenas os dias não úteis marcados manualmente no card do vocativo.</div><div class="rule"><b>Entrega fixa</b><br>Quando marcada, a entrega só ocorre nesses dias. Sábado e domingo podem ser selecionados para clientes que recebem nesses dias.</div>
+        <div class="rule"><b>Prazo útil</b><br>O prazo conta em dias corridos, descontando os dias não úteis marcados. Se o limite cair no fim de semana e não houver entrega fixa em sábado/domingo, o atendimento é aceito até o próximo dia útil.</div><div class="rule"><b>Entrega fixa</b><br>Quando marcada, a entrega só ocorre nesses dias. Sábado e domingo podem ser selecionados para clientes que recebem nesses dias.</div>
       </div>
     </div>
   </section>
@@ -1421,10 +1421,12 @@ function compareEvalByPrazoThenInicio(a,b){
 }
 function compareFallbackByPrazoThenSabado(a,b){
   // Para cenários que NÃO atendem:
-  // 1) reduz o estouro/pior prazo;
+  // 1) reduz o estouro real do prazo, já considerando a extensão para segunda
+  //    quando o limite cai em sábado/domingo;
   // 2) em empate, prioriza início da semana;
   // 3) depois evita sábado.
-  return (a.worst - b.worst)
+  return (evalMaxOver(a) - evalMaxOver(b))
+    || (a.worst - b.worst)
     || (a.total - b.total)
     || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
     || (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
@@ -1454,6 +1456,62 @@ function countContractDays(receiptDow, calendarElapsed, nonBusiness){
     if(!blocked.has(dow)) count++;
   }
   return count;
+}
+function hasWeekendFixedDelivery(row){
+  const fixed = getFixedDeliveryDays(row && row.vocativo);
+  return fixed.some(d => Number(d) === 0 || Number(d) === 6);
+}
+function effectiveDeadlineForReceipt(row, deadline, receiptDow, nonBusiness){
+  // Regra de prazo em fim de semana:
+  // se a data limite calculada cair em SÁBADO ou DOMINGO, e o cliente não tiver
+  // entrega fixa no fim de semana, o prazo de atendimento é estendido até o
+  // próximo dia útil. Essa regra muda apenas a comparação de prazo, não força
+  // novas datas de entrega nem altera o transit time.
+  const base = Math.ceil(num(deadline));
+  if(base <= 0 || hasWeekendFixedDelivery(row)){
+    return {deadline:base, extended:false, dueDay:null, extendedToDay:null, extraDays:0};
+  }
+
+  const blocked = new Set();
+  (nonBusiness || new Set()).forEach(d => blocked.add(Number(d)));
+
+  let count=0;
+  let dueOffset=null;
+  let dueDay=null;
+  for(let offset=0; offset<70; offset++){
+    const dow=(Number(receiptDow)+offset)%7;
+    if(!blocked.has(dow)) count++;
+    if(count>=base){
+      dueOffset=offset;
+      dueDay=dow;
+      break;
+    }
+  }
+
+  if(dueDay !== 0 && dueDay !== 6){
+    return {deadline:base, extended:false, dueDay, extendedToDay:dueDay, extraDays:0};
+  }
+
+  let adjusted=count;
+  for(let offset=(dueOffset ?? 0)+1; offset<90; offset++){
+    const dow=(Number(receiptDow)+offset)%7;
+    if(!blocked.has(dow)) adjusted++;
+    if(dow >= 1 && dow <= 5 && !blocked.has(dow)){
+      return {
+        deadline:Math.max(base, adjusted),
+        extended:true,
+        dueDay,
+        extendedToDay:dow,
+        extraDays:Math.max(0, adjusted-base)
+      };
+    }
+  }
+
+  return {deadline:base, extended:false, dueDay, extendedToDay:dueDay, extraDays:0};
+}
+function evalMaxOver(e){
+  const v = e && Number(e.maxOver);
+  return Number.isFinite(v) ? v : 9999;
 }
 function deliveryFromLoad(loadDay, transit, allowedDays){
   if(!allowedDays.length) return null;
@@ -1823,43 +1881,69 @@ function evaluateComboForRow(row, deadline, transit, combo, options={}){
   const fixedCheck = fixedDeliveryCheck(row, transit, combo, options);
 
   if(!allowedDays.length){
-    return {ok:false, reason:'Sem dia de entrega permitido para o vocativo', combo, loadDays:combo.map(i=>DAYS[i]), deliveryDays:[], windowPairs:[], worst:999, worstCalendar:999, total:999, worstReceiptDay:'—', worstLoadDay:'—', worstDeliveryDay:'—'};
+    return {ok:false, reason:'Sem dia de entrega permitido para o vocativo', combo, loadDays:combo.map(i=>DAYS[i]), deliveryDays:[], windowPairs:[], worst:999, worstCalendar:999, total:999, maxOver:9999, minSlack:null, effectiveDeadlineWorst:deadline, deadlineAdjustments:[], worstReceiptDay:'—', worstLoadDay:'—', worstDeliveryDay:'—'};
   }
 
   if(!fixedCheck.ok){
     const pairs=combo.map(i=>{ const de=resolveDeliveryFromLoad(row,i,transit,allowedDays,options); return de ? {load:DAYS[i],delivery:DAYS[de.day],travelElapsed:de.travelElapsed,adjustedFromSunday:de.adjustedFromSunday,fixedSlackApplied:!!de.fixedSlackApplied} : null; }).filter(Boolean);
-    return {ok:false, reason:fixedCheck.reason, combo, loadDays:combo.map(i=>DAYS[i]), deliveryDays:pairs.map(p=>p.delivery), windowPairs:pairs, worst:999, worstCalendar:999, total:999, worstReceiptDay:'—', worstLoadDay:'—', worstDeliveryDay:'—'};
+    return {ok:false, reason:fixedCheck.reason, combo, loadDays:combo.map(i=>DAYS[i]), deliveryDays:pairs.map(p=>p.delivery), windowPairs:pairs, worst:999, worstCalendar:999, total:999, maxOver:9999, minSlack:null, effectiveDeadlineWorst:deadline, deadlineAdjustments:[], worstReceiptDay:'—', worstLoadDay:'—', worstDeliveryDay:'—'};
   }
 
   let ok=true, worst=-1, worstCalendar=-1, total=0, delivs=[];
+  let maxOver=0, minSlack=null, effectiveDeadlineWorst=deadline;
   let worstReceipt=null;
+  const deadlineAdjustments=[];
 
   for(const receipt of RECEIPT_INDEXES){
     const nl=nextLoad((receipt+1)%7,combo);
     const planned=getPlannedDelivery(options,row.vocativo,nl.day);
     const de=planned || resolveDeliveryFromLoad(row,nl.day,transit,allowedDays,options);
-    if(!de){ ok=false; break; }
+    if(!de){ ok=false; maxOver=9999; break; }
     const calendarElapsed=1 + nl.wait + (de.calendarSpanFromLoad ?? (de.travelElapsed + 1));
     const contractElapsed=countContractDays(receipt, calendarElapsed, nonBusiness);
+    const deadlineInfo=effectiveDeadlineForReceipt(row, deadline, receipt, nonBusiness);
+    const effectiveDeadline=deadlineInfo.deadline;
+    const over=Math.max(0, contractElapsed - effectiveDeadline);
+    const slack=effectiveDeadline - contractElapsed;
+
+    if(deadlineInfo.extended){
+      deadlineAdjustments.push({
+        receipt:DAYS[receipt],
+        dueDay:DAYS[deadlineInfo.dueDay],
+        extendedToDay:DAYS[deadlineInfo.extendedToDay],
+        baseDeadline:deadline,
+        effectiveDeadline,
+        extraDays:deadlineInfo.extraDays
+      });
+    }
 
     // Guarda o cenário de recebimento que gera o maior prazo real.
-    // Critério principal: maior prazo útil. Empate: maior prazo corrido.
-    if(!worstReceipt || contractElapsed > worstReceipt.contractElapsed || (contractElapsed === worstReceipt.contractElapsed && calendarElapsed > worstReceipt.calendarElapsed)){
+    // Critério principal: maior estouro efetivo. Empate: maior prazo útil e maior prazo corrido.
+    if(!worstReceipt || over > worstReceipt.over || (over === worstReceipt.over && contractElapsed > worstReceipt.contractElapsed) || (over === worstReceipt.over && contractElapsed === worstReceipt.contractElapsed && calendarElapsed > worstReceipt.calendarElapsed)){
       worstReceipt={
         receipt,
         loadDay:nl.day,
         deliveryDay:de.day,
         contractElapsed,
         calendarElapsed,
-        wait:nl.wait
+        wait:nl.wait,
+        effectiveDeadline,
+        over,
+        slack,
+        deadlineExtended:!!deadlineInfo.extended,
+        dueDay:deadlineInfo.dueDay,
+        extendedToDay:deadlineInfo.extendedToDay
       };
     }
 
     worst=Math.max(worst, contractElapsed);
     worstCalendar=Math.max(worstCalendar, calendarElapsed);
+    effectiveDeadlineWorst=Math.max(effectiveDeadlineWorst, effectiveDeadline);
+    maxOver=Math.max(maxOver, over);
+    minSlack = minSlack === null ? slack : Math.min(minSlack, slack);
     total+=contractElapsed;
     delivs.push(de.day);
-    if(contractElapsed > deadline) ok=false;
+    if(over > 0) ok=false;
   }
   const pairs=combo.map(i=>{ const planned=getPlannedDelivery(options,row.vocativo,i); const de=planned || resolveDeliveryFromLoad(row,i,transit,allowedDays,options); return de ? {load:DAYS[i],delivery:DAYS[de.day],travelElapsed:de.travelElapsed,adjustedFromSunday:de.adjustedFromSunday,linkedAdjusted:!!de.linkedAdjusted,fixedSlackApplied:!!de.fixedSlackApplied} : null; }).filter(Boolean);
   const deliveryDays = fixedCheck.fixed.length
@@ -1875,6 +1959,10 @@ function evaluateComboForRow(row, deadline, transit, combo, options={}){
     worst:worst<0?999:worst,
     worstCalendar:worstCalendar<0?999:worstCalendar,
     total,
+    maxOver,
+    minSlack,
+    effectiveDeadlineWorst,
+    deadlineAdjustments,
     worstReceiptDay: worstReceipt ? DAYS[worstReceipt.receipt] : '—',
     worstLoadDay: worstReceipt ? DAYS[worstReceipt.loadDay] : '—',
     worstDeliveryDay: worstReceipt ? DAYS[worstReceipt.deliveryDay] : '—',
@@ -2004,11 +2092,8 @@ function scoreLinkedEval(e, deadline){
   if(!e) return {over:9999, worst:9999, total:9999};
   const worst = Number.isFinite(Number(e.worst)) ? Number(e.worst) : 9999;
   const total = Number.isFinite(Number(e.total)) ? Number(e.total) : 9999;
-  return {
-    over: Math.max(0, worst - num(deadline)),
-    worst,
-    total
-  };
+  const over = Number.isFinite(Number(e.maxOver)) ? Number(e.maxOver) : Math.max(0, worst - num(deadline));
+  return {over, worst, total};
 }
 function comboKey(combo){ return (combo || []).map(Number).sort((a,b)=>a-b).join(','); }
 function comboIntersection(a,b){
@@ -2440,7 +2525,7 @@ function enrich(r){
   const parts=calcDeadlineParts(r);
   const linkedSchedule=findBestLinkedSchedule(r);
   const w=evaluateWindows(r,parts.menorPrazo,r.transitTime,linkedSchedule);
-  const folga = w.worst===999 ? null : parts.menorPrazo - w.worst;
+  const folga = w.worst===999 ? null : (Number.isFinite(Number(w.minSlack)) ? Number(w.minSlack) : parts.menorPrazo - w.worst);
   const status = !w.ok ? 'impossivel' : folga<=1 ? 'critico' : 'atende';
   return {...r,...parts,...w,folga,status,nonBusiness:getNonBusinessDays(r.vocativo),fixedDelivery:getFixedDeliveryDays(r.vocativo),linkedWith:getLinkedVocativo(r.vocativo),linkedWithList:getLinkedVocativos(r.vocativo),deliveryOrder:getDeliveryOrder(r.vocativo),entregaMesmoDia:getEntregaMesmoDia(r.vocativo)};
 }
