@@ -286,7 +286,8 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 .simpleHero{padding:16px;border-top:4px solid var(--brand);margin-bottom:12px}
 .simpleHero h2{margin:0;color:var(--dark2);font-size:18px;letter-spacing:-.02em}
 .simpleHero p{margin:6px 0 0;color:var(--muted);line-height:1.45}
-.simpleFilters{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr)) auto;gap:10px;align-items:end;margin-top:14px}
+.simpleFilters{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr)) max-content max-content max-content;gap:10px;align-items:end;margin-top:14px}
+.simpleFilters button{height:44px;align-self:end;padding-left:14px;padding-right:14px}
 .simpleWeekGroup{margin-top:12px;border:1px solid var(--line);border-radius:16px;background:#fff;box-shadow:var(--shadowSoft);overflow:hidden}
 .simpleWeekHead{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:linear-gradient(135deg,#2b2f36,#111827);color:#fff;border-left:5px solid var(--brand)}
 .simpleWeekTitle{font-size:15px;font-weight:950;letter-spacing:-.01em}
@@ -734,6 +735,8 @@ html[data-theme="dark"] .vocCard.status-nao-atende{border-left-color:var(--bad)!
         <div><label>UF</label><select id="jsUf" multiple></select><div class="filterHint">Vazio = todas</div></div>
         <div><label>Cidade</label><select id="jsCidade" multiple></select><div class="filterHint">Vazio = todas</div></div>
         <div><label>Vocativo</label><select id="jsVocativo" multiple></select><div class="filterHint">Vazio = todos</div></div>
+        <button id="jsRelatorio" class="secondary" type="button">Gerar CSV</button>
+        <button id="jsRelatorioPdf" class="secondary" type="button">Gerar PDF</button>
         <button id="jsLimpar" class="ghost" type="button">Limpar filtros</button>
       </div>
     </section>
@@ -774,6 +777,8 @@ html[data-theme="dark"] .vocCard.status-nao-atende{border-left-color:var(--bad)!
 
 </main>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
 // Cole aqui a URL publicada do seu Apps Script Web App, terminando em /exec.
 // Exemplo: const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/SEU_ID/exec';
@@ -3283,6 +3288,174 @@ function renderSimpleWindows(){
   }).join('');
 }
 
+function jsCsvCell(value){
+  return '"'+String(value ?? '').replace(/"/g,'""')+'"';
+}
+function jsReportFilename(ext='csv'){
+  const d=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  return 'relatorio_painel_janelas_'+d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'_'+pad(d.getHours())+pad(d.getMinutes())+'.'+ext;
+}
+function jsBuildReportRows(){
+  const allRows=getAll();
+  if(!allRows.length) return [];
+  jsRefreshFilters(allRows);
+  const byVoc=new Map(allRows.map(r=>[r.vocativo,r]));
+  const groups=jsBuildGroups(allRows).filter(jsGroupMatches);
+  const selectedDays=getSelectedValues(jsDia);
+  const daysToRender=selectedDays.length ? DAYS.filter(d=>selectedDays.includes(d)) : DAYS;
+  const reportRows=[];
+  const joinUnique=(arr, sep=', ')=>unique(arr.filter(v=>String(v ?? '').trim()!=='')).join(sep);
+  const restrictionVehicle=v=>(typeof getVehicleRestriction==='function' ? getVehicleRestriction(v) : (typeof getMaxVehicleRestriction==='function' ? getMaxVehicleRestriction(v) : 'SEM RESTRIÇÃO')) || 'SEM RESTRIÇÃO';
+  const restrictionBody=v=>(typeof getBodyRestriction==='function' ? getBodyRestriction(v) : 'SEM RESTRIÇÃO') || 'SEM RESTRIÇÃO';
+
+  daysToRender.forEach(day=>{
+    groups.forEach(g=>{
+      const items=jsItemsForGroupAndDay(g,day);
+      if(!items.length) return;
+
+      const activeVocativos=unique(items.map(it=>it.vocativo));
+      const isConsolidatedWindow=activeVocativos.length>1;
+      const activeClientes=unique(items.map(it=>it.cliente));
+      const activeUfs=unique(items.map(it=>it.uf));
+      const activeCidades=unique(items.map(it=>it.cidade));
+
+      // Zona consolidada deve aparecer em uma única linha no relatório.
+      // Quando for consolidada, cidade/UF/clientes/restrições também são consolidados
+      // da mesma forma que a coluna "Vocativos na janela".
+      reportRows.push({
+        diaCarga:day,
+        tipoJanela:isConsolidatedWindow ? 'Zona consolidada' : 'Vocativo',
+        cliente:joinUnique(activeClientes) || '—',
+        cidade:joinUnique(activeCidades) || '—',
+        uf:joinUnique(activeUfs) || '—',
+        vocativosJanela:activeVocativos.join(', '),
+        entrega:joinUnique(items.map(it=>it.delivery), ' / ') || '—',
+        prazo:joinUnique(items.map(it=>fmt(it.travelElapsed)+'d'+(it.linkedAdjusted?' ajust.':'')), ' / ') || '—',
+        status:joinUnique(activeVocativos.map(v=>getUiStatusLabel(byVoc.get(v) || {})), ' / ') || '—',
+        maiorVeiculo:joinUnique(activeVocativos.map(v=>restrictionVehicle(v)), ' / ') || 'SEM RESTRIÇÃO',
+        carroceria:joinUnique(activeVocativos.map(v=>restrictionBody(v)), ' / ') || 'SEM RESTRIÇÃO'
+      });
+    });
+  });
+  return reportRows;
+}
+
+function jsReportColumns(){
+  return [
+    ['diaCarga','Dia de carregamento'],
+    ['tipoJanela','Tipo de janela'],
+    ['cliente','Cliente'],
+    ['cidade','Cidade destino'],
+    ['uf','UF destino'],
+    ['vocativosJanela','Vocativos na janela'],
+    ['entrega','Dia(s) de entrega'],
+    ['prazo','Prazo calculado'],
+    ['status','Status'],
+    ['maiorVeiculo','Maior veículo'],
+    ['carroceria','Carroceria']
+  ];
+}
+
+function jsExportReport(){
+  const rows=jsBuildReportRows();
+  if(!rows.length){ alert('Não há dados para gerar relatório nos filtros atuais.'); return; }
+  const cols=jsReportColumns();
+  const lines=[cols.map(c=>c[1]).join(';')];
+  rows.forEach(r=>lines.push(cols.map(([key])=>jsCsvCell(r[key])).join(';')));
+  const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=jsReportFilename('csv');
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function jsExportReportPdf(){
+  const rows=jsBuildReportRows();
+  if(!rows.length){ alert('Não há dados para gerar relatório nos filtros atuais.'); return; }
+  const jspdfLib=window.jspdf || {};
+  const PDFClass=jspdfLib.jsPDF;
+  if(!PDFClass){
+    alert('Não foi possível carregar a biblioteca de PDF. Verifique sua conexão com a internet e tente novamente.');
+    return;
+  }
+  const doc=new PDFClass({orientation:'landscape', unit:'mm', format:'a4', compress:true});
+  if(typeof doc.autoTable!=='function'){
+    alert('Não foi possível carregar o complemento de tabela do PDF. Verifique sua conexão com a internet e tente novamente.');
+    return;
+  }
+  const cols=jsReportColumns();
+  const head=[cols.map(c=>c[1])];
+  const pdfLineBreakKeys=new Set(['cidade','uf','vocativosJanela']);
+  const formatPdfCell=(key,value)=>{
+    const text=String(value ?? '');
+    return pdfLineBreakKeys.has(key) ? text.split(',').map(v=>v.trim()).filter(Boolean).join('\n') : text;
+  };
+  const body=rows.map(r=>cols.map(([key])=>formatPdfCell(key,r[key])));
+  const generatedAt=new Date().toLocaleString('pt-BR');
+
+  doc.setProperties({title:'Relatório Painel de Janelas'});
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(10);
+  doc.text('Relatório - Painel de Janelas', 6, 8);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(6);
+  doc.text('Gerado em: '+generatedAt+' | Registros: '+rows.length.toLocaleString('pt-BR'), 6, 12);
+
+  doc.autoTable({
+    head,
+    body,
+    startY:15,
+    theme:'grid',
+    tableWidth:'wrap',
+    margin:{left:6,right:6,top:15,bottom:8},
+    styles:{
+      font:'helvetica',
+      fontSize:5.1,
+      cellPadding:0.75,
+      lineWidth:0.08,
+      overflow:'linebreak',
+      valign:'top',
+      textColor:[20,20,20],
+      lineColor:[210,210,210]
+    },
+    headStyles:{
+      fillColor:[43,47,54],
+      textColor:[255,255,255],
+      fontSize:5.2,
+      fontStyle:'bold',
+      halign:'center',
+      valign:'middle'
+    },
+    alternateRowStyles:{fillColor:[248,250,252]},
+    columnStyles:{
+      0:{cellWidth:18},
+      1:{cellWidth:22},
+      2:{cellWidth:34},
+      3:{cellWidth:42},
+      4:{cellWidth:14,halign:'center'},
+      5:{cellWidth:54},
+      6:{cellWidth:24},
+      7:{cellWidth:19,halign:'center'},
+      8:{cellWidth:17,halign:'center'},
+      9:{cellWidth:21},
+      10:{cellWidth:20}
+    },
+    didDrawPage:function(){
+      const page=doc.internal.getNumberOfPages();
+      const pageSize=doc.internal.pageSize;
+      const w=pageSize.getWidth ? pageSize.getWidth() : pageSize.width;
+      const h=pageSize.getHeight ? pageSize.getHeight() : pageSize.height;
+      doc.setFontSize(6);
+      doc.setTextColor(120);
+      doc.text('Página '+page, w-18, h-4);
+    }
+  });
+  doc.save(jsReportFilename('pdf'));
+}
+
+
 const AUX_VEHICLES = [
   {nome:'UTILITÁRIO', peso:800},
   {nome:'VAN', peso:1500},
@@ -3918,6 +4091,8 @@ $('tabPlanejamento').addEventListener('click',()=>setActivePage('planejamento'))
 $('tabJanelasSimples').addEventListener('click',()=>setActivePage('janelas'));
 $('tabAuxVeiculos').addEventListener('click',()=>setActivePage('aux'));
 [jsDia,jsCliente,jsUf,jsCidade,jsVocativo].forEach(el=>el.addEventListener('change',()=>{ updateMultiSelectDropdown(el); scheduleSimpleRender(); }));
+$('jsRelatorio').addEventListener('click',jsExportReport);
+$('jsRelatorioPdf').addEventListener('click',jsExportReportPdf);
 $('jsLimpar').addEventListener('click',()=>{ [jsDia,jsCliente,jsUf,jsCidade,jsVocativo].forEach(clearSelect); refreshAllMultiSelectDropdowns(); renderSimpleWindows(); });
 auxFile.addEventListener('change',e=>{ const file=e.target.files && e.target.files[0]; if(file) auxReadFile(file).catch(err=>{ console.error(err); auxSetStatus('Erro ao ler Excel: '+err.message,'err'); }); });
 auxFilial.addEventListener('change',()=>{ updateMultiSelectDropdown(auxFilial); scheduleAuxRender(); });
