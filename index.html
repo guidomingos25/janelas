@@ -1705,22 +1705,46 @@ function scoreLinkedPlanForDeadlinesByCombos(groupRows, comboByVoc, plan){
   const hardInvalid = evals.some(x => !x.combo.length || !x.ev || x.ev.worst===999 || x.ev.total===999);
   return { hardInvalid, ok: !hardInvalid && evals.every(x=>x.ev.ok) && plan.complete, maxOver: hardInvalid ? 9999 : Math.max(...evals.map(x=>x.score.over)), worst: hardInvalid ? 9999 : Math.max(...evals.map(x=>x.score.worst)), total: hardInvalid ? 999999 : evals.reduce((sum,x)=>sum+x.score.total,0), evals };
 }
-function preferredLoadDayForFixedDelivery(fixedDay, transit){
+function preferredLoadDaysForFixedDelivery(fixedDay, transit, fixedDaysContext=[]){
   // Regra corrigida para ENTREGA FIXA:
   // o carregamento deve respeitar o transit time da mesma forma que a entrega livre.
   // Primeiro calcula o dia ideal de carga: entrega fixa - transit time.
   // Se esse dia não for permitido no regime da filial, volta para o dia de carga permitido
   // mais próximo antes dele.
-  // Ex.: TT 1 + entrega SEG => ideal DOM; no regime SEG-SEX vira SEX, no regime SEG-SAB vira SAB.
+  // Ajuste seguro: quando o ideal cair em DOM e a alternativa padrão seria carregar no SÁB
+  // para entregar na SEG, prefere SEX quando SEX também estiver no regime de carga e o cliente
+  // não tiver entrega fixa no fim de semana. SÁB continua válido como reserva caso SEX não atenda o prazo.
   const allowedLoads = getLoadIndexes();
-  if(!allowedLoads.length) return null;
+  if(!allowedLoads.length) return [];
   const transitDays = Math.max(0, Math.ceil(num(transit)));
-  let day = (Number(fixedDay) - transitDays + 700) % 7;
+  const deliveryDay = Number(fixedDay);
+  const contextDays = (fixedDaysContext || []).map(Number).filter(d=>d>=0 && d<=6);
+  const hasWeekendFixed = contextDays.some(d=>d===0 || d===6);
+  const idealDay = (deliveryDay - transitDays + 700) % 7;
+
+  let fallback = null;
+  let day = idealDay;
   for(let guard=0; guard<14; guard++){
-    if(allowedLoads.includes(day)) return day;
+    if(allowedLoads.includes(day)){ fallback = day; break; }
     day = (day + 6) % 7;
   }
-  return null;
+  if(fallback === null) return [];
+
+  const out = [];
+  const canAvoidSaturday = idealDay === 0
+    && fallback === 6
+    && deliveryDay !== 0
+    && deliveryDay !== 6
+    && !hasWeekendFixed
+    && allowedLoads.includes(5);
+
+  if(canAvoidSaturday) out.push(5); // SEX → SEG, quando também atende o prazo, evita carga no sábado.
+  out.push(fallback);              // reserva: mantém SÁB se for indispensável para atender o prazo.
+  return [...new Set(out)];
+}
+function preferredLoadDayForFixedDelivery(fixedDay, transit, fixedDaysContext=[]){
+  const days = preferredLoadDaysForFixedDelivery(fixedDay, transit, fixedDaysContext);
+  return days.length ? days[0] : null;
 }
 
 function fixedDeliveryFromLoad(loadDay, transit, fixedDays, options={}){
@@ -1733,7 +1757,8 @@ function fixedDeliveryFromLoad(loadDay, transit, fixedDays, options={}){
 
   const candidates = fixedDays
     .map(fixedDay => {
-      const preferredLoad = preferredLoadDayForFixedDelivery(fixedDay, transitDays);
+      const preferredLoads = preferredLoadDaysForFixedDelivery(fixedDay, transitDays, fixedDays);
+      const preferredLoad = preferredLoads.length ? preferredLoads[0] : null;
       if(preferredLoad === null) return null;
       const calendarTravel = diffForwardDays(loadDay, fixedDay);
       // Regra corrigida: mesmo em vocativos vinculados com entrega fixa,
@@ -1741,7 +1766,7 @@ function fixedDeliveryFromLoad(loadDay, transit, fixedDays, options={}){
       // Ex.: TT 2 + entrega QUI exige carga até TER; QUA → QUI NÃO atende.
       const atendeTransit = calendarTravel >= transitDays;
       if(!atendeTransit) return null;
-      if(!allowSlack && Number(loadDay) !== Number(preferredLoad)) return null;
+      if(!allowSlack && !preferredLoads.includes(Number(loadDay))) return null;
       const idealLoad=(fixedDay - transitDays + 700) % 7;
       return {
         day:fixedDay,
@@ -1750,7 +1775,9 @@ function fixedDeliveryFromLoad(loadDay, transit, fixedDays, options={}){
         adjustedFromSunday: idealLoad===0 && Number(loadDay)===6,
         calendarSpanFromLoad:calendarTravel + 1,
         extraWaitingDays: calendarTravel - transitDays,
-        fixedSlackApplied: allowSlack && Number(loadDay) !== Number(preferredLoad)
+        fixedSlackApplied: allowSlack && !preferredLoads.includes(Number(loadDay)),
+        saturdayBackupApplied: preferredLoads.length > 1 && Number(loadDay) === 6,
+        saturdayAvoidedByFriday: preferredLoads.length > 1 && Number(loadDay) === 5
       };
     })
     .filter(Boolean);
@@ -1765,7 +1792,7 @@ function getFixedDeliveryPairs(row, transit){
   const fixed = getFixedDeliveryDays(row.vocativo);
   const transitDays = Math.max(0, Math.ceil(num(transit)));
   return fixed.map(fixedDay => {
-    const loadDay = preferredLoadDayForFixedDelivery(fixedDay, transitDays);
+    const loadDay = preferredLoadDayForFixedDelivery(fixedDay, transitDays, fixed);
     if(loadDay === null) return null;
     const travelElapsed = diffForwardDays(loadDay, fixedDay);
     if(travelElapsed < transitDays) return null;
@@ -2107,6 +2134,20 @@ function comboIncludesAll(combo, required){
   const set=new Set((combo || []).map(Number));
   return (required || []).every(day=>set.has(Number(day)));
 }
+function avoidableSaturdayLoadScore(row, combo){
+  // Penaliza somente o sábado que pode ser trocado por sexta para a mesma entrega fixa
+  // sem perder o fallback de prazo. Não afeta sábados que sejam indispensáveis.
+  if(!row) return 0;
+  const fixed = getFixedDeliveryDays(row.vocativo);
+  if(!fixed.length) return 0;
+  return (combo || []).map(Number).filter(loadDay => {
+    if(loadDay !== 6) return false;
+    return fixed.some(fd => {
+      const preferred = preferredLoadDaysForFixedDelivery(fd, row.transitTime, fixed);
+      return preferred.length > 1 && preferred[0] === 5 && preferred.includes(6);
+    });
+  }).length;
+}
 function orderedPermutations(arr){
   const values=[...new Set((arr || []).map(Number).filter(d=>getLoadIndexes().includes(d)))];
   const out=[];
@@ -2141,7 +2182,7 @@ function orderedFixedLinkedSequences(arr, groupRows){
   const preferredAll=[];
   orderedRows.forEach(row=>{
     getFixedDeliveryDays(row.vocativo).forEach(fd=>{
-      const ld=preferredLoadDayForFixedDelivery(fd, row.transitTime);
+      const ld=preferredLoadDayForFixedDelivery(fd, row.transitTime, getFixedDeliveryDays(row.vocativo));
       if(ld!==null && values.includes(Number(ld))) preferredAll.push(Number(ld));
     });
   });
@@ -2149,7 +2190,7 @@ function orderedFixedLinkedSequences(arr, groupRows){
 
   orderedRows.forEach(row=>{
     const preferred=getFixedDeliveryDays(row.vocativo)
-      .map(d=>preferredLoadDayForFixedDelivery(d, row.transitTime))
+      .map(d=>preferredLoadDayForFixedDelivery(d, row.transitTime, getFixedDeliveryDays(row.vocativo)))
       .filter(d=>d!==null && values.includes(Number(d)));
     if(preferred.length) push(preferred.concat(values));
   });
@@ -2227,6 +2268,10 @@ function bestPrefixForLinkedRow(row, groupSequence, linkedPlan, requiredCore=[])
         const bMissing=fixedCount - bFixed.size;
         return (aMissing-bMissing)
           || (a.score.over-b.score.over)
+          // Quando os dois cenários atendem o prazo, evita usar SÁB se a alternativa
+          // SEX → SEG também atende. Antes esta penalização vinha depois do pior prazo/total,
+          // por isso o vínculo ainda escolhia SAB → SEG por ter menor espera absoluta.
+          || (avoidableSaturdayLoadScore(row,a.combo)-avoidableSaturdayLoadScore(row,b.combo))
           || (a.score.worst-b.score.worst)
           || (a.score.total-b.score.total)
           // Mantém o subconjunto mais alinhado ao fim da matriz quando isso não piora prazo,
@@ -2244,6 +2289,7 @@ function bestPrefixForLinkedRow(row, groupSequence, linkedPlan, requiredCore=[])
       (a.score.over-b.score.over) ||
       (a.score.worst-b.score.worst) ||
       (a.score.total-b.score.total) ||
+      (hasFixedDelivery ? (avoidableSaturdayLoadScore(row,a.combo)-avoidableSaturdayLoadScore(row,b.combo)) : 0) ||
       (hasFixedDelivery ? (b.combo.length-a.combo.length) : (a.combo.length-b.combo.length)) ||
       (hasFixedDelivery ? (linkedSequenceScore(b.combo)-linkedSequenceScore(a.combo)) : 0)
     );
@@ -2273,7 +2319,7 @@ function linkedFixedAnchorScore(candidate){
   if(rows.length){
     rows.forEach(row=>{
       getFixedDeliveryDays(row.vocativo).forEach(fd=>{
-        const ld=preferredLoadDayForFixedDelivery(fd, row.transitTime);
+        const ld=preferredLoadDayForFixedDelivery(fd, row.transitTime, getFixedDeliveryDays(row.vocativo));
         if(ld!==null && getLoadIndexes().includes(Number(ld))) anchors.push(Number(ld));
       });
     });
@@ -2299,6 +2345,28 @@ function linkedFixedAnchorScore(candidate){
   });
   return score;
 }
+function linkedRowSaturdayPreferenceScore(row, combo){
+  // Penalidade usada somente na comparação de cenários vinculados que já ATENDEM o prazo.
+  // Para entrega fixa, mantém a regra específica SEX → SEG como alternativa ao SÁB → SEG.
+  // Para entrega livre, evita sábado quando existe alternativa viável entre segunda e sexta
+  // com a mesma quantidade de janelas. Isso replica o comportamento do vocativo desvinculado.
+  if(!row) return 0;
+  const fixed = getFixedDeliveryDays(row.vocativo);
+  if(fixed.length) return avoidableSaturdayLoadScore(row, combo);
+  if(!getLoadIndexes().includes(5)) return 0;
+  return saturdayLoadCount(combo);
+}
+function linkedAvoidableSaturdayScore(candidate){
+  // Soma a penalização de sábado em todos os vocativos do grupo vinculado.
+  // A comparação só usa essa penalização depois de preservar atendimento do prazo,
+  // quantidade de janelas e alinhamento do vínculo; portanto sábado continua válido
+  // quando for indispensável para atender o prazo.
+  if(!candidate || !candidate.comboByVoc) return 0;
+  const rows=(candidate.orderedRowsForAnchor || []).length
+    ? candidate.orderedRowsForAnchor
+    : (candidate.evals || []).map(x=>x.row).filter(Boolean);
+  return rows.reduce((sum,row)=>sum + linkedRowSaturdayPreferenceScore(row, candidate.comboByVoc[row.vocativo] || []), 0);
+}
 function compareLinkedSchedulesOk(a,b){
   // Regra de vínculo em matriz progressiva:
   // 1) minimiza a quantidade total de janelas realmente usadas pelos vocativos;
@@ -2309,6 +2377,9 @@ function compareLinkedSchedulesOk(a,b){
   // 5) só depois compara tamanho da matriz do grupo e qualidade de prazo.
   return (a.assignedLoads-b.assignedLoads)
     || ((a.commonShortfall||0)-(b.commonShortfall||0))
+    // Em vínculo, se uma alternativa de segunda a sexta atende com a mesma quantidade de janelas,
+    // prefere evitar SÁB antes de comparar prazo médio/espera total.
+    || (linkedAvoidableSaturdayScore(a)-linkedAvoidableSaturdayScore(b))
     || (linkedFixedAnchorScore(a)-linkedFixedAnchorScore(b))
     || (a.maxRowLoads-b.maxRowLoads)
     || (a.firstDeliveryLoads-b.firstDeliveryLoads)
@@ -2332,6 +2403,7 @@ function compareLinkedSchedulesFallback(a,b){
   const fixedLinked = !!(a && b && a.fixedLinked && b.fixedLinked);
   return (a.maxOver-b.maxOver)
     || (fixedLinked ? ((a.commonShortfall||0)-(b.commonShortfall||0)) : 0)
+    || (fixedLinked ? (linkedAvoidableSaturdayScore(a)-linkedAvoidableSaturdayScore(b)) : 0)
     || (a.worst-b.worst)
     || (a.total-b.total)
     || (fixedLinked ? (b.maxRowLoads-a.maxRowLoads) : 0)
@@ -2406,6 +2478,7 @@ function makeLinkedScheduleCandidate(groupRows, groupSequence){
         weekPenalty: nextPlan.weekPenalty,
         gap: nextPlan.gap,
         extraDelay: nextPlan.extraDelay,
+        avoidableSaturday: groupRows.reduce((sum,r)=>sum + linkedRowSaturdayPreferenceScore(r, nextComboByVoc[r.vocativo] || []), 0),
         coreScore: linkedSequenceScore(core),
         comboKey: groupRows.map(r=>comboKey(nextComboByVoc[r.vocativo] || [])).join('|')
       };
@@ -2414,6 +2487,8 @@ function makeLinkedScheduleCandidate(groupRows, groupSequence){
         || (scorePack.commonShortfall-chosenScore.commonShortfall)
         || (scorePack.assignedLoads-chosenScore.assignedLoads)
         || (scorePack.maxOver-chosenScore.maxOver)
+        // Se ambos atendem o prazo, evita escolher SÁB apenas porque ele reduz a espera.
+        || ((scorePack.avoidableSaturday||0)-(chosenScore.avoidableSaturday||0))
         || (scorePack.worst-chosenScore.worst)
         || (scorePack.total-chosenScore.total)
         || (scorePack.weekPenalty-chosenScore.weekPenalty)
@@ -2474,6 +2549,7 @@ function makeLinkedScheduleCandidate(groupRows, groupSequence){
     maxRowLoads,
     minRowLoads,
     commonShortfall,
+    avoidableSaturday: groupRows.reduce((sum,r)=>sum + linkedRowSaturdayPreferenceScore(r, comboByVoc[r.vocativo] || []), 0),
     linkedWeekPenalty: linkedPlan.weekPenalty,
     linkedGap: linkedPlan.gap,
     linkedExtraDelay: linkedPlan.extraDelay,
