@@ -2242,15 +2242,33 @@ function avoidableSaturdayLoadScore(row, combo){
   }).length;
 }
 function orderedPermutations(arr){
+  // Otimização de desempenho: a versão anterior avaliava TODAS as permutações
+  // de cada combinação de dias. Com carga SEG-SÁB, uma combinação de 6 dias gerava
+  // 720 sequências para um único grupo vinculado, travando a visualização.
+  // Para a regra atual, não precisamos testar todas as ordens: os subconjuntos
+  // possíveis continuam sendo avaliados em bestPrefixForLinkedRow; aqui mantemos
+  // somente ordens estratégicas e determinísticas para preservar alinhamento,
+  // sábado quando necessário e desempates estáveis.
   const values=[...new Set((arr || []).map(Number).filter(d=>getLoadIndexes().includes(d)))];
+  const seen=new Set();
   const out=[];
-  function walk(rest,prefix){
-    if(!rest.length){ out.push(prefix.slice()); return; }
-    for(let i=0;i<rest.length;i++){
-      walk(rest.slice(0,i).concat(rest.slice(i+1)), prefix.concat(rest[i]));
-    }
+  function push(seq){
+    const clean=[];
+    (seq || []).map(Number).forEach(d=>{ if(values.includes(d) && !clean.includes(d)) clean.push(d); });
+    values.forEach(d=>{ if(!clean.includes(d)) clean.push(d); });
+    if(clean.length !== values.length) return;
+    const key=clean.join(',');
+    if(!seen.has(key)){ seen.add(key); out.push(clean); }
   }
-  walk(values,[]);
+  const asc=values.slice().sort((a,b)=>a-b);
+  push(asc);
+  // Testa cada dia como primeira âncora da matriz. Isso cobre casos em que a
+  // melhor janela comum não é a primeira da semana, inclusive SÁB.
+  asc.forEach(anchor=>push([anchor].concat(asc.filter(d=>d!==anchor))));
+  // Mantém uma alternativa com sábado antes de sexta para cenários em que SÁB é
+  // a melhor data comum para otimizar uma única janela.
+  if(values.includes(6)) push([6].concat(asc.filter(d=>d!==6)));
+  if(values.includes(5) && values.includes(6)) push([6,5].concat(asc.filter(d=>d!==6 && d!==5)));
   return out;
 }
 function orderedFixedLinkedSequences(arr, groupRows){
@@ -2335,52 +2353,42 @@ function bestPrefixForLinkedRow(row, groupSequence, linkedPlan, requiredCore=[],
     .some(v => v !== row.vocativo && getFixedDeliveryDays(v).length > 0);
 
   if(!hasFixedDelivery){
-    // Primeiro tenta prefixos (comportamento original – mais eficiente para o caso geral)
+    // Em vocativo livre dentro de grupo vinculado, não pode ficar preso apenas ao prefixo
+    // da matriz comum. Ex.: matriz [TER, SEX]; se o parceiro precisa TER+SEX, mas este
+    // vocativo atende com apenas SEX, ele deve usar só SEX. A regra continua sendo:
+    // 1) menor quantidade de janelas que atenda o prazo; 2) manter pelo menos uma data
+    // comum com o grupo; 3) só depois desempatar por preferência operacional.
     for(let k=1;k<=matrix.length;k++){
-      const combo=matrix.slice(0,k);
-      if(core.length && !comboIncludesAll(combo, core)) continue;
-      const ev=evaluateComboForRow(row, parts.menorPrazo, row.transitTime, combo, {allowExtraLoads:true, allowFixedDeliverySlack:true, linkedDeliveryPlan:linkedPlan});
-      const pack={combo:combo.slice(), ev, score:scoreLinkedEval(ev, parts.menorPrazo)};
-      fallback.push(pack);
-      // Em vínculo com entrega fixa, não pode parar no primeiro prefixo que atende.
-      // O vocativo livre deve testar também subconjuntos da matriz para encontrar a
-      // menor quantidade de carregamentos que atenda ao prazo e, em empate, case melhor
-      // com as janelas do vocativo que possui entrega fixa.
-      if(ev && ev.ok && !groupHasFixedMember) return pack;
+      const subsets=comb(matrix,k).map(c=>{
+        const order=new Map(matrix.map((d,i)=>[Number(d),i]));
+        return c.slice().sort((a,b)=>(order.get(Number(a))??99)-(order.get(Number(b))??99));
+      });
+      subsets.forEach(combo=>{
+        if(fallback.some(f=>comboKey(f.combo)===comboKey(combo))) return;
+        if(core.length && !comboIncludesAll(combo, core)) return;
+        const ev=evaluateComboForRow(row, parts.menorPrazo, row.transitTime, combo, {allowExtraLoads:true, allowFixedDeliverySlack:true, linkedDeliveryPlan:linkedPlan});
+        const pack={combo:combo.slice(), ev, score:scoreLinkedEval(ev, parts.menorPrazo)};
+        fallback.push(pack);
+      });
     }
-    // Se o grupo tem membro com entrega fixa, testa todos os subconjuntos para encontrar
-    // alinhamento com os dias fixos do parceiro, mesmo quando algum prefixo já atende.
-    if(groupHasFixedMember){
-      for(let k=1;k<=matrix.length;k++){
-        const subsets=comb(matrix,k).map(c=>{
-          const order=new Map(matrix.map((d,i)=>[Number(d),i]));
-          return c.slice().sort((a,b)=>(order.get(Number(a))??99)-(order.get(Number(b))??99));
-        });
-        subsets.forEach(combo=>{
-          if(fallback.some(f=>comboKey(f.combo)===comboKey(combo))) return; // já testado
-          if(core.length && !comboIncludesAll(combo, core)) return;
-          const ev=evaluateComboForRow(row, parts.menorPrazo, row.transitTime, combo, {allowExtraLoads:true, allowFixedDeliverySlack:true, linkedDeliveryPlan:linkedPlan});
-          const pack={combo:combo.slice(), ev, score:scoreLinkedEval(ev, parts.menorPrazo)};
-          fallback.push(pack);
-        });
-      }
-      const okSubsets=fallback.filter(x=>x.ev && x.ev.ok);
-      if(okSubsets.length){
-        okSubsets.sort((a,b)=>
-          // Regra principal solicitada: usar a menor quantidade de carregamentos possível.
-          (a.combo.length-b.combo.length)
-          // Em empate de quantidade, casar o máximo possível com as janelas do vocativo fixo.
-          ||(preferredMissing(a.combo)-preferredMissing(b.combo))
-          ||(preferredOverlap(b.combo)-preferredOverlap(a.combo))
-          ||(a.score.over-b.score.over)
-          ||(linkedRowSaturdayPreferenceScore(row,a.combo)-linkedRowSaturdayPreferenceScore(row,b.combo))
-          ||(a.score.worst-b.score.worst)
-          ||(a.score.total-b.score.total)
-          ||(linkedSequenceScore(b.combo)-linkedSequenceScore(a.combo))
-          || String(comboKey(a.combo)).localeCompare(String(comboKey(b.combo)))
-        );
-        return okSubsets[0];
-      }
+
+    const okSubsets=fallback.filter(x=>x.ev && x.ev.ok);
+    if(okSubsets.length){
+      okSubsets.sort((a,b)=>
+        // Regra principal: se uma janela já atende o prazo do vocativo, não inflar para duas
+        // apenas porque outro vinculado precisou de uma janela extra.
+        (a.combo.length-b.combo.length)
+        // Em empate de quantidade, casar o máximo possível com as âncoras/preferências do grupo.
+        ||(preferredMissing(a.combo)-preferredMissing(b.combo))
+        ||(preferredOverlap(b.combo)-preferredOverlap(a.combo))
+        ||(a.score.over-b.score.over)
+        ||(linkedRowSaturdayPreferenceScore(row,a.combo)-linkedRowSaturdayPreferenceScore(row,b.combo))
+        ||(a.score.worst-b.score.worst)
+        ||(a.score.total-b.score.total)
+        ||(groupHasFixedMember ? (linkedSequenceScore(b.combo)-linkedSequenceScore(a.combo)) : (earlyLoadScore(a.combo)-earlyLoadScore(b.combo)))
+        || String(comboKey(a.combo)).localeCompare(String(comboKey(b.combo)))
+      );
+      return okSubsets[0];
     }
   } else {
     // Regra corrigida para VOCATIVOS VINCULADOS COM ENTREGA FIXA:
@@ -2453,6 +2461,35 @@ function linkedExtraLoads(candidate){
   return Math.max(0, ((candidate && candidate.assignedLoads) || 0) - shared);
 }
 
+function linkedSharedLoadShortfall(candidate){
+  // Regra prioritária dos vínculos: quando há 2+ vocativos vinculados,
+  // a primeira escolha deve ser uma data de CARREGAMENTO comum.
+  // O cálculo usa a menor quantidade de janelas exigida por algum membro como
+  // referência: se um vocativo precisa de 1 carga e outro de 2, basta 1 data
+  // comum; a 2ª janela fica somente no vocativo que precisar dela.
+  if(!candidate || !candidate.comboByVoc) return 9999;
+  const combos=Object.values(candidate.comboByVoc)
+    .map(c=>[...new Set((c || []).map(Number))].filter(d=>getLoadIndexes().includes(d)));
+  if(combos.length < 2 || combos.some(c=>!c.length)) return 9999;
+  let common=combos[0].slice();
+  combos.slice(1).forEach(combo=>{ common=comboIntersection(common, combo); });
+  const minLoads=Math.min(...combos.map(c=>c.length));
+  return Math.max(0, minLoads - common.length);
+}
+function linkedSharedLoadCount(candidate){
+  if(!candidate || !candidate.comboByVoc) return 0;
+  const combos=Object.values(candidate.comboByVoc)
+    .map(c=>[...new Set((c || []).map(Number))].filter(d=>getLoadIndexes().includes(d)));
+  if(combos.length < 2 || combos.some(c=>!c.length)) return 0;
+  let common=combos[0].slice();
+  combos.slice(1).forEach(combo=>{ common=comboIntersection(common, combo); });
+  return common.length;
+}
+function linkedDistinctLoadDates(candidate){
+  if(!candidate || !candidate.comboByVoc) return 9999;
+  return [...new Set(Object.values(candidate.comboByVoc).flat().map(Number))].length;
+}
+
 function linkedFixedAnchorScore(candidate){
   // Para entrega fixa vinculada, a matriz comum NÃO pode ancorar no próprio dia
   // de entrega fixa. Ela deve ancorar nos dias de CARGA que respeitam o transit time.
@@ -2518,24 +2555,27 @@ function linkedAvoidableSaturdayScore(candidate){
 }
 function compareLinkedSchedulesOk(a,b){
   // Regra de vínculo em matriz progressiva:
-  // 1) minimiza a quantidade total de janelas realmente usadas pelos vocativos;
-  // 2) em entrega fixa vinculada, prioriza a matriz comum nos dias fixos do 1º vocativo
-  //    quando isso atende transit time ou gera folga para os demais;
-  // 3) minimiza o maior número de janelas exigido por um vocativo;
-  // 4) preserva a otimização do 1º vocativo da ordem de entrega;
-  // 5) só depois compara tamanho da matriz do grupo e qualidade de prazo.
-  return (a.assignedLoads-b.assignedLoads)
+  // 1) força primeiro a mesma data de CARREGAMENTO para todos os vocativos vinculados;
+  // 2) se algum vocativo precisar de janela extra para atender prazo, a janela extra fica só nele;
+  // 3) depois minimiza a quantidade total de janelas realmente usadas;
+  // 4) somente depois evita sábado quando houver alternativa igualmente alinhada e viável;
+  // 5) por fim compara qualidade de prazo, início da matriz e desempates.
+  return (linkedSharedLoadShortfall(a)-linkedSharedLoadShortfall(b))
+    || (linkedDistinctLoadDates(a)-linkedDistinctLoadDates(b))
+    // Depois que existe data comum suficiente, economiza janelas por vocativo.
+    // Isso permite 2 cargas para quem precisa e 1 carga para quem já atende o prazo.
+    || (a.assignedLoads-b.assignedLoads)
+    || (b.rowsWithSingleCommon-a.rowsWithSingleCommon)
     || ((a.commonShortfall||0)-(b.commonShortfall||0))
     || ((a.anchorShortfall||0)-(b.anchorShortfall||0))
-    // Em vínculo, se uma alternativa de segunda a sexta atende com a mesma quantidade de janelas,
-    // prefere evitar SÁB antes de comparar prazo médio/espera total.
+    // Em vínculo, sábado só é evitado depois de preservar o carregamento na mesma data.
+    // Assim, SÁB pode ser escolhido quando for a melhor data comum para atender o prazo.
     || (linkedAvoidableSaturdayScore(a)-linkedAvoidableSaturdayScore(b))
     || (linkedFixedAnchorScore(a)-linkedFixedAnchorScore(b))
     || (a.maxRowLoads-b.maxRowLoads)
     || (a.firstDeliveryLoads-b.firstDeliveryLoads)
     || (a.groupLoads-b.groupLoads)
     || (linkedExtraLoads(a)-linkedExtraLoads(b))
-    || (b.rowsWithSingleCommon-a.rowsWithSingleCommon)
     || (a.linkedWeekPenalty-b.linkedWeekPenalty)
     || (a.linkedGap-b.linkedGap)
     || (a.linkedExtraDelay-b.linkedExtraDelay)
@@ -2547,14 +2587,15 @@ function compareLinkedSchedulesOk(a,b){
 }
 function compareLinkedSchedulesFallback(a,b){
   // Quando não atende, primeiro fica o mais próximo do prazo.
-  // Em entrega fixa vinculada, se o estouro empatar, mantém mais janelas até o limite
-  // necessário e ancora a matriz nos dias fixos do 1º vocativo, evitando cair em carga
-  // sábado/terça quando segunda/quarta atende transit time e dá folga às entregas seguintes.
+  // Em empate operacional, mantém a regra de vínculo: data comum de carregamento
+  // antes de economia de janela e antes de evitar sábado.
   const fixedLinked = !!(a && b && a.fixedLinked && b.fixedLinked);
   return (a.maxOver-b.maxOver)
-    || (fixedLinked ? ((a.commonShortfall||0)-(b.commonShortfall||0)) : 0)
     || (a.worst-b.worst)
     || (a.total-b.total)
+    || (linkedSharedLoadShortfall(a)-linkedSharedLoadShortfall(b))
+    || (linkedDistinctLoadDates(a)-linkedDistinctLoadDates(b))
+    || (fixedLinked ? ((a.commonShortfall||0)-(b.commonShortfall||0)) : 0)
     // Se ainda não atende e o prazo empatou, mantém mais janelas antes de preferir
     // somente a menor quantidade. Isso evita o caso da 6ª entrega ficar presa em 2 cargas
     // mesmo quando 3 cargas reduzem o atraso ou chegam mais perto do contrato.
@@ -2592,6 +2633,10 @@ function compareLinkedIterationScores(a,b){
     return (n(a.maxOver)-n(b.maxOver))
       || (n(a.worst)-n(b.worst))
       || (n(a.total)-n(b.total))
+      // Em empate de prazo, preserva a regra do vínculo: uma data comum de carregamento
+      // antes de economizar janela ou evitar sábado.
+      || (n(a.sharedShortfall)-n(b.sharedShortfall))
+      || (n(a.distinctLoadDates)-n(b.distinctLoadDates))
       // Empate no prazo: em grupo vinculado que ainda não atende, preferir mais janelas
       // para chegar o mais próximo possível antes de voltar à regra de economia de cargas.
       || (n(b.maxRowLoads)-n(a.maxRowLoads))
@@ -2605,7 +2650,9 @@ function compareLinkedIterationScores(a,b){
       || String(a.comboKey || '').localeCompare(String(b.comboKey || ''));
   }
 
-  return (n(a.assignedLoads)-n(b.assignedLoads))
+  return (n(a.sharedShortfall)-n(b.sharedShortfall))
+    || (n(a.distinctLoadDates)-n(b.distinctLoadDates))
+    || (n(a.assignedLoads)-n(b.assignedLoads))
     || (n(a.anchorShortfall)-n(b.anchorShortfall))
     || (n(a.avoidableSaturday)-n(b.avoidableSaturday))
     || (n(a.maxOver)-n(b.maxOver))
@@ -2642,6 +2689,8 @@ function linkedScorePackForCombos(groupRows, comboByVoc, plan, scored, matrix, f
   return {
     ok: scored.ok ? 0 : 1,
     commonShortfall: fixedShortfall,
+    sharedShortfall: Math.max(0, Math.min(...groupRows.map(r=>(comboByVoc[r.vocativo] || []).length)) - common.length),
+    distinctLoadDates: [...new Set(Object.values(comboByVoc).flat().map(Number))].length,
     anchorShortfall,
     assignedLoads: assigned,
     maxRowLoads: Math.max(...groupRows.map(r=>(comboByVoc[r.vocativo] || []).length)),
@@ -2858,6 +2907,7 @@ function findBestLinkedSchedule(row){
 
   const okCandidates=[];
   let bestFallback=null;
+  const seenCandidateKeys=new Set();
 
   const allFixedLinkedGroup = groupRows.every(r=>getFixedDeliveryDays(r.vocativo).length>0);
   // Quando ao menos UM vocativo do grupo tem entrega fixa, usa sequências ancoradas
@@ -2873,6 +2923,9 @@ function findBestLinkedSchedule(row){
       sequences.forEach(sequence=>{
         const candidate=makeLinkedScheduleCandidate(groupRows, sequence);
         if(!candidate) return;
+        const candidateKey=groupRows.map(r=>comboKey((candidate.comboByVoc && candidate.comboByVoc[r.vocativo]) || [])).join('|')+'::'+comboKey(candidate.commonCombo || []);
+        if(seenCandidateKeys.has(candidateKey)) return;
+        seenCandidateKeys.add(candidateKey);
         if(candidate.ok) okCandidates.push(candidate);
         if(!bestFallback || compareLinkedSchedulesFallback(candidate,bestFallback)<0) bestFallback=candidate;
       });
@@ -3303,8 +3356,17 @@ function callBackendJsonp(params){
     const script=document.createElement('script');
     const sep=APPS_SCRIPT_URL.includes('?') ? '&' : '?';
     const query=new URLSearchParams({...params, callback:cb, _:Date.now()});
+    let done=false;
+    const timeoutMs = Number(params && params.action === 'dados' ? 90000 : 45000);
+    const timer=setTimeout(()=>{
+      if(done) return;
+      cleanup();
+      reject(new Error('Tempo esgotado ao comunicar com o Apps Script. Atualize os dados ou verifique a publicação/permissão do Web App.'));
+    }, timeoutMs);
     window[cb]=(payload)=>{ cleanup(); resolve(payload); };
     function cleanup(){
+      done=true;
+      clearTimeout(timer);
       try{ delete window[cb]; }catch(e){ window[cb]=undefined; }
       script.remove();
     }
@@ -3567,6 +3629,11 @@ async function saveDirtyConfigs(){
     updateSaveButton();
   }
 }
+
+function waitUiFrame(){
+  return new Promise(resolve=>setTimeout(resolve,0));
+}
+
 async function loadBackendData(resetFilters=true){
   if(!SELECTED_FILIAL){ await openFilialSelection(false); return; }
   if(!isUrlConfigured()){
@@ -3582,6 +3649,8 @@ async function loadBackendData(resetFilters=true){
     bumpBaseDataVersion();
     applyBackendConfigs(payload.configs || {});
     if(resetFilters){ clearSelect(fCliente); clearSelect(fVocativo); clearSelect(fUf); clearSelect(fCidade); clearSelect(fStatus); clearSelect(fCargas); clearSelect(fDiaCarga); }
+    setLoadStatus(`${rows.length.toLocaleString('pt-BR')} registros recebidos. Calculando janelas e vínculos...`,'loading');
+    await waitUiFrame();
     render();
     updateSaveButton();
     setLoadStatus(`${rows.length.toLocaleString('pt-BR')} registros carregados da filial ${SELECTED_FILIAL}. Regime de carga: ${getLoadModeLabel()}. Configurações da Página2 aplicadas. Atualizado em ${new Date().toLocaleString('pt-BR')}.`,'ok');
