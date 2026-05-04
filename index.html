@@ -2553,11 +2553,14 @@ function compareLinkedSchedulesFallback(a,b){
   const fixedLinked = !!(a && b && a.fixedLinked && b.fixedLinked);
   return (a.maxOver-b.maxOver)
     || (fixedLinked ? ((a.commonShortfall||0)-(b.commonShortfall||0)) : 0)
-    || (fixedLinked ? ((a.anchorShortfall||0)-(b.anchorShortfall||0)) : 0)
-    || (fixedLinked ? (linkedAvoidableSaturdayScore(a)-linkedAvoidableSaturdayScore(b)) : 0)
     || (a.worst-b.worst)
     || (a.total-b.total)
+    // Se ainda não atende e o prazo empatou, mantém mais janelas antes de preferir
+    // somente a menor quantidade. Isso evita o caso da 6ª entrega ficar presa em 2 cargas
+    // mesmo quando 3 cargas reduzem o atraso ou chegam mais perto do contrato.
     || (fixedLinked ? (b.maxRowLoads-a.maxRowLoads) : 0)
+    || (fixedLinked ? ((a.anchorShortfall||0)-(b.anchorShortfall||0)) : 0)
+    || (fixedLinked ? (linkedAvoidableSaturdayScore(a)-linkedAvoidableSaturdayScore(b)) : 0)
     || (linkedFixedAnchorScore(a)-linkedFixedAnchorScore(b))
     || (a.assignedLoads-b.assignedLoads)
     || (a.maxRowLoads-b.maxRowLoads)
@@ -2570,6 +2573,148 @@ function compareLinkedSchedulesFallback(a,b){
     || (linkedSequenceScore(a.groupCombo)-linkedSequenceScore(b.groupCombo))
     || (saturdayLoadCount(a.groupCombo)-saturdayLoadCount(b.groupCombo));
 }
+function compareLinkedIterationScores(a,b){
+  // Comparador usado DENTRO de makeLinkedScheduleCandidate.
+  // Importante: aqui não podemos usar a expressão booleana com "||" diretamente,
+  // porque qualquer diferença positiva também vira true e acaba escolhendo um cenário pior.
+  // Além disso, quando o grupo ainda NÃO atende, prazo vem antes de quantidade de janelas.
+  if(!b) return -1;
+  const n=v=>Number.isFinite(Number(v)) ? Number(v) : 0;
+  const okDiff=n(a.ok)-n(b.ok);
+  if(okDiff) return okDiff;
+
+  const commonDiff=n(a.commonShortfall)-n(b.commonShortfall);
+  if(commonDiff) return commonDiff;
+
+  const aFail=n(a.ok)>0;
+  const bFail=n(b.ok)>0;
+  if(aFail || bFail){
+    return (n(a.maxOver)-n(b.maxOver))
+      || (n(a.worst)-n(b.worst))
+      || (n(a.total)-n(b.total))
+      // Empate no prazo: em grupo vinculado que ainda não atende, preferir mais janelas
+      // para chegar o mais próximo possível antes de voltar à regra de economia de cargas.
+      || (n(b.maxRowLoads)-n(a.maxRowLoads))
+      || (n(b.assignedLoads)-n(a.assignedLoads))
+      || (n(a.anchorShortfall)-n(b.anchorShortfall))
+      || (n(a.avoidableSaturday)-n(b.avoidableSaturday))
+      || (n(a.weekPenalty)-n(b.weekPenalty))
+      || (n(a.gap)-n(b.gap))
+      || (n(a.extraDelay)-n(b.extraDelay))
+      || (n(a.coreScore)-n(b.coreScore))
+      || String(a.comboKey || '').localeCompare(String(b.comboKey || ''));
+  }
+
+  return (n(a.assignedLoads)-n(b.assignedLoads))
+    || (n(a.anchorShortfall)-n(b.anchorShortfall))
+    || (n(a.avoidableSaturday)-n(b.avoidableSaturday))
+    || (n(a.maxOver)-n(b.maxOver))
+    || (n(a.worst)-n(b.worst))
+    || (n(a.total)-n(b.total))
+    || (n(a.weekPenalty)-n(b.weekPenalty))
+    || (n(a.gap)-n(b.gap))
+    || (n(a.extraDelay)-n(b.extraDelay))
+    || (n(a.coreScore)-n(b.coreScore))
+    || String(a.comboKey || '').localeCompare(String(b.comboKey || ''));
+}
+
+function cloneComboMapForLinked(comboByVoc){
+  const out={};
+  Object.keys(comboByVoc || {}).forEach(v=>{
+    out[v]=[...new Set((comboByVoc[v] || []).map(Number))];
+  });
+  return out;
+}
+function sortComboByMatrixOrder(combo, matrix){
+  const order=new Map((matrix || []).map((d,i)=>[Number(d),i]));
+  return [...new Set((combo || []).map(Number).filter(d=>order.has(d)))]
+    .sort((a,b)=>(order.get(a)??99)-(order.get(b)??99));
+}
+function linkedScorePackForCombos(groupRows, comboByVoc, plan, scored, matrix, fixedAnchorUnion, core=[]){
+  let common=comboByVoc[groupRows[0].vocativo] ? comboByVoc[groupRows[0].vocativo].slice() : [];
+  groupRows.slice(1).forEach(r=>{ common=comboIntersection(common, comboByVoc[r.vocativo] || []); });
+  const assigned=groupRows.reduce((sum,r)=>sum + ((comboByVoc[r.vocativo] || []).length), 0);
+  const fixedShortfall = groupRows.reduce((sum,r)=>{
+    if(!getFixedDeliveryDays(r.vocativo).length) return sum;
+    return sum + fixedDeliveryCoverageForCombo(r, comboByVoc[r.vocativo] || [], {linkedDeliveryPlan:plan}).missing;
+  }, 0);
+  const anchorShortfall = freeRowsAnchorMissing(groupRows, comboByVoc, fixedAnchorUnion || []);
+  return {
+    ok: scored.ok ? 0 : 1,
+    commonShortfall: fixedShortfall,
+    anchorShortfall,
+    assignedLoads: assigned,
+    maxRowLoads: Math.max(...groupRows.map(r=>(comboByVoc[r.vocativo] || []).length)),
+    maxOver: scored.maxOver,
+    worst: scored.worst,
+    total: scored.total,
+    weekPenalty: plan.weekPenalty,
+    gap: plan.gap,
+    extraDelay: plan.extraDelay,
+    avoidableSaturday: groupRows.reduce((sum,r)=>sum + linkedRowSaturdayPreferenceScore(r, comboByVoc[r.vocativo] || []), 0),
+    coreScore: linkedSequenceScore(core),
+    comboKey: groupRows.map(r=>comboKey(comboByVoc[r.vocativo] || [])).join('|')
+  };
+}
+function buildLinkedCandidateState(groupRows, comboByVoc, matrix, fixedAnchorUnion, core=[]){
+  const normalized={};
+  groupRows.forEach(r=>{
+    normalized[r.vocativo]=sortComboByMatrixOrder(comboByVoc[r.vocativo] || [], matrix);
+  });
+  const plan=buildLinkedDeliveryPlanForCombos(groupRows, normalized);
+  if(!plan || !plan.complete) return null;
+  const scored=scoreLinkedPlanForDeadlinesByCombos(groupRows, normalized, plan);
+  if(scored.hardInvalid) return null;
+  const scorePack=linkedScorePackForCombos(groupRows, normalized, plan, scored, matrix, fixedAnchorUnion, core);
+  return {comboByVoc:normalized, plan, scored, scorePack};
+}
+function repairLinkedCandidateForDeadlines(groupRows, comboByVoc, matrix, fixedAnchorUnion, core=[]){
+  // Correção importante para vocativos livres dentro de grupo vinculado:
+  // a escolha inicial do subconjunto é feita antes do plano final de entregas do grupo.
+  // Quando a ordem de entrega do vínculo desloca uma entrega e o vocativo fica com folga negativa,
+  // esta etapa reabre as combinações e permite trocar/adicionar janelas até atender o prazo
+  // ou, se não for possível, chegar no menor estouro. Isso evita a 6ª entrega ficar presa em 2 cargas.
+  let current=buildLinkedCandidateState(groupRows, comboByVoc, matrix, fixedAnchorUnion, core);
+  if(!current) return null;
+
+  for(let pass=0; pass<Math.max(2, matrix.length); pass++){
+    if(current.scored.ok) break;
+    const failingFreeRows=current.scored.evals
+      .filter(x=>x && x.row && !getFixedDeliveryDays(x.row.vocativo).length && (!x.ev || !x.ev.ok))
+      .map(x=>x.row);
+    if(!failingFreeRows.length) break;
+
+    let bestState=null;
+    failingFreeRows.forEach(row=>{
+      const voc=row.vocativo;
+      const currentCombo=sortComboByMatrixOrder(current.comboByVoc[voc] || [], matrix);
+      const startK=Math.max(1, currentCombo.length);
+      for(let k=startK;k<=matrix.length;k++){
+        comb(matrix,k).forEach(rawCombo=>{
+          const combo=sortComboByMatrixOrder(rawCombo, matrix);
+          if(comboKey(combo)===comboKey(currentCombo)) return;
+          // Mantém estabilidade: primeiro tenta combinações que preservam as janelas já escolhidas;
+          // se for a mesma quantidade, permite troca somente quando o prazo melhora.
+          const preservesCurrent = comboIncludesAll(combo, currentCombo);
+          if(k>currentCombo.length && !preservesCurrent) return;
+          const trial=cloneComboMapForLinked(current.comboByVoc);
+          trial[voc]=combo;
+          const state=buildLinkedCandidateState(groupRows, trial, matrix, fixedAnchorUnion, core);
+          if(!state) return;
+          if(compareLinkedIterationScores(state.scorePack, current.scorePack) >= 0) return;
+          if(!bestState || compareLinkedIterationScores(state.scorePack, bestState.scorePack) < 0){
+            bestState=state;
+          }
+        });
+      }
+    });
+
+    if(!bestState) break;
+    current=bestState;
+  }
+  return current;
+}
+
 function makeLinkedScheduleCandidate(groupRows, groupSequence){
   const matrix=[...new Set((groupSequence || []).map(Number).filter(d=>getLoadIndexes().includes(d)))];
   if(!matrix.length) return null;
@@ -2621,55 +2766,15 @@ function makeLinkedScheduleCandidate(groupRows, groupSequence){
       });
       if(hardInvalid) return;
 
-      const nextPlan=buildLinkedDeliveryPlanForCombos(groupRows, nextComboByVoc);
-      if(!nextPlan || !nextPlan.complete) return;
-      const scored=scoreLinkedPlanForDeadlinesByCombos(groupRows, nextComboByVoc, nextPlan);
-      if(scored.hardInvalid) return;
+      const repaired=repairLinkedCandidateForDeadlines(groupRows, nextComboByVoc, matrix, fixedAnchorUnion, core);
+      if(!repaired) return;
 
-      let common=nextComboByVoc[groupRows[0].vocativo] ? nextComboByVoc[groupRows[0].vocativo].slice() : [];
-      groupRows.slice(1).forEach(r=>{ common=comboIntersection(common, nextComboByVoc[r.vocativo] || []); });
-      const assigned=groupRows.reduce((sum,r)=>sum + ((nextComboByVoc[r.vocativo] || []).length), 0);
-      // commonShortfall: só verifica se os membros COM entrega fixa têm seus dias fixos cobertos.
-      // Membros sem entrega fixa não contribuem para o shortfall.
-      const fixedShortfall = groupRows.reduce((sum,r)=>{
-        if(!getFixedDeliveryDays(r.vocativo).length) return sum;
-        return sum + fixedDeliveryCoverageForCombo(r, nextComboByVoc[r.vocativo] || [], {linkedDeliveryPlan:nextPlan}).missing;
-      }, 0);
-      const anchorShortfall = freeRowsAnchorMissing(groupRows, nextComboByVoc, fixedAnchorUnion);
-      const scorePack={
-        ok: scored.ok ? 0 : 1,
-        commonShortfall: fixedShortfall,
-        anchorShortfall,
-        assignedLoads: assigned,
-        maxOver: scored.maxOver,
-        worst: scored.worst,
-        total: scored.total,
-        weekPenalty: nextPlan.weekPenalty,
-        gap: nextPlan.gap,
-        extraDelay: nextPlan.extraDelay,
-        avoidableSaturday: groupRows.reduce((sum,r)=>sum + linkedRowSaturdayPreferenceScore(r, nextComboByVoc[r.vocativo] || []), 0),
-        coreScore: linkedSequenceScore(core),
-        comboKey: groupRows.map(r=>comboKey(nextComboByVoc[r.vocativo] || [])).join('|')
-      };
-      const better = !chosenScore
-        || (scorePack.ok-chosenScore.ok)
-        || (scorePack.commonShortfall-chosenScore.commonShortfall)
-        || (scorePack.assignedLoads-chosenScore.assignedLoads)
-        || ((scorePack.anchorShortfall||0)-(chosenScore.anchorShortfall||0))
-        || (scorePack.maxOver-chosenScore.maxOver)
-        // Se ambos atendem o prazo, evita escolher SÁB apenas porque ele reduz a espera.
-        || ((scorePack.avoidableSaturday||0)-(chosenScore.avoidableSaturday||0))
-        || (scorePack.worst-chosenScore.worst)
-        || (scorePack.total-chosenScore.total)
-        || (scorePack.weekPenalty-chosenScore.weekPenalty)
-        || (scorePack.gap-chosenScore.gap)
-        || (scorePack.extraDelay-chosenScore.extraDelay)
-        || (scorePack.coreScore-chosenScore.coreScore)
-        || String(scorePack.comboKey).localeCompare(String(chosenScore.comboKey)) < 0;
+      const scorePack=repaired.scorePack;
+      const better = compareLinkedIterationScores(scorePack, chosenScore) < 0;
       if(better){
         chosenScore=scorePack;
-        chosenComboByVoc=nextComboByVoc;
-        chosenPlan=nextPlan;
+        chosenComboByVoc=repaired.comboByVoc;
+        chosenPlan=repaired.plan;
       }
     });
 
