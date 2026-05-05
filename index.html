@@ -1990,27 +1990,15 @@ function fixedDeliveryCheck(row, transit, combo, options={}){
       };
     }
   } else if(fixedLinkedStrict){
-    // Importante para vínculos + entregas fixas:
-    // quando duas entregas fixas diferentes têm o MESMO dia correto de carregamento
-    // pelo transit time, não devemos invalidar o vínculo só porque há menos entregas
-    // distintas do que dias fixos selecionados. Ex.: filial SEG-SEX, TT 5, entregas
-    // QUA e QUI podem compartilhar carga SEX. Neste caso, a cobertura correta é por
-    // DATA DE CARGA PREFERENCIAL, não por uma entrega distinta para cada carga.
-    const preferredCoverage = fixedPreferredLoadCoverageForCombo(row, combo);
-    const preferredMissing = (preferredCoverage && Number(preferredCoverage.missing)) || 0;
-    if(preferredMissing > 0){
-      const missingLoads = (preferredCoverage.requiredLoads || [])
-        .filter(d => !(preferredCoverage.coveredLoads || []).includes(Number(d)))
-        .map(i=>DAYS[i]);
-      return {
-        ok:false,
-        fixed,
-        usedFixed:[...deliveredSet],
-        reason: missingLoads.length
-          ? `As janelas de carga selecionadas não cobrem os dias corretos de carga ${missingLoads.join(', ')} das entregas fixas`
-          : `As janelas de carga selecionadas não cobrem as entregas fixas ${fixed.map(i=>DAYS[i]).join(', ')}`
-      };
-    }
+    // Para vocativos vinculados com 2+ entregas fixas, a cobertura total das entregas
+    // fixas NÃO deve ser trava obrigatória quando uma quantidade menor de janelas
+    // já atende o prazo do cliente.
+    //
+    // Aqui a validação já garantiu que cada carga escolhida gera uma entrega fixa válida.
+    // A decisão de usar 1, 2, 3 ou mais janelas fica para os comparadores:
+    // - se atende o prazo: vence a menor quantidade de carregamentos;
+    // - se não atende o prazo: os fallbacks preservam maior cobertura/mais janelas
+    //   para chegar o mais próximo possível do contrato.
   }
 
   return {ok:true, fixed, usedFixed:[...deliveredSet].sort((a,b)=>a-b)};
