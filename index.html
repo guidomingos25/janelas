@@ -1979,7 +1979,7 @@ function fixedDeliveryCheck(row, transit, combo, options={}){
 
   const deliveredSet = new Set(planned.map(x => x.day));
 
-  if(!flexibleFixed || fixedLinkedStrict){
+  if(!flexibleFixed){
     const missing = fixed.filter(day => !deliveredSet.has(day));
     if(missing.length){
       return {
@@ -1987,6 +1987,28 @@ function fixedDeliveryCheck(row, transit, combo, options={}){
         fixed,
         usedFixed:[...deliveredSet],
         reason:`As janelas de carga selecionadas não geram entrega fixa em ${fixed.map(i=>DAYS[i]).join(', ')}`
+      };
+    }
+  } else if(fixedLinkedStrict){
+    // Importante para vínculos + entregas fixas:
+    // quando duas entregas fixas diferentes têm o MESMO dia correto de carregamento
+    // pelo transit time, não devemos invalidar o vínculo só porque há menos entregas
+    // distintas do que dias fixos selecionados. Ex.: filial SEG-SEX, TT 5, entregas
+    // QUA e QUI podem compartilhar carga SEX. Neste caso, a cobertura correta é por
+    // DATA DE CARGA PREFERENCIAL, não por uma entrega distinta para cada carga.
+    const preferredCoverage = fixedPreferredLoadCoverageForCombo(row, combo);
+    const preferredMissing = (preferredCoverage && Number(preferredCoverage.missing)) || 0;
+    if(preferredMissing > 0){
+      const missingLoads = (preferredCoverage.requiredLoads || [])
+        .filter(d => !(preferredCoverage.coveredLoads || []).includes(Number(d)))
+        .map(i=>DAYS[i]);
+      return {
+        ok:false,
+        fixed,
+        usedFixed:[...deliveredSet],
+        reason: missingLoads.length
+          ? `As janelas de carga selecionadas não cobrem os dias corretos de carga ${missingLoads.join(', ')} das entregas fixas`
+          : `As janelas de carga selecionadas não cobrem as entregas fixas ${fixed.map(i=>DAYS[i]).join(', ')}`
       };
     }
   }
@@ -2148,12 +2170,13 @@ function evaluateFixedDeliveryForRow(row, deadline, transit){
   if(fallbackOptions.length){
     fallbackOptions.sort((a,b)=>{
       if(fixedCount > 1){
-        const ac=fixedDeliveryCoverageForCombo(row, a.combo || [], {allowFixedDeliverySlack:true});
-        const bc=fixedDeliveryCoverageForCombo(row, b.combo || [], {allowFixedDeliverySlack:true});
+        const ac=fixedPreferredLoadCoverageForCombo(row, a.combo || []);
+        const bc=fixedPreferredLoadCoverageForCombo(row, b.combo || []);
         return (ac.missing-bc.missing)
-          || ((bc.used || []).length-(ac.used || []).length)
-          // Quando NÃO ATENDE, não reduz as entregas fixas: mantém o máximo de janelas/coberturas.
-          || ((b.combo || []).length-(a.combo || []).length)
+          || ((bc.covered || []).length-(ac.covered || []).length)
+          // Quando duas entregas fixas caem no mesmo dia correto de CARGA, não cria
+          // janela extra só para separar a entrega. Com a mesma cobertura, reduz janelas.
+          || ((a.combo || []).length-(b.combo || []).length)
           || (ac.duplicate-bc.duplicate)
           || compareFallbackByPrazoThenSabado(a,b);
       }
@@ -2305,6 +2328,46 @@ function fixedDeliveryCoverageForCombo(row, combo, options={}){
     fixed: fixed.slice()
   };
 }
+
+function fixedPreferredLoadCoverageForCombo(row, combo){
+  // Cobertura das ENTREGAS FIXAS pelos dias preferenciais de CARGA.
+  // Corrige o caso SEG-SEX em que 2 entregas fixas diferentes geram o mesmo
+  // dia correto de carregamento pelo transit time. Ex.: TT 5 + entregas QUA/QUI
+  // podem compartilhar carga SEX. Nesse caso, não se cria uma carga extra apenas
+  // para separar entregas que já caem na mesma data de carregamento.
+  const fixed = getFixedDeliveryDays(row && row.vocativo);
+  const comboDays=[...new Set((combo || []).map(Number).filter(d=>getLoadIndexes().includes(d)))];
+  const comboSet=new Set(comboDays);
+  const covered=[];
+  const missing=[];
+  const requiredLoads=[];
+  const coveredLoads=[];
+  if(!row || !fixed.length){ return {missing:0, covered:[], used:[], fixed:[], requiredLoads:[], coveredLoads:[], duplicate:0}; }
+
+  fixed.forEach(fixedDay=>{
+    const preferredLoads=preferredLoadDaysForFixedDelivery(fixedDay, row.transitTime, fixed)
+      .map(Number)
+      .filter(d=>getLoadIndexes().includes(d));
+    preferredLoads.forEach(d=>{ if(!requiredLoads.includes(d)) requiredLoads.push(d); });
+    const matched=preferredLoads.find(d=>comboSet.has(d));
+    if(matched!==undefined){
+      covered.push(Number(fixedDay));
+      if(!coveredLoads.includes(matched)) coveredLoads.push(matched);
+    }else{
+      missing.push(Number(fixedDay));
+    }
+  });
+
+  return {
+    missing: missing.length,
+    covered: covered.sort((a,b)=>a-b),
+    used: covered.sort((a,b)=>a-b),
+    fixed: fixed.slice(),
+    requiredLoads: requiredLoads.sort((a,b)=>a-b),
+    coveredLoads: coveredLoads.sort((a,b)=>a-b),
+    duplicate: Math.max(0, comboDays.length - coveredLoads.length)
+  };
+}
 function fixedDeliveryCoverageShortfall(row, combo, options={}){
   const coverage = fixedDeliveryCoverageForCombo(row, combo, options);
   const fixedTotal = (coverage.fixed || []).length;
@@ -2317,13 +2380,14 @@ function fixedDeliveryCoverageShortfall(row, combo, options={}){
 }
 function fixedDeliveryFullCoverageShortfall(row, combo, options={}){
   // Usado somente para cenários que NÃO atendem o prazo.
-  // Se o cliente marcou 3 entregas fixas e nenhuma combinação atende,
-  // o melhor fallback deve preservar o máximo dessas 3 entregas fixas,
-  // em vez de reduzir para 2/1 só porque o prazo isolado fica melhor.
-  const coverage = fixedDeliveryCoverageForCombo(row, combo, options);
-  const fixedTotal = (coverage.fixed || []).length;
+  // Agora a cobertura completa é medida pelas DATAS CORRETAS DE CARGA das entregas
+  // fixas, não obrigatoriamente por uma carga distinta para cada dia de entrega.
+  // Se QUA e QUI caem corretamente na mesma carga SEX pelo transit time, uma única
+  // carga SEX cobre as duas entregas para efeito de otimização de janelas.
+  const preferredCoverage = fixedPreferredLoadCoverageForCombo(row, combo);
+  const fixedTotal = (preferredCoverage.fixed || []).length;
   if(!fixedTotal) return 0;
-  return Math.max(0, fixedTotal - (coverage.used || []).length);
+  return Math.max(0, fixedTotal - (preferredCoverage.covered || []).length);
 }
 function fixedDeliveryCoverageForPack(row, pack){
   if(!pack || !pack.ev) return fixedDeliveryCoverageForCombo(row, []);
@@ -2351,18 +2415,20 @@ function fixedAnchorLoadsByVocativoForMatrix(groupRows, matrix){
       for(let k=1;k<=Math.min(fixed.length, allowedMatrix.length);k++){
         comb(allowedMatrix,k).forEach(combo=>{
           const assignment=assignFixedDeliveriesToCombo(row, combo, {allowFixedDeliverySlack:true});
-          const used=(assignment.used || []).length;
+          const preferredCoverage=fixedPreferredLoadCoverageForCombo(row, combo);
+          const used=(preferredCoverage.covered || []).length || (assignment.used || []).length;
           if(!used) return;
-          candidates.push({combo:combo.slice(), assignment, used, missing:fixed.length-used});
+          candidates.push({combo:combo.slice(), assignment, preferredCoverage, used, missing:fixed.length-used});
         });
       }
       if(candidates.length){
         candidates.sort((a,b)=>
           (a.missing-b.missing)
           || (b.used-a.used)
-          // Para fallback NÃO ATENDE, preservar mais janelas fixas quando elas existem na matriz.
-          || (b.combo.length-a.combo.length)
-          || ((a.assignment.duplicate||0)-(b.assignment.duplicate||0))
+          // Se a cobertura das entregas fixas é a mesma, usa a menor quantidade de
+          // datas de carga; isso evita inflar a matriz quando duas entregas compartilham SEX.
+          || (a.combo.length-b.combo.length)
+          || ((a.preferredCoverage.duplicate||0)-(b.preferredCoverage.duplicate||0))
           || ((a.assignment.score||0)-(b.assignment.score||0))
           || String(comboKey(a.combo)).localeCompare(String(comboKey(b.combo)))
         );
@@ -2610,14 +2676,13 @@ function bestPrefixForLinkedRow(row, groupSequence, linkedPlan, requiredCore=[],
 
   if(fallback.length){
     fallback.sort((a,b)=>{
-      const ac = hasFixedDelivery ? fixedDeliveryCoverageForCombo(row, a.combo || [], {linkedDeliveryPlan:linkedPlan}) : null;
-      const bc = hasFixedDelivery ? fixedDeliveryCoverageForCombo(row, b.combo || [], {linkedDeliveryPlan:linkedPlan}) : null;
+      const ac = hasFixedDelivery ? fixedPreferredLoadCoverageForCombo(row, a.combo || []) : null;
+      const bc = hasFixedDelivery ? fixedPreferredLoadCoverageForCombo(row, b.combo || []) : null;
       return (hasFixedDelivery ? (fixedDeliveryFullCoverageShortfall(row, a.combo || [], {linkedDeliveryPlan:linkedPlan})-fixedDeliveryFullCoverageShortfall(row, b.combo || [], {linkedDeliveryPlan:linkedPlan})) : 0)
-        || (hasFixedDelivery ? ((bc.used || []).length-(ac.used || []).length) : 0)
-        // Se ainda NÃO atende, não reduzir as entregas fixas. Ex.: 3 entregas fixas
-        // devem continuar como 3 tentativas/coberturas; só podem virar 2/1 quando algum
-        // cenário com 2/1 realmente atende o prazo.
-        || (hasFixedDelivery ? ((b.combo || []).length-(a.combo || []).length) : (a.combo.length-b.combo.length))
+        || (hasFixedDelivery ? ((bc.covered || []).length-(ac.covered || []).length) : 0)
+        // Se duas entregas fixas caem no mesmo dia correto de carga, não força uma
+        // terceira janela artificial. Com a mesma cobertura, reduz janelas.
+        || (hasFixedDelivery ? ((a.combo || []).length-(b.combo || []).length) : (a.combo.length-b.combo.length))
         || (hasFixedDelivery ? (ac.duplicate-bc.duplicate) : 0)
         || (a.score.over-b.score.over)
         || (a.score.worst-b.score.worst)
@@ -2769,18 +2834,19 @@ function compareLinkedSchedulesFallback(a,b){
   // existindo QUA/SEX em comum com o vocativo de entrega fixa.
   const fixedLinked = !!(a && b && (a.fixedLinked || b.fixedLinked));
   if(fixedLinked){
-    return ((a.fixedFullShortfall||0)-(b.fixedFullShortfall||0))
-      // Em cenário NÃO ATENDE com entrega fixa, primeiro preserva o máximo de entregas fixas.
-      // Ex.: se há 3 entregas fixas, mantém 3 coberturas/tentativas; só reduz quando existe
-      // um candidato OK com menos janelas, tratado no comparador de cenários atendidos.
-      || (b.maxRowLoads-a.maxRowLoads)
-      || (b.assignedLoads-a.assignedLoads)
+    const fullDiff=((a.fixedFullShortfall||0)-(b.fixedFullShortfall||0));
+    const bothCovered=(Number(a.fixedFullShortfall||0)===0 && Number(b.fixedFullShortfall||0)===0);
+    return fullDiff
       // Depois força as datas comuns de carregamento entre os vocativos vinculados.
       || (linkedSharedLoadShortfall(a)-linkedSharedLoadShortfall(b))
       || ((a.anchorShortfall||0)-(b.anchorShortfall||0))
       || ((a.commonShortfall||0)-(b.commonShortfall||0))
       || (linkedFixedAnchorScore(a)-linkedFixedAnchorScore(b))
       || (linkedDistinctLoadDates(a)-linkedDistinctLoadDates(b))
+      // Com a cobertura fixa preservada, otimiza o total de janelas. Se ainda falta
+      // cobertura, mantém a preferência antiga por mais tentativas/coberturas.
+      || (bothCovered ? (a.assignedLoads-b.assignedLoads) : (b.assignedLoads-a.assignedLoads))
+      || (bothCovered ? (a.maxRowLoads-b.maxRowLoads) : (b.maxRowLoads-a.maxRowLoads))
       // Se continuar empatado no alinhamento/cobertura, aí sim usa a proximidade do prazo.
       || (a.maxOver-b.maxOver)
       || (a.worst-b.worst)
@@ -2836,7 +2902,9 @@ function compareLinkedIterationScores(a,b){
     if(fixedCoverageDiff) return fixedCoverageDiff;
 
     const fixedLoadCountDiff = (n(a.hasFixedAnchors) || n(b.hasFixedAnchors))
-      ? ((n(b.maxRowLoads)-n(a.maxRowLoads)) || (n(b.assignedLoads)-n(a.assignedLoads)))
+      ? ((n(a.fixedFullShortfall)===0 && n(b.fixedFullShortfall)===0)
+        ? ((n(a.assignedLoads)-n(b.assignedLoads)) || (n(a.maxRowLoads)-n(b.maxRowLoads)))
+        : ((n(b.maxRowLoads)-n(a.maxRowLoads)) || (n(b.assignedLoads)-n(a.assignedLoads))))
       : 0;
     if(fixedLoadCountDiff) return fixedLoadCountDiff;
 
