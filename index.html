@@ -2782,13 +2782,35 @@ function linkedAvoidableSaturdayScore(candidate){
     : (candidate.evals || []).map(x=>x.row).filter(Boolean);
   return rows.reduce((sum,row)=>sum + linkedRowSaturdayPreferenceScore(row, candidate.comboByVoc[row.vocativo] || []), 0);
 }
+function linkedCommonEarlyLoadScore(candidate){
+  // Para cenários vinculados que já ATENDEM o prazo, replica a prioridade do vocativo
+  // individual: entre opções viáveis e com a mesma quantidade/alinhamento de janelas,
+  // escolhe a data comum mais cedo na semana: SEG, depois TER, QUA, QUI, SEX e SAB.
+  if(!candidate) return 999999999999;
+  const common=(candidate.commonCombo || []).map(Number).filter(d=>getLoadIndexes().includes(d));
+  if(common.length) return earlyLoadScore(common);
+  if(candidate.comboByVoc){
+    const all=[...new Set(Object.values(candidate.comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))];
+    if(all.length) return earlyLoadScore(all);
+  }
+  return earlyLoadScore(candidate.groupCombo || []);
+}
+function linkedAllLoadsEarlyScore(candidate){
+  if(!candidate) return 999999999999;
+  if(candidate.comboByVoc){
+    const all=[...new Set(Object.values(candidate.comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))];
+    if(all.length) return earlyLoadScore(all);
+  }
+  return earlyLoadScore(candidate.groupCombo || []);
+}
 function compareLinkedSchedulesOk(a,b){
   // Regra de vínculo em matriz progressiva:
   // 1) força primeiro a mesma data de CARREGAMENTO para todos os vocativos vinculados;
   // 2) se algum vocativo precisar de janela extra para atender prazo, a janela extra fica só nele;
-  // 3) depois minimiza a quantidade total de janelas realmente usadas;
-  // 4) somente depois evita sábado quando houver alternativa igualmente alinhada e viável;
-  // 5) por fim compara qualidade de prazo, início da matriz e desempates.
+  // 3) minimiza a quantidade total de janelas realmente usadas;
+  // 4) se todos atendem com o mesmo alinhamento/quantidade, prioriza início da semana
+  //    também nos vinculados: SEG, depois TER, QUA, QUI, SEX e SAB;
+  // 5) somente depois compara sábado evitável, qualidade de prazo e desempates.
   return (linkedSharedLoadShortfall(a)-linkedSharedLoadShortfall(b))
     || (linkedDistinctLoadDates(a)-linkedDistinctLoadDates(b))
     // Depois que existe data comum suficiente, economiza janelas por vocativo.
@@ -2797,6 +2819,11 @@ function compareLinkedSchedulesOk(a,b){
     || ((a.anchorShortfall||0)-(b.anchorShortfall||0))
     || (a.assignedLoads-b.assignedLoads)
     || (b.rowsWithSingleCommon-a.rowsWithSingleCommon)
+    // Ajuste pontual: em cenários vinculados que já atendem o prazo, a data comum
+    // mais cedo na semana vem antes de "prazo real menor"/gap. Assim, se SEG atende,
+    // SEG vence TER/QUA/QUI/SEX/SAB; se não atender, o próximo dia viável vence.
+    || (linkedCommonEarlyLoadScore(a)-linkedCommonEarlyLoadScore(b))
+    || (linkedAllLoadsEarlyScore(a)-linkedAllLoadsEarlyScore(b))
     // Em vínculo, sábado só é evitado depois de preservar o carregamento na mesma data.
     // Assim, SÁB pode ser escolhido quando for a melhor data comum para atender o prazo.
     || (linkedAvoidableSaturdayScore(a)-linkedAvoidableSaturdayScore(b))
@@ -2923,6 +2950,10 @@ function compareLinkedIterationScores(a,b){
     || (n(a.distinctLoadDates)-n(b.distinctLoadDates))
     || (n(a.assignedLoads)-n(b.assignedLoads))
     || (n(a.anchorShortfall)-n(b.anchorShortfall))
+    // Ajuste pontual para iterações internas já OK: não trocar uma matriz de início
+    // de semana por outra mais tarde apenas porque o gap/prazo real ficou menor.
+    || (n(a.earlyCommonScore)-n(b.earlyCommonScore))
+    || (n(a.earlyAllScore)-n(b.earlyAllScore))
     || (n(a.avoidableSaturday)-n(b.avoidableSaturday))
     || (n(a.maxOver)-n(b.maxOver))
     || (n(a.worst)-n(b.worst))
@@ -2972,6 +3003,8 @@ function linkedScorePackForCombos(groupRows, comboByVoc, plan, scored, matrix, f
     maxOver: scored.maxOver,
     worst: scored.worst,
     total: scored.total,
+    earlyCommonScore: earlyLoadScore(common.length ? common : [...new Set(Object.values(comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))]),
+    earlyAllScore: earlyLoadScore([...new Set(Object.values(comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))]),
     weekPenalty: plan.weekPenalty,
     gap: plan.gap,
     extraDelay: plan.extraDelay,
