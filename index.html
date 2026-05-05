@@ -1398,7 +1398,7 @@ function saturdayLoadCount(combo){
 function earlyLoadScore(combo){
   // Prioridade absoluta para início da semana entre combinações viáveis.
   // Quanto menor, mais cedo na semana: SEG, depois TER, QUA, QUI, SEX e SAB.
-  // A comparação é lexicográfica para que [SEG] vença [TER] e [SEG,QUI] vença [TER,QUA].
+  // Mantida para desempates finais, sem substituir a regra nova de espaçamento.
   const days = (combo || []).map(Number).sort((a,b)=>a-b);
   let score = 0;
   for(let i = 0; i < 6; i++){
@@ -1407,16 +1407,65 @@ function earlyLoadScore(combo){
   }
   return score;
 }
+function loadOrderMap(){
+  return new Map(getLoadIndexes().map((d,i)=>[Number(d),i]));
+}
+function normalizeLoadComboByOrder(combo){
+  const order=loadOrderMap();
+  return [...new Set((combo || []).map(Number).filter(d=>order.has(d)))]
+    .sort((a,b)=>(order.get(a)??99)-(order.get(b)??99));
+}
+function firstLoadScore(combo){
+  // Mantém a primeira janela o mais perto possível do início da semana operacional.
+  const order=loadOrderMap();
+  const days=normalizeLoadComboByOrder(combo);
+  return days.length ? (order.get(days[0]) ?? 99) : 99;
+}
+function circularLoadSpacingScore(combo){
+  // Desempate operacional para combinações que já ATENDEM o prazo:
+  // distribui as janelas no ciclo da semana de carregamento, evitando tanto dias
+  // seguidos quanto o par SEX -> próxima SEG muito curto. Ex.: em SEG-SEX,
+  // SEG+QUI vence SEG+SEX, pois equilibra SEG->QUI e QUI->próxima SEG.
+  const allowed=getLoadIndexes().map(Number);
+  const order=new Map(allowed.map((d,i)=>[Number(d),i]));
+  const days=normalizeLoadComboByOrder(combo);
+  if(days.length<=1 || allowed.length<=1) return 0;
+  const pos=days.map(d=>order.get(Number(d))).filter(v=>Number.isFinite(v)).sort((a,b)=>a-b);
+  if(pos.length<=1) return 0;
+  const gaps=[];
+  for(let i=0;i<pos.length;i++){
+    const cur=pos[i];
+    const next=pos[(i+1)%pos.length] + (i===pos.length-1 ? allowed.length : 0);
+    gaps.push(next-cur);
+  }
+  const minGap=Math.min(...gaps);
+  const maxGap=Math.max(...gaps);
+  const spread=maxGap-minGap;
+  const ideal=allowed.length/pos.length;
+  const deviation=gaps.reduce((sum,g)=>sum+Math.abs(g-ideal),0);
+  const firstGap=gaps[0] || 0;
+  // Menor pontuação é melhor: maximiza o menor intervalo circular, minimiza
+  // desequilíbrio e, em empate, afasta a 2ª janela sem encurtar o retorno semanal.
+  return ((allowed.length-minGap)*1000000) + (spread*10000) + Math.round(deviation*100) - firstGap;
+}
+function okLoadDistributionScore(combo){
+  // Só deve ser usado para cenários já viáveis e, preferencialmente, depois da
+  // quantidade de janelas. Não muda prazo, TT, vínculo ou entrega fixa.
+  return (firstLoadScore(combo)*1000000000000) + circularLoadSpacingScore(combo);
+}
 function compareEvalByPrazoThenInicio(a,b){
   // Para combinações que ATENDEM o prazo:
-  // 1) prioriza início da semana: SEG, depois TER, depois QUA...;
-  // 2) em empate, evita sábado;
-  // 3) em empate, escolhe melhor pior prazo;
-  // 4) em empate, escolhe menor total/média.
-  return (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
+  // 1) mantém a primeira janela no início da semana;
+  // 2) em empate, evita sábado quando houver alternativa viável;
+  // 3) em empate, distribui circularmente as janelas para evitar cargas seguidas
+  //    e também evitar SEX muito próximo da próxima SEG;
+  // 4) em empate, escolhe melhor pior prazo e menor total/média.
+  return (firstLoadScore(a.combo) - firstLoadScore(b.combo))
     || (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
+    || (circularLoadSpacingScore(a.combo) - circularLoadSpacingScore(b.combo))
     || (a.worst - b.worst)
     || (a.total - b.total)
+    || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
     || String(a.combo || '').localeCompare(String(b.combo || ''));
 }
 function compareFallbackByPrazoThenSabado(a,b){
@@ -1433,11 +1482,14 @@ function compareFallbackByPrazoThenSabado(a,b){
     || String(a.combo || '').localeCompare(String(b.combo || ''));
 }
 function compareLinkedCandidatesByPrazoThenInicio(a,b){
-  // Para vocativos vinculados que ATENDEM, usa a mesma prioridade de início de semana.
-  return (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
+  // Para vocativos vinculados que ATENDEM, mantém o início da semana e usa o
+  // espaçamento circular apenas como desempate operacional.
+  return (firstLoadScore(a.combo) - firstLoadScore(b.combo))
     || (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
+    || (circularLoadSpacingScore(a.combo) - circularLoadSpacingScore(b.combo))
     || (a.worst - b.worst)
     || (a.total - b.total)
+    || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
     || String(a.combo || '').localeCompare(String(b.combo || ''));
 }
 function nextLoad(start, allowed){ let wait=0, d=start; while(!allowed.includes(d) && wait<14){ d=(d+1)%7; wait++; } return {day:d,wait}; }
@@ -1537,6 +1589,15 @@ function deliveryFromLoad(loadDay, transit, allowedDays){
 }
 function diffForwardDays(fromDay, toDay){
   return (toDay - fromDay + 7) % 7;
+}
+function diffForwardDaysRespectingTransit(fromDay, toDay, transit){
+  // Corrige entrega fixa em ciclos semanais: quando carga e entrega caem no
+  // mesmo dia da semana, ou quando o dia fixo ainda ficaria antes do transit time,
+  // considera a próxima ocorrência semanal em vez de tratar como 0 dias.
+  const transitDays = Math.max(0, Math.ceil(num(transit)));
+  let elapsed = diffForwardDays(Number(fromDay), Number(toDay));
+  while(elapsed < transitDays) elapsed += 7;
+  return elapsed;
 }
 
 function deliveryPlanKey(vocativo, loadDay){
@@ -1823,9 +1884,7 @@ function fixedDeliveryOptionsFromLoad(loadDay, transit, fixedDays, options={}){
       const preferredLoads = preferredLoadDaysForFixedDelivery(fixedDay, transitDays, fixedDays);
       const preferredLoad = preferredLoads.length ? preferredLoads[0] : null;
       if(preferredLoad === null) return null;
-      const calendarTravel = diffForwardDays(Number(loadDay), Number(fixedDay));
-      const atendeTransit = calendarTravel >= transitDays;
-      if(!atendeTransit) return null;
+      const calendarTravel = diffForwardDaysRespectingTransit(Number(loadDay), Number(fixedDay), transitDays);
       if(!allowSlack && !preferredLoads.includes(Number(loadDay))) return null;
       const idealLoad=(Number(fixedDay) - transitDays + 700) % 7;
       return {
@@ -1910,8 +1969,7 @@ function getFixedDeliveryPairs(row, transit){
   return fixed.map(fixedDay => {
     const loadDay = preferredLoadDayForFixedDelivery(fixedDay, transitDays, fixed);
     if(loadDay === null) return null;
-    const travelElapsed = diffForwardDays(loadDay, fixedDay);
-    if(travelElapsed < transitDays) return null;
+    const travelElapsed = diffForwardDaysRespectingTransit(loadDay, fixedDay, transitDays);
     const idealLoad = (fixedDay - transitDays + 700) % 7;
     return {
       loadDay,
@@ -2605,8 +2663,12 @@ function bestPrefixForLinkedRow(row, groupSequence, linkedPlan, requiredCore=[],
         // Em empate de quantidade, casar o máximo possível com as âncoras/preferências do grupo.
         ||(preferredMissing(a.combo)-preferredMissing(b.combo))
         ||(preferredOverlap(b.combo)-preferredOverlap(a.combo))
-        ||(a.score.over-b.score.over)
+        // Depois de preservar prazo, quantidade e âncoras, distribui as janelas
+        // no ciclo semanal sem deslocar a primeira carga do início da semana.
+        ||(firstLoadScore(a.combo)-firstLoadScore(b.combo))
         ||(linkedRowSaturdayPreferenceScore(row,a.combo)-linkedRowSaturdayPreferenceScore(row,b.combo))
+        ||(circularLoadSpacingScore(a.combo)-circularLoadSpacingScore(b.combo))
+        ||(a.score.over-b.score.over)
         ||(a.score.worst-b.score.worst)
         ||(a.score.total-b.score.total)
         ||(groupHasFixedMember ? (linkedSequenceScore(b.combo)-linkedSequenceScore(a.combo)) : (earlyLoadScore(a.combo)-earlyLoadScore(b.combo)))
@@ -2650,6 +2712,8 @@ function bestPrefixForLinkedRow(row, groupSequence, linkedPlan, requiredCore=[],
           // SEX → SEG também atende. Antes esta penalização vinha depois do pior prazo/total,
           // por isso o vínculo ainda escolhia SAB → SEG por ter menor espera absoluta.
           || (avoidableSaturdayLoadScore(row,a.combo)-avoidableSaturdayLoadScore(row,b.combo))
+          || (firstLoadScore(a.combo)-firstLoadScore(b.combo))
+          || (circularLoadSpacingScore(a.combo)-circularLoadSpacingScore(b.combo))
           || (a.score.worst-b.score.worst)
           || (a.score.total-b.score.total)
           // Mantém o subconjunto mais alinhado ao fim da matriz quando isso não piora prazo,
@@ -2683,6 +2747,8 @@ function bestPrefixForLinkedRow(row, groupSequence, linkedPlan, requiredCore=[],
         // Só depois de melhorar o prazo é que reduz a quantidade de janelas.
         || (a.combo.length-b.combo.length)
         || (linkedRowSaturdayPreferenceScore(row,a.combo)-linkedRowSaturdayPreferenceScore(row,b.combo))
+        || (firstLoadScore(a.combo)-firstLoadScore(b.combo))
+        || (circularLoadSpacingScore(a.combo)-circularLoadSpacingScore(b.combo))
         || (linkedSequenceScore(b.combo)-linkedSequenceScore(a.combo))
         || String(comboKey(a.combo)).localeCompare(String(comboKey(b.combo)))
       );
@@ -2809,25 +2875,42 @@ function linkedAvoidableSaturdayScore(candidate){
   return rows.reduce((sum,row)=>sum + linkedRowSaturdayPreferenceScore(row, candidate.comboByVoc[row.vocativo] || []), 0);
 }
 function linkedCommonEarlyLoadScore(candidate){
-  // Para cenários vinculados que já ATENDEM o prazo, replica a prioridade do vocativo
-  // individual: entre opções viáveis e com a mesma quantidade/alinhamento de janelas,
-  // escolhe a data comum mais cedo na semana: SEG, depois TER, QUA, QUI, SEX e SAB.
+  // Para cenários vinculados que já ATENDEM o prazo, mantém a primeira data comum
+  // o mais perto possível do início da semana. O espaçamento vem em função separada.
   if(!candidate) return 999999999999;
   const common=(candidate.commonCombo || []).map(Number).filter(d=>getLoadIndexes().includes(d));
-  if(common.length) return earlyLoadScore(common);
+  if(common.length) return firstLoadScore(common);
   if(candidate.comboByVoc){
     const all=[...new Set(Object.values(candidate.comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))];
-    if(all.length) return earlyLoadScore(all);
+    if(all.length) return firstLoadScore(all);
   }
-  return earlyLoadScore(candidate.groupCombo || []);
+  return firstLoadScore(candidate.groupCombo || []);
+}
+function linkedCommonSpacingScore(candidate){
+  if(!candidate) return 999999999999;
+  const common=(candidate.commonCombo || []).map(Number).filter(d=>getLoadIndexes().includes(d));
+  if(common.length) return circularLoadSpacingScore(common);
+  if(candidate.comboByVoc){
+    const all=[...new Set(Object.values(candidate.comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))];
+    if(all.length) return circularLoadSpacingScore(all);
+  }
+  return circularLoadSpacingScore(candidate.groupCombo || []);
 }
 function linkedAllLoadsEarlyScore(candidate){
   if(!candidate) return 999999999999;
   if(candidate.comboByVoc){
     const all=[...new Set(Object.values(candidate.comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))];
-    if(all.length) return earlyLoadScore(all);
+    if(all.length) return firstLoadScore(all);
   }
-  return earlyLoadScore(candidate.groupCombo || []);
+  return firstLoadScore(candidate.groupCombo || []);
+}
+function linkedAllLoadsSpacingScore(candidate){
+  if(!candidate) return 999999999999;
+  if(candidate.comboByVoc){
+    const all=[...new Set(Object.values(candidate.comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))];
+    if(all.length) return circularLoadSpacingScore(all);
+  }
+  return circularLoadSpacingScore(candidate.groupCombo || []);
 }
 function compareLinkedSchedulesOk(a,b){
   // Regra de vínculo em matriz progressiva:
@@ -2850,6 +2933,8 @@ function compareLinkedSchedulesOk(a,b){
     // SEG vence TER/QUA/QUI/SEX/SAB; se não atender, o próximo dia viável vence.
     || (linkedCommonEarlyLoadScore(a)-linkedCommonEarlyLoadScore(b))
     || (linkedAllLoadsEarlyScore(a)-linkedAllLoadsEarlyScore(b))
+    || (linkedCommonSpacingScore(a)-linkedCommonSpacingScore(b))
+    || (linkedAllLoadsSpacingScore(a)-linkedAllLoadsSpacingScore(b))
     // Em vínculo, sábado só é evitado depois de preservar o carregamento na mesma data.
     // Assim, SÁB pode ser escolhido quando for a melhor data comum para atender o prazo.
     || (linkedAvoidableSaturdayScore(a)-linkedAvoidableSaturdayScore(b))
@@ -3002,6 +3087,8 @@ function compareLinkedIterationScores(a,b){
     // de semana por outra mais tarde apenas porque o gap/prazo real ficou menor.
     || (n(a.earlyCommonScore)-n(b.earlyCommonScore))
     || (n(a.earlyAllScore)-n(b.earlyAllScore))
+    || (n(a.spacingCommonScore)-n(b.spacingCommonScore))
+    || (n(a.spacingAllScore)-n(b.spacingAllScore))
     || (n(a.avoidableSaturday)-n(b.avoidableSaturday))
     || (n(a.maxOver)-n(b.maxOver))
     || (n(a.worst)-n(b.worst))
@@ -3060,8 +3147,10 @@ function linkedScorePackForCombos(groupRows, comboByVoc, plan, scored, matrix, f
     maxOver: scored.maxOver,
     worst: scored.worst,
     total: scored.total,
-    earlyCommonScore: earlyLoadScore(common.length ? common : [...new Set(Object.values(comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))]),
-    earlyAllScore: earlyLoadScore([...new Set(Object.values(comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))]),
+    earlyCommonScore: firstLoadScore(common.length ? common : [...new Set(Object.values(comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))]),
+    earlyAllScore: firstLoadScore([...new Set(Object.values(comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))]),
+    spacingCommonScore: circularLoadSpacingScore(common.length ? common : [...new Set(Object.values(comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))]),
+    spacingAllScore: circularLoadSpacingScore([...new Set(Object.values(comboByVoc).flat().map(Number).filter(d=>getLoadIndexes().includes(d)))]),
     weekPenalty: plan.weekPenalty,
     gap: plan.gap,
     extraDelay: plan.extraDelay,
