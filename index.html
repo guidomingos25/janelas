@@ -2663,6 +2663,32 @@ function bestPrefixForLinkedRow(row, groupSequence, linkedPlan, requiredCore=[],
   }
 
   if(fallback.length){
+    if(!hasFixedDelivery && groupHasFixedMember){
+      const anchorShortfallForCombo=(combo)=>{
+        if(!preferred.length) return 0;
+        const comboSet=new Set((combo || []).map(Number));
+        const overlap=preferred.filter(d=>comboSet.has(Number(d))).length;
+        return Math.max(0, Math.min((combo || []).length, preferred.length) - overlap);
+      };
+      fallback.sort((a,b)=>
+        // Ajuste pontual: em vocativo LIVRE vinculado a entrega fixa, quando a menor
+        // janela não atende, o prazo volta a ser prioridade antes de reduzir quantidade.
+        // Assim o livre pode receber janela extra própria, mantendo as âncoras do fixo.
+        (anchorShortfallForCombo(a.combo)-anchorShortfallForCombo(b.combo))
+        || (preferredMissing(a.combo)-preferredMissing(b.combo))
+        || (preferredOverlap(b.combo)-preferredOverlap(a.combo))
+        || (a.score.over-b.score.over)
+        || (a.score.worst-b.score.worst)
+        || (a.score.total-b.score.total)
+        // Só depois de melhorar o prazo é que reduz a quantidade de janelas.
+        || (a.combo.length-b.combo.length)
+        || (linkedRowSaturdayPreferenceScore(row,a.combo)-linkedRowSaturdayPreferenceScore(row,b.combo))
+        || (linkedSequenceScore(b.combo)-linkedSequenceScore(a.combo))
+        || String(comboKey(a.combo)).localeCompare(String(comboKey(b.combo)))
+      );
+      return fallback[0];
+    }
+
     fallback.sort((a,b)=>{
       const ac = hasFixedDelivery ? fixedPreferredLoadCoverageForCombo(row, a.combo || []) : null;
       const bc = hasFixedDelivery ? fixedPreferredLoadCoverageForCombo(row, b.combo || []) : null;
@@ -2856,6 +2882,16 @@ function compareLinkedSchedulesFallback(a,b){
       || (linkedSharedLoadShortfall(a)-linkedSharedLoadShortfall(b))
       || ((a.anchorShortfall||0)-(b.anchorShortfall||0))
       || ((a.commonShortfall||0)-(b.commonShortfall||0))
+      // Ajuste pontual: quando o parceiro fixo fica com 1 janela, a matriz do grupo
+      // pode precisar de uma data extra só para o vocativo livre atender o prazo.
+      // Antes, linkedFixedAnchorScore penalizava essa data extra antes de avaliar o
+      // prazo do livre, fazendo o sistema voltar para 1 janela mesmo com folga negativa.
+      || ((a.freeDeadlineFail||0)-(b.freeDeadlineFail||0))
+      || ((a.freeMaxOver||0)-(b.freeMaxOver||0))
+      || ((a.freeWorst||0)-(b.freeWorst||0))
+      || ((a.freeTotal||0)-(b.freeTotal||0))
+      // Só depois de garantir o prazo do livre a matriz volta a preferir ficar
+      // totalmente ancorada nas datas do vocativo fixo e com menos datas distintas.
       || (linkedFixedAnchorScore(a)-linkedFixedAnchorScore(b))
       || (linkedDistinctLoadDates(a)-linkedDistinctLoadDates(b))
       // Com a cobertura fixa preservada, otimiza o total de janelas. Se ainda falta
@@ -2916,19 +2952,31 @@ function compareLinkedIterationScores(a,b){
       : 0;
     if(fixedCoverageDiff) return fixedCoverageDiff;
 
+    const fixedAlignmentDiff = (n(a.hasFixedAnchors) || n(b.hasFixedAnchors))
+      ? ((n(a.anchorShortfall)-n(b.anchorShortfall))
+        || (n(a.sharedShortfall)-n(b.sharedShortfall)))
+      : 0;
+    if(fixedAlignmentDiff) return fixedAlignmentDiff;
+
+    const freeDeadlineDiff = (n(a.hasFixedAnchors) || n(b.hasFixedAnchors))
+      ? ((n(a.freeDeadlineFail)-n(b.freeDeadlineFail))
+        || (n(a.freeMaxOver)-n(b.freeMaxOver))
+        || (n(a.freeWorst)-n(b.freeWorst))
+        || (n(a.freeTotal)-n(b.freeTotal)))
+      : 0;
+    if(freeDeadlineDiff) return freeDeadlineDiff;
+
+    const fixedDistinctDiff = (n(a.hasFixedAnchors) || n(b.hasFixedAnchors))
+      ? (n(a.distinctLoadDates)-n(b.distinctLoadDates))
+      : 0;
+    if(fixedDistinctDiff) return fixedDistinctDiff;
+
     const fixedLoadCountDiff = (n(a.hasFixedAnchors) || n(b.hasFixedAnchors))
       ? ((n(a.fixedFullShortfall)===0 && n(b.fixedFullShortfall)===0)
         ? ((n(a.assignedLoads)-n(b.assignedLoads)) || (n(a.maxRowLoads)-n(b.maxRowLoads)))
         : ((n(b.maxRowLoads)-n(a.maxRowLoads)) || (n(b.assignedLoads)-n(a.assignedLoads))))
       : 0;
     if(fixedLoadCountDiff) return fixedLoadCountDiff;
-
-    const fixedAnchorDiff = (n(a.hasFixedAnchors) || n(b.hasFixedAnchors))
-      ? ((n(a.anchorShortfall)-n(b.anchorShortfall))
-        || (n(a.sharedShortfall)-n(b.sharedShortfall))
-        || (n(a.distinctLoadDates)-n(b.distinctLoadDates)))
-      : 0;
-    if(fixedAnchorDiff) return fixedAnchorDiff;
 
     return (n(a.maxOver)-n(b.maxOver))
       || (n(a.worst)-n(b.worst))
@@ -2990,6 +3038,11 @@ function linkedScorePackForCombos(groupRows, comboByVoc, plan, scored, matrix, f
     return sum + fixedDeliveryFullCoverageShortfall(r, comboByVoc[r.vocativo] || [], {linkedDeliveryPlan:plan});
   }, 0);
   const anchorShortfall = freeRowsAnchorMissing(groupRows, comboByVoc, fixedAnchorUnion || []);
+  const freeEvals=(scored.evals || []).filter(x=>x && x.row && !getFixedDeliveryDays(x.row.vocativo).length);
+  const freeDeadlineFail=freeEvals.length ? (freeEvals.every(x=>x.ev && x.ev.ok) ? 0 : 1) : 0;
+  const freeMaxOver=freeEvals.length ? Math.max(...freeEvals.map(x=>x.score.over)) : 0;
+  const freeWorst=freeEvals.length ? Math.max(...freeEvals.map(x=>x.score.worst)) : 0;
+  const freeTotal=freeEvals.length ? freeEvals.reduce((sum,x)=>sum+x.score.total,0) : 0;
   return {
     ok: scored.ok ? 0 : 1,
     commonShortfall: fixedShortfall,
@@ -3000,6 +3053,10 @@ function linkedScorePackForCombos(groupRows, comboByVoc, plan, scored, matrix, f
     hasFixedAnchors: (fixedAnchorUnion || []).length ? 1 : 0,
     assignedLoads: assigned,
     maxRowLoads: Math.max(...groupRows.map(r=>(comboByVoc[r.vocativo] || []).length)),
+    freeDeadlineFail,
+    freeMaxOver,
+    freeWorst,
+    freeTotal,
     maxOver: scored.maxOver,
     worst: scored.worst,
     total: scored.total,
@@ -3193,6 +3250,11 @@ function makeLinkedScheduleCandidate(groupRows, groupSequence){
   if(scored.hardInvalid) return null;
 
   const assignedLoads=groupRows.reduce((sum,r)=>sum + ((comboByVoc[r.vocativo] || []).length), 0);
+  const freeEvals=(scored.evals || []).filter(x=>x && x.row && !getFixedDeliveryDays(x.row.vocativo).length);
+  const freeDeadlineFail=freeEvals.length ? (freeEvals.every(x=>x.ev && x.ev.ok) ? 0 : 1) : 0;
+  const freeMaxOver=freeEvals.length ? Math.max(...freeEvals.map(x=>x.score.over)) : 0;
+  const freeWorst=freeEvals.length ? Math.max(...freeEvals.map(x=>x.score.worst)) : 0;
+  const freeTotal=freeEvals.length ? freeEvals.reduce((sum,x)=>sum+x.score.total,0) : 0;
   let commonCombo=(comboByVoc[groupRows[0].vocativo] || []).slice();
   groupRows.slice(1).forEach(r=>{ commonCombo=comboIntersection(commonCombo, comboByVoc[r.vocativo] || []); });
   const rowsWithSingleCommon=groupRows.filter(r=>{
@@ -3233,6 +3295,10 @@ function makeLinkedScheduleCandidate(groupRows, groupSequence){
     worst:scored.worst,
     total:scored.total,
     assignedLoads,
+    freeDeadlineFail,
+    freeMaxOver,
+    freeWorst,
+    freeTotal,
     groupLoads:matrix.length,
     rowsWithSingleCommon,
     firstDeliveryLoads,
