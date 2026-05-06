@@ -3914,7 +3914,41 @@ function exportCSV(){
   const rows=getFiltered(getAll());
   const cols=[['filial','Filial'],['cliente','Cliente'],['vocativo','Vocativo'],['ufOrigem','UF Origem'],['cidadeDestino','Cidade destino'],['ufDestino','UF Destino'],['prazoExwReal','Prazo EXW real'],['prazoFcaReal','Prazo FCA real'],['menorPrazo','Menor prazo'],['transitTime','Transit time'],['status','Status'],['cargas','Cargas semanais'],['ciclos','Ciclos carga entrega'],['entregaFixa','Entrega fixa'],['vinculo','Vinculado com'],['ordemEntrega','Ordem entrega'],['maiorVeiculo','Maior veículo'],['entregaMesmoDia','Entrega mesmo dia'],['diasNaoUteis','Dias nao uteis vocativo'],['loadDays','Dias carga'],['deliveryDays','Dias entrega'],['worst','Pior prazo util'],['worstCalendar','Pior prazo corrido'],['worstReceiptDay','Dia recebimento critico'],['worstLoadDay','Dia carga do pior prazo'],['worstDeliveryDay','Dia entrega do pior prazo'],['folga','Folga']];
   const lines=[cols.map(c=>c[1]).join(';')];
-  rows.forEach(r=>{ lines.push(cols.map(([key])=>{ let v=r[key]; if(key==='status') v=getUiStatusLabel(r); if(key==='ciclos') v=r.windowPairs.map(p=>`${p.load}->${p.delivery}`).join(' | '); if(key==='entregaFixa') v=getFixedDeliveryDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(key==='vinculo') v=getLinkedVocativos(r.vocativo).join(', '); if(key==='ordemEntrega') v=getDeliveryOrder(r.vocativo); if(key==='maiorVeiculo') v=getMaxVehicleRestriction(r.vocativo); if(key==='entregaMesmoDia') v=getEntregaMesmoDia(r.vocativo); if(key==='diasNaoUteis') v=getNonBusinessDays(r.vocativo).map(i=>DAYS[i]).join(', '); if(Array.isArray(v)) v=v.join(', '); return `"${String(v ?? '').replace(/"/g,'""')}"`; }).join(';')); });
+
+  // Mantém o CSV do Planejamento de Janelas coerente com a visualização.
+  // Para vocativos vinculados, os ciclos e os dias de entrega exportados usam
+  // exatamente o mesmo recálculo visual por janela aplicado nos cards e no
+  // Painel de Janelas: somente os vocativos presentes naquele dia de carga
+  // participam da sequência de entrega. Isso não muda o planejamento salvo,
+  // o SLA, a prioridade de escolha das janelas nem a ordem dos vínculos.
+  const valueForExport=(r,key,displayPairs,displayLoadDays,displayDeliveryDays)=>{
+    let v=r[key];
+
+    if(key==='status') v=getUiStatusLabel(r);
+    if(key==='ciclos') v=(displayPairs || []).map(p=>`${p.load}->${p.delivery}`).join(' | ');
+    if(key==='entregaFixa') v=getFixedDeliveryDays(r.vocativo).map(i=>DAYS[i]).join(', ');
+    if(key==='vinculo') v=getLinkedVocativos(r.vocativo).join(', ');
+    if(key==='ordemEntrega') v=getDeliveryOrder(r.vocativo);
+    if(key==='maiorVeiculo') v=getMaxVehicleRestriction(r.vocativo);
+    if(key==='entregaMesmoDia') v=getEntregaMesmoDia(r.vocativo);
+    if(key==='diasNaoUteis') v=getNonBusinessDays(r.vocativo).map(i=>DAYS[i]).join(', ');
+    if(key==='loadDays') v=displayLoadDays.length ? displayLoadDays.join(', ') : ((r.loadDays || []).join(', '));
+    if(key==='deliveryDays') v=displayDeliveryDays.length ? displayDeliveryDays.join(', ') : ((r.deliveryDays || []).join(', '));
+    if(key==='worstDeliveryDay'){
+      const worstPair=(displayPairs || []).find(p=>p && p.load===r.worstLoadDay);
+      v=(worstPair && worstPair.delivery) ? worstPair.delivery : r.worstDeliveryDay;
+    }
+
+    if(Array.isArray(v)) v=v.join(', ');
+    return `"${String(v ?? '').replace(/"/g,'""')}"`;
+  };
+
+  rows.forEach(r=>{
+    const displayPairs=getPlanningCardDisplayPairs(r);
+    const displayLoadDays=uniqueDaysFromPairs(displayPairs,'load');
+    const displayDeliveryDays=uniqueDaysFromPairs(displayPairs,'delivery');
+    lines.push(cols.map(([key])=>valueForExport(r,key,displayPairs,displayLoadDays,displayDeliveryDays)).join(';'));
+  });
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8;'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='planejamento_janelas_vocativo.csv'; a.click(); URL.revokeObjectURL(a.href);
 }
 function mapImportedRow(x){
