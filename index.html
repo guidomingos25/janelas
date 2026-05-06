@@ -3613,6 +3613,78 @@ function renderCycles(pairs){
     return `<div class="cycle">${escapeHtml(p.load)} → ${escapeHtml(p.delivery)}<small>${fmt(p.travelElapsed)} dia(s)${ajuste}</small></div>`;
   }).join('')}</div>`;
 }
+
+
+let PLANNING_CARD_WINDOW_DISPLAY_CACHE_KEY='';
+let PLANNING_CARD_WINDOW_DISPLAY_CACHE=new Map();
+function planningCardDisplayCacheKey(){
+  return [
+    ENRICHED_ROWS_CACHE_KEY || '',
+    BASE_DATA_VERSION,
+    PLANNING_CACHE_VERSION,
+    getLoadIndexes().join(','),
+    JSON.stringify(CONFIG || {})
+  ].join('§');
+}
+function getPlanningCardWindowDisplayCache(){
+  // Mesma regra visual do Painel de Janelas aplicada aos cards executivos:
+  // para cada dia de carga, a sequência de entrega considera somente os vocativos
+  // que realmente participam daquela janela. Isso não altera a ordem salva,
+  // a escolha das janelas, o SLA nem a prioridade de cálculo; ajusta apenas a
+  // apresentação dos ciclos do card para ficar coerente com o Painel de Janelas.
+  const key=planningCardDisplayCacheKey();
+  if(PLANNING_CARD_WINDOW_DISPLAY_CACHE_KEY===key) return PLANNING_CARD_WINDOW_DISPLAY_CACHE;
+  const map=new Map();
+  try{
+    const allRows=getAll();
+    jsBuildGroups(allRows).forEach(g=>{
+      DAYS.forEach(day=>{
+        jsItemsForGroupAndDay(g,day).forEach(item=>{
+          const loadIdx=DAYS.indexOf(item.load);
+          if(loadIdx>=0) map.set(deliveryPlanKey(item.vocativo, loadIdx), item);
+        });
+      });
+    });
+  }catch(err){
+    console.warn('Falha ao recalcular ciclos do card por janela:', err);
+  }
+  PLANNING_CARD_WINDOW_DISPLAY_CACHE_KEY=key;
+  PLANNING_CARD_WINDOW_DISPLAY_CACHE=map;
+  return map;
+}
+function getPlanningCardDisplayPairs(row){
+  const pairs=(row && row.windowPairs || []).map(p=>({...p}));
+  if(!row || !pairs.length || !((row.linkedWithList || []).length)) return pairs;
+  const map=getPlanningCardWindowDisplayCache();
+  return pairs.map(pair=>{
+    const loadIdx=DAYS.indexOf(pair.load);
+    const adjusted=loadIdx>=0 ? map.get(deliveryPlanKey(row.vocativo, loadIdx)) : null;
+    if(!adjusted) return pair;
+    return {
+      ...pair,
+      delivery:adjusted.delivery,
+      travelElapsed:adjusted.travelElapsed,
+      adjustedFromSunday:!!adjusted.adjustedFromSunday,
+      linkedAdjusted:!!adjusted.linkedAdjusted,
+      fixedSlackApplied:!!adjusted.fixedSlackApplied,
+      panelWindowSequenceAdjusted:!!adjusted.panelWindowSequenceAdjusted
+    };
+  });
+}
+function uniqueDaysFromPairs(pairs, field){
+  return [...new Set((pairs || []).map(p=>p && p[field]).filter(Boolean))]
+    .sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b));
+}
+function fmtWorstReceiptForPlanningCard(row, displayPairs){
+  if(!row || !row.worstReceiptDay) return '—';
+  const parts=[row.worstReceiptDay];
+  if(row.worstLoadDay) parts.push(`carga ${row.worstLoadDay}`);
+  let delivery=row.worstDeliveryDay;
+  const pair=(displayPairs || []).find(p=>p && p.load===row.worstLoadDay);
+  if(pair && pair.delivery) delivery=pair.delivery;
+  if(delivery) parts.push(`entrega ${delivery}`);
+  return parts.join(' • ');
+}
 function renderDayToggles(voc, type){
   const selected = new Set(type==='off' ? getNonBusinessDays(voc) : getFixedDeliveryDays(voc));
   const cls = type==='off' ? 'off' : 'fixed';
@@ -3684,6 +3756,11 @@ function renderCards(rows){
     const badge = uiStatus==='nao_atende' ? '<span class="badge bad">Não atende</span>' : '<span class="badge good">Atende</span>';
     const cardStatusClass = uiStatus==='nao_atende' ? 'status-nao-atende' : 'status-atende';
     const reason = r.reason ? `<div class="smallmuted">${escapeHtml(r.reason)}</div>` : '';
+    const displayPairs=getPlanningCardDisplayPairs(r);
+    const displayLoadDays=uniqueDaysFromPairs(displayPairs,'load');
+    const displayDeliveryDays=uniqueDaysFromPairs(displayPairs,'delivery');
+    const cardLoadDays=displayLoadDays.length ? displayLoadDays : (r.loadDays || []);
+    const cardDeliveryDays=displayDeliveryDays.length ? displayDeliveryDays : (r.deliveryDays || []);
     return `<article class="card vocCard ${cardStatusClass}" data-voc-card="${escapeHtml(r.vocativo)}">
       <div class="vocTop">
         <div><div class="vocTitle">${escapeHtml(r.vocativo)}</div><div class="vocSub">${escapeHtml(r.cliente)} • ${escapeHtml(r.cidadeDestino)}/${escapeHtml(r.ufDestino)} • Origem ${escapeHtml(r.ufOrigem)}</div></div>
@@ -3694,14 +3771,14 @@ function renderCards(rows){
         <div class="metric"><span>Prazo usado</span><b>${fmt(r.menorPrazo)} dias</b><div class="smallmuted">EXW ${fmt(r.prazoExwReal)} • FCA ${fmt(r.prazoFcaReal)}</div></div>
         <div class="metric"><span>Frequência</span><b>${r.cargas}x/semana</b></div>
         <div class="metric"><span>Prazo real</span><b>${fmt(r.worst)} úteis</b><div class="smallmuted">${fmt(r.worstCalendar)} corridos</div></div>
-        <div class="metric"><span>Recebimento crítico</span><b>${escapeHtml(r.worstReceiptDay || '—')}</b><div class="smallmuted">${escapeHtml(fmtWorstReceipt(r))}</div></div>
+        <div class="metric"><span>Recebimento crítico</span><b>${escapeHtml(r.worstReceiptDay || '—')}</b><div class="smallmuted">${escapeHtml(fmtWorstReceiptForPlanningCard(r, displayPairs))}</div></div>
         <div class="metric"><span>Folga</span><b>${fmt(r.folga)} dias</b></div>
         <div class="metric"><span>Transit time</span><b>${fmt(r.transitTime)} dias</b></div>
       </div>
       <div class="cardRow">
         <div>
-          <div class="compactLabel"><label>Ciclos recomendados: carga → entrega</label><span class="compactHint">${r.loadDays.length} carga(s) • ${r.deliveryDays.length} entrega(s)</span></div>
-          ${renderCycles(r.windowPairs)}
+          <div class="compactLabel"><label>Ciclos recomendados: carga → entrega</label><span class="compactHint">${cardLoadDays.length} carga(s) • ${cardDeliveryDays.length} entrega(s)</span></div>
+          ${renderCycles(displayPairs)}
         </div>
         <div class="configInCard">
           <div class="configBlock">
@@ -3719,8 +3796,8 @@ function renderCards(rows){
         </div>
       </div>
       <div class="miniInfo">
-        <div class="metric"><span>Cargas</span><div class="pillLine">${r.loadDays.map(d=>`<span class="day load">${d}</span>`).join('')}</div></div>
-        <div class="metric"><span>Entregas</span><div class="pillLine">${r.deliveryDays.map(d=>`<span class="day deliv">${d}</span>`).join('') || '<span class="smallmuted">Nenhuma</span>'}</div></div>
+        <div class="metric"><span>Cargas</span><div class="pillLine">${cardLoadDays.map(d=>`<span class="day load">${d}</span>`).join('')}</div></div>
+        <div class="metric"><span>Entregas</span><div class="pillLine">${cardDeliveryDays.map(d=>`<span class="day deliv">${d}</span>`).join('') || '<span class="smallmuted">Nenhuma</span>'}</div></div>
         <div class="metric"><span>Não úteis</span><div class="pillLine">${r.nonBusiness.length ? r.nonBusiness.map(i=>`<span class="day off">${DAYS[i]}</span>`).join('') : '<span class="smallmuted">Nenhum</span>'}</div></div>
         <div class="metric"><span>Entrega fixa</span><div class="pillLine">${r.fixedDelivery.length ? r.fixedDelivery.map(i=>`<span class="day deliv">${DAYS[i]}</span>`).join('') : '<span class="smallmuted">Livre seg-sex</span>'}</div></div>
         <div class="metric"><span>Vínculos</span><div class="pillLine">${r.linkedWithList && r.linkedWithList.length ? r.linkedWithList.map(v=>`<span class="linkBadge">${escapeHtml(v)}</span>`).join('') : '<span class="smallmuted">Sem vínculo</span>'}</div><div class="smallmuted">${r.deliveryOrder ? r.deliveryOrder + 'ª entrega' : 'Ordem auto'} • Mesmo dia: ${escapeHtml(r.entregaMesmoDia || 'NÃO')}</div></div>
@@ -4244,10 +4321,99 @@ function jsRefreshFilters(allRows){
   const vocBase=allRows.filter(r=>matchesSelected(jsCliente,r.cliente) && matchesSelected(jsUf,r.ufDestino) && matchesSelected(jsCidade,r.cidadeDestino));
   opt(jsVocativo, unique(vocBase.map(r=>r.vocativo)), 'Todos');
 }
+function jsBaseDeliveryForPanelWindow(row, loadIdx){
+  const fixedDays = getFixedDeliveryDays(row && row.vocativo);
+  const combo = [...new Set(((row && row.combo) || [])
+    .map(Number)
+    .filter(d=>getLoadIndexes().includes(d)))];
+
+  if(fixedDays.length && combo.length){
+    const assignment = assignFixedDeliveriesToCombo(row, combo, {allowFixedDeliverySlack:true});
+    if(assignment && assignment.map && assignment.map[Number(loadIdx)]){
+      return {...assignment.map[Number(loadIdx)]};
+    }
+  }
+
+  const resolved = resolveDeliveryFromLoad(
+    row,
+    Number(loadIdx),
+    row.transitTime,
+    allowedDeliveryDays(row),
+    {allowFixedDeliverySlack:true}
+  );
+  return resolved ? {...resolved} : null;
+}
+function jsRecalculateItemsForPanelWindow(g, day, items){
+  // Regra do Painel de Janelas/relatórios/cards:
+  // a sequência de entrega é recalculada dentro da própria janela de carga.
+  // Assim, se a 2ª entrega do grupo não participa desta carga, a 3ª entrega
+  // passa a ser a próxima entrega real da janela, sem herdar o dia reservado
+  // por um vocativo ausente. Não altera o planejamento, o SLA, a escolha das
+  // janelas nem a ordem salva do grupo; apenas harmoniza a exibição visual.
+  if(!g || !Array.isArray(g.rows) || !Array.isArray(items) || items.length < 2) return items;
+
+  const loadIdx = DAYS.indexOf(day);
+  if(loadIdx < 0) return items;
+
+  const activeVocativos = new Set(items.map(it=>it.vocativo));
+  const participants = getOrderedLinkedRows(g.rows)
+    .filter(row => activeVocativos.has(row.vocativo));
+
+  if(participants.length < 2) return items;
+
+  const adjustedByVoc = new Map();
+  let previous = null;
+
+  for(let idx=0; idx<participants.length; idx++){
+    const row = participants[idx];
+    const base = jsBaseDeliveryForPanelWindow(row, loadIdx);
+    if(!base) continue;
+
+    let delivery = {...base, linkedAdjusted:false, panelWindowSequenceAdjusted:false};
+
+    if(previous){
+      const sameDay = getEntregaMesmoDia(row.vocativo) === 'SIM';
+      if(sameDay){
+        const exact = deliveryAtExactDay(row, loadIdx, row.transitTime, previous.day);
+        const allowedDays = allowedDeliveryDays(row);
+        if(exact && allowedDays.includes(exact.day)){
+          delivery = {...exact, linkedAdjusted: exact.travelElapsed !== base.travelElapsed, panelWindowSequenceAdjusted:true};
+        }else if(Number(base.travelElapsed) < Number(previous.travelElapsed)){
+          const adj = deliveryFromLoadAtOrAfterElapsed(row, loadIdx, row.transitTime, Number(previous.travelElapsed));
+          if(adj) delivery = {...adj, linkedAdjusted:true, panelWindowSequenceAdjusted:true};
+        }
+      }else{
+        const minElapsed = Number(previous.travelElapsed) + 1;
+        if(Number(base.travelElapsed) < minElapsed){
+          const adj = deliveryFromLoadAtOrAfterElapsed(row, loadIdx, row.transitTime, minElapsed);
+          if(adj) delivery = {...adj, linkedAdjusted:true, panelWindowSequenceAdjusted:true};
+        }
+      }
+    }
+
+    adjustedByVoc.set(row.vocativo, delivery);
+    previous = delivery;
+  }
+
+  return items.map(item=>{
+    const adj = adjustedByVoc.get(item.vocativo);
+    if(!adj) return item;
+    return {
+      ...item,
+      delivery:DAYS[adj.day],
+      travelElapsed:adj.travelElapsed,
+      adjustedFromSunday:adj.adjustedFromSunday,
+      fixedSlackApplied:!!adj.fixedSlackApplied,
+      linkedAdjusted:!!adj.linkedAdjusted,
+      panelWindowSequenceAdjusted:!!adj.panelWindowSequenceAdjusted
+    };
+  });
+}
 function jsItemsForGroupAndDay(g, day){
-  return g.rows.flatMap(r=>(r.windowPairs||[])
+  const items = g.rows.flatMap(r=>(r.windowPairs||[])
     .filter(p=>p.load===day)
     .map(p=>({vocativo:r.vocativo, cliente:r.cliente, cidade:r.cidadeDestino, uf:r.ufDestino, status:r.status, ...p})));
+  return jsRecalculateItemsForPanelWindow(g, day, items);
 }
 function jsRenderVocDetail(vocativo, extraHtml, showRestrictions){
   const vehicle=(typeof getVehicleRestriction==='function' ? getVehicleRestriction(vocativo) : (typeof getMaxVehicleRestriction==='function' ? getMaxVehicleRestriction(vocativo) : 'SEM RESTRIÇÃO'));
