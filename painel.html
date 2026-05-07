@@ -8,8 +8,8 @@
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;background:#07111f;font-family:Inter,Segoe UI,Arial,sans-serif;overflow:hidden}
   #painelFrame{position:fixed;inset:0;width:100%;height:100%;border:0;background:#07111f;display:block}
-  #bootLoading,#errorPanel{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(circle at 18% 0%,rgba(56,189,248,.13),transparent 30%),linear-gradient(180deg,#0b1220 0%,#07111f 56%,#050b14 100%);color:#e5e7eb}
-  #errorPanel{display:none;z-index:40}
+  #bootLoading{display:none!important}
+  #errorPanel{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;padding:18px;background:radial-gradient(circle at 18% 0%,rgba(56,189,248,.13),transparent 30%),linear-gradient(180deg,#0b1220 0%,#07111f 56%,#050b14 100%);color:#e5e7eb}
   .box{width:min(640px,100%);background:#0f172a;border:1px solid #243244;border-radius:18px;box-shadow:0 18px 45px rgba(0,0,0,.34);padding:18px;line-height:1.45}
   .box h1{margin:0 0 8px;font-size:18px;color:#f8fafc;letter-spacing:-.02em}
   .box p{margin:0;color:#94a3b8;font-size:12px}
@@ -34,15 +34,7 @@
 <body>
 <iframe id="painelFrame" title="Painel de Janelas"></iframe>
 
-<div id="bootLoading">
-  <div class="box row">
-    <div class="spin"></div>
-    <div>
-      <h1>Carregando Painel de Janelas...</h1>
-      <p>Usando automaticamente o arquivo <b>index.html</b> da mesma pasta.</p>
-    </div>
-  </div>
-</div>
+<div id="bootLoading" class="hidden" aria-hidden="true"></div>
 
 <div id="dataIndicator">
   <div class="miniSpin"></div>
@@ -70,6 +62,7 @@
   let ready = false;
   let indicatorTimer = null;
   let pollTimer = null;
+  let filialLoadStarted = false;
 
   function setIndicator(title, msg, type){
     clearTimeout(indicatorTimer);
@@ -113,7 +106,7 @@
       const cls = String(loadStatus?.className || '');
 
       if(modalAberto){
-        setIndicator('Aguardando seleção de filial', 'Selecione a filial e o regime de carregamento para carregar o Painel de Janelas.', 'wait');
+        hideIndicator();
         return;
       }
 
@@ -123,12 +116,12 @@
       }
 
       if(cls.includes('err')){
-        setIndicator('Erro ao carregar dados', txt || 'A aplicação principal retornou erro no carregamento.', 'err');
+        if(filialLoadStarted) setIndicator('Erro ao carregar dados', txt || 'A aplicação principal retornou erro no carregamento.', 'err');
         return;
       }
 
       if(cls.includes('ok')){
-        setIndicator('Dados carregados', txt || 'Painel atualizado.', 'ok');
+        if(filialLoadStarted) setIndicator('Dados carregados', txt || 'Painel atualizado.', 'ok');
         return;
       }
     }catch(e){
@@ -185,9 +178,9 @@
       const originalSetLoadStatus = win.setLoadStatus;
       win.setLoadStatus = function(msg, type){
         const result = originalSetLoadStatus.apply(this, arguments);
-        if(type === 'loading') setIndicator('Carregando dados', String(msg || 'Buscando dados e calculando janelas...'), '');
-        else if(type === 'ok') setIndicator('Dados carregados', String(msg || 'Painel atualizado.'), 'ok');
-        else if(type === 'err') setIndicator('Erro ao carregar dados', String(msg || 'Falha ao carregar dados.'), 'err');
+        if(type === 'loading'){ filialLoadStarted = true; setIndicator('Carregando dados', String(msg || 'Buscando dados e calculando janelas...'), ''); }
+        else if(type === 'ok' && filialLoadStarted) setIndicator('Dados carregados', String(msg || 'Painel atualizado.'), 'ok');
+        else if(type === 'err' && filialLoadStarted) setIndicator('Erro ao carregar dados', String(msg || 'Falha ao carregar dados.'), 'err');
         else updateIndicatorFromInside();
         return result;
       };
@@ -196,6 +189,7 @@
     if(typeof win.loadBackendData === 'function'){
       const originalLoadBackendData = win.loadBackendData;
       win.loadBackendData = async function(){
+        filialLoadStarted = true;
         setIndicator('Carregando dados', 'Buscando dados do Google Planilhas e recalculando janelas...', '');
         try{
           return await originalLoadBackendData.apply(this, arguments);
@@ -249,7 +243,7 @@
     }
   }, 6000);
 
-  // Carrega sempre o index.html da mesma pasta. O timestamp reduz o risco de usar uma versão antiga em cache.
+  // Carrega sempre o index.html da mesma pasta. Sem indicador inicial; o aviso aparece somente após selecionar a filial.
   frame.src = './index.html?_painel_janelas=' + Date.now();
 })();
 </script>
