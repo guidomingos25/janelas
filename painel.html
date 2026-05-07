@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Janelas - Independente</title>
+<style>
+:root{
+  --bg:#07111f;
+  --panel:#0f172a;
+  --panel2:#111827;
+  --text:#e5e7eb;
+  --muted:#94a3b8;
+  --line:#243244;
+  --brand:#38bdf8;
+  --brand2:#0284c7;
+  --danger:#ef4444;
+  --ok:#22c55e;
+  --shadow:0 18px 45px rgba(0,0,0,.34);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+body:before{content:"";position:fixed;inset:0 0 auto 0;height:5px;background:linear-gradient(90deg,#0ea5e9,#38bdf8,#6366f1);z-index:50}
+.shell{min-height:100%;display:grid;grid-template-rows:auto 1fr;background:radial-gradient(circle at 18% 0%,rgba(56,189,248,.13),transparent 30%),linear-gradient(180deg,#0b1220 0%,#07111f 56%,#050b14 100%)}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 18px;border-bottom:1px solid var(--line);background:rgba(15,23,42,.92);backdrop-filter:blur(8px)}
+.titleBox{min-width:0}.titleBox h1{margin:0;font-size:18px;letter-spacing:-.02em;color:#f8fafc}.titleBox p{margin:3px 0 0;color:var(--muted);font-size:11px;line-height:1.35}
+.status{display:inline-flex;align-items:center;gap:8px;min-height:34px;padding:8px 10px;border:1px solid var(--line);border-radius:999px;background:#0b1220;color:#cbd5e1;font-size:11px;font-weight:800;white-space:nowrap}.status.ok{color:#86efac;border-color:#166534;background:#052e1a}.status.err{color:#fecaca;border-color:#7f1d1d;background:#3b0d12}.status.loading{color:#bae6fd;border-color:#1e3a5f;background:#082f49}
+.frameWrap{position:relative;min-height:0}.engineFrame{width:100%;height:100%;border:0;display:block;background:#07111f}.loader,.sourcePanel{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(circle at 18% 0%,rgba(56,189,248,.13),transparent 30%),linear-gradient(180deg,#0b1220 0%,#07111f 56%,#050b14 100%);z-index:10}.sourcePanel{display:none;z-index:20}.sourcePanel.open{display:flex}.box{width:min(760px,100%);background:rgba(15,23,42,.96);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px}.box h2{margin:0 0 8px;color:#f8fafc;font-size:18px}.box p{margin:0 0 14px;color:var(--muted);font-size:12px;line-height:1.45}.grid{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}.field label{display:block;color:#93a4ba;font-weight:900;text-transform:uppercase;letter-spacing:.055em;font-size:10px;margin-bottom:5px}.field input{width:100%;min-height:38px;background:#0b1220;color:#e5e7eb;border:1px solid #334155;border-radius:10px;padding:8px 10px;outline:none}.field input:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(56,189,248,.16)}button{border:0;border-radius:10px;background:linear-gradient(135deg,var(--brand2),var(--brand));color:#03111f;font-weight:950;padding:10px 13px;cursor:pointer;box-shadow:0 10px 22px rgba(14,165,233,.22);white-space:nowrap}button.secondary{background:#0b1220;color:#cbd5e1;border:1px solid #334155;box-shadow:none}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.hint{border-left:4px solid var(--brand);background:#0b1220;border-radius:12px;padding:10px 12px;color:#cbd5e1;font-size:11px;line-height:1.45;margin-top:12px}.hint b{color:#f8fafc}.hidden{display:none!important}.spin{width:22px;height:22px;border:3px solid #1e3a5f;border-top-color:var(--brand);border-radius:999px;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:760px){.topbar{align-items:flex-start;flex-direction:column}.status{white-space:normal}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="titleBox">
+      <h1>Painel de Janelas</h1>
+      <p>HTML independente alimentado automaticamente pelo arquivo <b>index.html</b> da mesma pasta do GitHub Pages.</p>
+    </div>
+    <div id="status" class="status loading">Carregando aplicação principal...</div>
+  </div>
+  <div class="frameWrap">
+    <iframe id="engineFrame" class="engineFrame" title="Painel de Janelas"></iframe>
+    <div id="loader" class="loader"><div class="box" style="display:flex;gap:12px;align-items:center;width:auto"><div class="spin"></div><div><b>Preparando Painel de Janelas...</b><br><span style="color:#94a3b8;font-size:12px">Carregando automaticamente ./index.html na mesma pasta.</span></div></div></div>
+    <div id="sourcePanel" class="sourcePanel">
+      <div class="box">
+        <h2>Não foi possível carregar o index.html</h2>
+        <p>Esta página foi configurada para buscar automaticamente o arquivo <b>./index.html</b> no mesmo diretório. Verifique se os dois arquivos estão publicados na mesma pasta do GitHub Pages.</p>
+        <div class="grid">
+          <div class="field">
+            <label>Caminho ou URL do HTML principal</label>
+            <input id="sourceUrl" type="text" value="./index.html" placeholder="./index.html">
+          </div>
+          <button id="btnLoadUrl" type="button">Carregar URL</button>
+        </div>
+        <div class="actions">
+          <label class="field" style="flex:1;min-width:260px">
+            <span style="display:block;color:#93a4ba;font-weight:900;text-transform:uppercase;letter-spacing:.055em;font-size:10px;margin-bottom:5px">Ou carregue o arquivo HTML principal</span>
+            <input id="sourceFile" type="file" accept=".html,.htm,.txt">
+          </label>
+          <button id="btnRetry" class="secondary" type="button">Tentar novamente</button>
+        </div>
+        <div class="hint">
+          <b>Importante:</b> no GitHub Pages, deixe este arquivo no mesmo diretório do <b>index.html</b>. Assim, toda alteração publicada no index.html será usada automaticamente na próxima abertura deste painel.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+/*
+  Painel de Janelas independente.
+  Não contém regra de cálculo própria. A página carrega o HTML principal e apenas isola
+  a página #pageJanelasSimples. As funções de cálculo, filtros, seleção de filial,
+  Apps Script, vínculos, TT e SLA continuam vindo da aplicação principal.
+*/
+const DEFAULT_MAIN_APP_PATHS = [
+  './index.html'
+];
+const frame = document.getElementById('engineFrame');
+const statusEl = document.getElementById('status');
+const loader = document.getElementById('loader');
+const sourcePanel = document.getElementById('sourcePanel');
+const sourceUrl = document.getElementById('sourceUrl');
+const sourceFile = document.getElementById('sourceFile');
+const btnLoadUrl = document.getElementById('btnLoadUrl');
+const btnRetry = document.getElementById('btnRetry');
+
+function setStatus(msg, type=''){
+  statusEl.className = 'status' + (type ? ' ' + type : '');
+  statusEl.textContent = msg;
+}
+function showSourcePanel(show=true){
+  sourcePanel.classList.toggle('open', !!show);
+  loader.classList.toggle('hidden', !!show);
+}
+function injectIsolationScript(html){
+  const isolation = String.raw`
+<script>
+(function(){
+  function applyExternalPanelMode(){
+    try{
+      if(document.getElementById('externalPainelJanelasStyle')) return;
+      var style=document.createElement('style');
+      style.id='externalPainelJanelasStyle';
+      style.textContent = [
+        'header{padding:16px 24px 14px!important}',
+        'header .headerGrid{grid-template-columns:1fr!important}',
+        'header .headerNote{display:none!important}',
+        'header h1{font-size:22px!important}',
+        'header .subtitle{max-width:100%!important}',
+        '.pageNav{padding-top:8px!important;align-items:center!important}',
+        '#tabPlanejamento,#tabJanelasSimples,#tabAuxVeiculos{display:none!important}',
+        '#pagePlanejamento,#pageAuxVeiculos{display:none!important}',
+        '#pageJanelasSimples{display:block!important}',
+        '#pageJanelasSimples.appPage{display:block!important}',
+        'main{padding-top:10px!important}',
+        '.simpleHero{margin-top:0!important}',
+        '.filialModalOverlay{z-index:999999!important}'
+      ].join('\n');
+      document.head.appendChild(style);
+    }catch(e){}
+  }
+  function forcePainelJanelas(){
+    try{
+      applyExternalPanelMode();
+      var title=document.querySelector('header h1');
+      if(title) title.textContent='Painel de Janelas';
+      var sub=document.querySelector('header .subtitle');
+      if(sub) sub.textContent='Visualização independente alimentada pela aplicação principal.';
+      if(typeof setActivePage === 'function') setActivePage('janelas');
+      else{
+        var planejamento=document.getElementById('pagePlanejamento');
+        var janelas=document.getElementById('pageJanelasSimples');
+        var aux=document.getElementById('pageAuxVeiculos');
+        if(planejamento) planejamento.classList.remove('active');
+        if(aux) aux.classList.remove('active');
+        if(janelas) janelas.classList.add('active');
+      }
+      if(typeof updateFilialButton === 'function') updateFilialButton();
+      if(typeof renderSimpleWindows === 'function') renderSimpleWindows();
+    }catch(e){ console.warn('Falha ao isolar Painel de Janelas:', e); }
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', forcePainelJanelas);
+  else forcePainelJanelas();
+  window.addEventListener('load', function(){ setTimeout(forcePainelJanelas, 50); setTimeout(forcePainelJanelas, 600); });
+  var guard=0;
+  var interval=setInterval(function(){
+    guard++;
+    forcePainelJanelas();
+    if(guard>20) clearInterval(interval);
+  }, 500);
+})();
+<\/script>`;
+  if(/<\/body\s*>/i.test(html)) return html.replace(/<\/body\s*>/i, isolation + '\n</body>');
+  return html + isolation;
+}
+function loadMainAppHtml(html, label='aplicação principal'){
+  if(!html || !/<html[\s>]/i.test(html) || !/pageJanelasSimples/i.test(html)){
+    throw new Error('O arquivo informado não parece ser a aplicação correta com a página Painel de Janelas.');
+  }
+  setStatus('Motor carregado: ' + label, 'ok');
+  showSourcePanel(false);
+  loader.classList.remove('hidden');
+  frame.onload = function(){
+    loader.classList.add('hidden');
+    setStatus('Painel carregado. Selecione a filial na janela aberta.', 'ok');
+  };
+  frame.srcdoc = injectIsolationScript(html);
+}
+async function tryFetch(path){
+  const url = path + (path.includes('?') ? '&' : '?') + '_pj_cache=' + Date.now();
+  const res = await fetch(url, {cache:'no-store'});
+  if(!res.ok) throw new Error('HTTP ' + res.status);
+  return await res.text();
+}
+async function loadFromUrl(path){
+  const html = await tryFetch(path.trim());
+  loadMainAppHtml(html, path.trim());
+}
+async function autoLoad(){
+  setStatus('Carregando ./index.html...', 'loading');
+  for(const path of DEFAULT_MAIN_APP_PATHS){
+    try{
+      const html = await tryFetch(path);
+      loadMainAppHtml(html, path);
+      return;
+    }catch(err){}
+  }
+  setStatus('Não encontrei ./index.html no mesmo diretório.', 'err');
+  showSourcePanel(true);
+}
+btnLoadUrl.addEventListener('click', async()=>{
+  try{
+    if(!sourceUrl.value.trim()) throw new Error('Informe um caminho ou URL.');
+    setStatus('Carregando URL informada...', 'loading');
+    showSourcePanel(false);
+    await loadFromUrl(sourceUrl.value);
+  }catch(err){
+    setStatus('Erro: ' + err.message, 'err');
+    showSourcePanel(true);
+  }
+});
+btnRetry.addEventListener('click', autoLoad);
+sourceFile.addEventListener('change', async(e)=>{
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  try{
+    setStatus('Lendo arquivo principal...', 'loading');
+    const html = await file.text();
+    loadMainAppHtml(html, file.name);
+  }catch(err){
+    setStatus('Erro: ' + err.message, 'err');
+    showSourcePanel(true);
+  }
+});
+autoLoad();
+</script>
+</body>
+</html>
