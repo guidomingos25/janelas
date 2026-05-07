@@ -8,20 +8,33 @@
   *{box-sizing:border-box}
   html,body{height:100%;margin:0;background:#07111f;font-family:Inter,Segoe UI,Arial,sans-serif;overflow:hidden}
   #painelFrame{position:fixed;inset:0;width:100%;height:100%;border:0;background:#07111f;display:block}
-  #loadingPanel,#errorPanel{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(circle at 18% 0%,rgba(56,189,248,.13),transparent 30%),linear-gradient(180deg,#0b1220 0%,#07111f 56%,#050b14 100%);color:#e5e7eb}
-  #errorPanel{display:none;z-index:30}
-  .box{width:min(620px,100%);background:#0f172a;border:1px solid #243244;border-radius:18px;box-shadow:0 18px 45px rgba(0,0,0,.34);padding:18px;line-height:1.45}
+  #bootLoading,#errorPanel{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(circle at 18% 0%,rgba(56,189,248,.13),transparent 30%),linear-gradient(180deg,#0b1220 0%,#07111f 56%,#050b14 100%);color:#e5e7eb}
+  #errorPanel{display:none;z-index:40}
+  .box{width:min(640px,100%);background:#0f172a;border:1px solid #243244;border-radius:18px;box-shadow:0 18px 45px rgba(0,0,0,.34);padding:18px;line-height:1.45}
   .box h1{margin:0 0 8px;font-size:18px;color:#f8fafc;letter-spacing:-.02em}
   .box p{margin:0;color:#94a3b8;font-size:12px}
   .row{display:flex;gap:12px;align-items:center}
   .spin{width:24px;height:24px;border:3px solid #1e3a5f;border-top-color:#38bdf8;border-radius:999px;animation:spin .8s linear infinite;flex:0 0 auto}
+  .miniSpin{width:16px;height:16px;border:2px solid rgba(56,189,248,.22);border-top-color:#38bdf8;border-radius:999px;animation:spin .8s linear infinite;flex:0 0 auto}
   @keyframes spin{to{transform:rotate(360deg)}}
   .hidden{display:none!important}
+  #dataIndicator{position:fixed;top:14px;right:14px;z-index:35;max-width:min(520px,calc(100vw - 28px));display:none;align-items:flex-start;gap:10px;padding:11px 13px;border-radius:14px;background:rgba(15,23,42,.94);border:1px solid rgba(56,189,248,.28);box-shadow:0 16px 38px rgba(0,0,0,.32);color:#e5e7eb;backdrop-filter:blur(10px);pointer-events:none}
+  #dataIndicator.show{display:flex}
+  #dataIndicator.ok{border-color:rgba(34,197,94,.34)}
+  #dataIndicator.err{border-color:rgba(239,68,68,.42);background:rgba(69,10,10,.94)}
+  #dataIndicator.wait{border-color:rgba(245,158,11,.38)}
+  #dataIndicator.ok .miniSpin{display:none}
+  #dataIndicator.err .miniSpin{display:none}
+  #dataIndicator.wait .miniSpin{border-color:rgba(245,158,11,.24);border-top-color:#f59e0b}
+  #dataTitle{display:block;font-size:12px;font-weight:950;color:#f8fafc;letter-spacing:.01em;margin-bottom:2px}
+  #dataMsg{display:block;font-size:11px;line-height:1.35;color:#cbd5e1}
+  @media(max-width:760px){#dataIndicator{top:10px;right:10px;left:10px;max-width:none}}
 </style>
 </head>
 <body>
 <iframe id="painelFrame" title="Painel de Janelas"></iframe>
-<div id="loadingPanel">
+
+<div id="bootLoading">
   <div class="box row">
     <div class="spin"></div>
     <div>
@@ -30,28 +43,101 @@
     </div>
   </div>
 </div>
+
+<div id="dataIndicator">
+  <div class="miniSpin"></div>
+  <div>
+    <strong id="dataTitle">Carregando dados</strong>
+    <span id="dataMsg">Aguarde enquanto a aplicação principal busca as informações.</span>
+  </div>
+</div>
+
 <div id="errorPanel">
   <div class="box">
     <h1>Não foi possível abrir o Painel de Janelas</h1>
     <p>Confira se este arquivo está publicado no mesmo diretório do <b>index.html</b> no GitHub Pages. Esta página não contém regras próprias: ela apenas exibe o painel gerado pela aplicação principal.</p>
   </div>
 </div>
+
 <script>
 (function(){
   const frame = document.getElementById('painelFrame');
-  const loading = document.getElementById('loadingPanel');
-  const error = document.getElementById('errorPanel');
+  const bootLoading = document.getElementById('bootLoading');
+  const errorPanel = document.getElementById('errorPanel');
+  const dataIndicator = document.getElementById('dataIndicator');
+  const dataTitle = document.getElementById('dataTitle');
+  const dataMsg = document.getElementById('dataMsg');
   let ready = false;
+  let indicatorTimer = null;
+  let pollTimer = null;
 
-  function showError(){
-    loading.classList.add('hidden');
-    error.style.display = 'flex';
+  function setIndicator(title, msg, type){
+    clearTimeout(indicatorTimer);
+    dataTitle.textContent = title || 'Carregando dados';
+    dataMsg.textContent = msg || '';
+    dataIndicator.className = 'show' + (type ? ' ' + type : '');
+
+    if(type === 'ok'){
+      indicatorTimer = setTimeout(function(){ dataIndicator.className = ''; }, 1800);
+    }
+    if(type === 'err'){
+      indicatorTimer = setTimeout(function(){ dataIndicator.className = ''; }, 7000);
+    }
   }
 
-  function injectPanelOnlyMode(){
+  function hideIndicator(){
+    clearTimeout(indicatorTimer);
+    dataIndicator.className = '';
+  }
+
+  function showError(){
+    bootLoading.classList.add('hidden');
+    hideIndicator();
+    errorPanel.style.display = 'flex';
+  }
+
+  function getFrameHandles(){
     const win = frame.contentWindow;
     const doc = frame.contentDocument || (win && win.document);
     if(!win || !doc) throw new Error('Sem acesso ao index.html.');
+    return {win, doc};
+  }
+
+  function updateIndicatorFromInside(){
+    try{
+      const {doc} = getFrameHandles();
+      const filialModal = doc.getElementById('filialModalOverlay');
+      const modalAberto = !!(filialModal && filialModal.classList.contains('open'));
+      const loadStatus = doc.getElementById('loadStatus');
+      const txt = String(loadStatus?.textContent || '').trim();
+      const cls = String(loadStatus?.className || '');
+
+      if(modalAberto){
+        setIndicator('Aguardando seleção de filial', 'Selecione a filial e o regime de carregamento para carregar o Painel de Janelas.', 'wait');
+        return;
+      }
+
+      if(cls.includes('loading')){
+        setIndicator('Carregando dados', txt || 'Buscando dados e calculando janelas...', '');
+        return;
+      }
+
+      if(cls.includes('err')){
+        setIndicator('Erro ao carregar dados', txt || 'A aplicação principal retornou erro no carregamento.', 'err');
+        return;
+      }
+
+      if(cls.includes('ok')){
+        setIndicator('Dados carregados', txt || 'Painel atualizado.', 'ok');
+        return;
+      }
+    }catch(e){
+      // Se o iframe ainda estiver inicializando, apenas ignora a leitura pontual.
+    }
+  }
+
+  function injectPanelOnlyMode(){
+    const {win, doc} = getFrameHandles();
 
     if(!doc.getElementById('painelJanelasOnlyStyle')){
       const style = doc.createElement('style');
@@ -90,21 +176,59 @@
     if(h1) h1.textContent = 'Painel de Janelas';
   }
 
+  function installLoadingBridge(){
+    const {win} = getFrameHandles();
+    if(win.__painelJanelasBridgeInstalled) return;
+    win.__painelJanelasBridgeInstalled = true;
+
+    if(typeof win.setLoadStatus === 'function'){
+      const originalSetLoadStatus = win.setLoadStatus;
+      win.setLoadStatus = function(msg, type){
+        const result = originalSetLoadStatus.apply(this, arguments);
+        if(type === 'loading') setIndicator('Carregando dados', String(msg || 'Buscando dados e calculando janelas...'), '');
+        else if(type === 'ok') setIndicator('Dados carregados', String(msg || 'Painel atualizado.'), 'ok');
+        else if(type === 'err') setIndicator('Erro ao carregar dados', String(msg || 'Falha ao carregar dados.'), 'err');
+        else updateIndicatorFromInside();
+        return result;
+      };
+    }
+
+    if(typeof win.loadBackendData === 'function'){
+      const originalLoadBackendData = win.loadBackendData;
+      win.loadBackendData = async function(){
+        setIndicator('Carregando dados', 'Buscando dados do Google Planilhas e recalculando janelas...', '');
+        try{
+          return await originalLoadBackendData.apply(this, arguments);
+        }finally{
+          setTimeout(updateIndicatorFromInside, 50);
+          setTimeout(updateIndicatorFromInside, 450);
+        }
+      };
+    }
+  }
+
   function keepPanelOnlyMode(){
     let count = 0;
-    const timer = setInterval(function(){
+    clearInterval(pollTimer);
+    pollTimer = setInterval(function(){
       count++;
-      try{ injectPanelOnlyMode(); }catch(e){}
-      if(count >= 24) clearInterval(timer);
+      try{
+        injectPanelOnlyMode();
+        installLoadingBridge();
+        updateIndicatorFromInside();
+      }catch(e){}
+      if(count >= 240) clearInterval(pollTimer);
     }, 500);
   }
 
   frame.addEventListener('load', function(){
     try{
       injectPanelOnlyMode();
+      installLoadingBridge();
       keepPanelOnlyMode();
       ready = true;
-      loading.classList.add('hidden');
+      bootLoading.classList.add('hidden');
+      updateIndicatorFromInside();
     }catch(err){
       console.error(err);
       showError();
@@ -115,12 +239,17 @@
 
   setTimeout(function(){
     if(!ready){
-      try{ injectPanelOnlyMode(); loading.classList.add('hidden'); ready = true; }
-      catch(e){}
+      try{
+        injectPanelOnlyMode();
+        installLoadingBridge();
+        bootLoading.classList.add('hidden');
+        ready = true;
+        updateIndicatorFromInside();
+      }catch(e){}
     }
   }, 6000);
 
-  // Carrega sempre o index.html da mesma pasta. O timestamp evita usar versão antiga em cache.
+  // Carrega sempre o index.html da mesma pasta. O timestamp reduz o risco de usar uma versão antiga em cache.
   frame.src = './index.html?_painel_janelas=' + Date.now();
 })();
 </script>
