@@ -1471,6 +1471,62 @@ function circularLoadSpacingScore(combo){
   // desequilíbrio e, em empate, afasta a 2ª janela sem encurtar o retorno semanal.
   return ((allowed.length-minGap)*1000000) + (spread*10000) + Math.round(deviation*100) - firstGap;
 }
+
+function fixedTransitAdherenceScore(row, combo, options={}){
+  // Ajuste pontual para o flag "FORÇAR ENTREGAS FIXAS":
+  // quando a quantidade de janelas já está forçada, a escolha deve preferir
+  // a carga mais aderente ao transit time de cada entrega fixa antes de
+  // aplicar o desempate de início da semana.
+  if(!row || !shouldForceAllFixedDeliveries(row.vocativo)) return 0;
+  const fixed=getFixedDeliveryDays(row.vocativo);
+  if(!fixed.length) return 0;
+  const comboDays=[...new Set((combo || []).map(Number).filter(d=>getLoadIndexes().includes(d)))];
+  if(!comboDays.length) return 999999999;
+
+  const assignment=assignFixedDeliveriesToCombo(row, comboDays, Object.assign({}, options || {}, {allowFixedDeliverySlack:true}));
+  const planned=assignment && assignment.planned ? assignment.planned : [];
+  const used=assignment && assignment.used ? assignment.used.map(Number) : [];
+  const missing=fixed.filter(day=>!used.includes(Number(day))).length;
+  const duplicate=assignment && Number.isFinite(Number(assignment.duplicate)) ? Number(assignment.duplicate) : Math.max(0, comboDays.length-used.length);
+  const preferredMiss=planned.reduce((sum,p)=>sum + (p && p.fixedSlackApplied ? 1 : 0), 0);
+  const extraWaiting=planned.reduce((sum,p)=>sum + Math.max(0, Number(p && p.extraWaitingDays) || 0), 0);
+  const totalTravel=planned.reduce((sum,p)=>sum + (Number(p && p.travelElapsed) || 0), 0);
+
+  return (missing*1000000000)
+    + (duplicate*10000000)
+    + (preferredMiss*100000)
+    + (extraWaiting*1000)
+    + totalTravel;
+}
+function compareEvalByPrazoThenInicioForRow(row, a, b, options={}){
+  if(row && shouldForceAllFixedDeliveries(row.vocativo)){
+    return (fixedTransitAdherenceScore(row, a.combo, options)-fixedTransitAdherenceScore(row, b.combo, options))
+      || (circularLoadSpacingScore(a.combo)-circularLoadSpacingScore(b.combo))
+      || (firstLoadScore(a.combo)-firstLoadScore(b.combo))
+      || (saturdayLoadCount(a.combo)-saturdayLoadCount(b.combo))
+      || (a.worst-b.worst)
+      || (a.total-b.total)
+      || (earlyLoadScore(a.combo)-earlyLoadScore(b.combo))
+      || String(a.combo || '').localeCompare(String(b.combo || ''));
+  }
+  return compareEvalByPrazoThenInicio(a,b);
+}
+function linkedForceFixedActive(candidate){
+  const rows=(candidate && candidate.orderedRowsForAnchor && candidate.orderedRowsForAnchor.length)
+    ? candidate.orderedRowsForAnchor
+    : ((candidate && candidate.evals) || []).map(x=>x && x.row).filter(Boolean);
+  return rows.some(row=>row && getFixedDeliveryDays(row.vocativo).length && shouldForceAllFixedDeliveries(row.vocativo));
+}
+function linkedForceFixedTransitAdherenceScore(candidate){
+  if(!candidate || !candidate.comboByVoc) return 0;
+  const rows=(candidate.orderedRowsForAnchor && candidate.orderedRowsForAnchor.length)
+    ? candidate.orderedRowsForAnchor
+    : ((candidate.evals || []).map(x=>x && x.row).filter(Boolean));
+  return rows.reduce((sum,row)=>{
+    if(!row || !getFixedDeliveryDays(row.vocativo).length || !shouldForceAllFixedDeliveries(row.vocativo)) return sum;
+    return sum + fixedTransitAdherenceScore(row, candidate.comboByVoc[row.vocativo] || [], {linkedDeliveryPlan:candidate.linkedPlan});
+  },0);
+}
 function okLoadDistributionScore(combo){
   // Só deve ser usado para cenários já viáveis e, preferencialmente, depois da
   // quantidade de janelas. Não muda prazo, TT, vínculo ou entrega fixa.
@@ -2228,7 +2284,7 @@ function evaluateFixedDeliveryForRow(row, deadline, transit){
     }
 
     if(candidates.length){
-      candidates.sort(compareEvalByPrazoThenInicio);
+      candidates.sort((a,b)=>compareEvalByPrazoThenInicioForRow(row,a,b));
       const best=candidates[0];
       const usedDays = [...new Set((best.windowPairs || []).map(p=>p.delivery))];
       const reasonBase = fixedCount > 1
@@ -2308,7 +2364,7 @@ function evaluateWindows(row, deadline, transit, forcedCombo){
       if(ev.ok) candidates.push(ev);
     }
     if(candidates.length){
-      candidates.sort(compareEvalByPrazoThenInicio);
+      candidates.sort((a,b)=>compareEvalByPrazoThenInicioForRow(row,a,b));
       const best=candidates[0];
       const reason = fixedCount
         ? (shouldForceAllFixedDeliveries(row.vocativo)
@@ -2757,15 +2813,22 @@ function bestPrefixForLinkedRow(row, groupSequence, linkedPlan, requiredCore=[],
       ok.sort((a,b)=>{
         const aMissing=fixedDeliveryCoverageShortfallForPack(row,a);
         const bMissing=fixedDeliveryCoverageShortfallForPack(row,b);
+        const forceFixed=shouldForceAllFixedDeliveries(row.vocativo);
         return (a.combo.length-b.combo.length)
           || (aMissing-bMissing)
+          // Com o flag ligado, prioriza a carga aderente ao transit time da entrega fixa
+          // antes de puxar a janela para o início da semana.
+          || (forceFixed ? (fixedTransitAdherenceScore(row,a.combo,{linkedDeliveryPlan:linkedPlan})-fixedTransitAdherenceScore(row,b.combo,{linkedDeliveryPlan:linkedPlan})) : 0)
           || (a.score.over-b.score.over)
+          // Com o flag ligado, depois da aderência ao TT vem o espaçamento entre janelas;
+          // a prioridade de início da semana fica apenas como desempate posterior.
+          || (forceFixed ? (circularLoadSpacingScore(a.combo)-circularLoadSpacingScore(b.combo)) : 0)
           // Quando os dois cenários atendem o prazo, evita usar SÁB se a alternativa
           // SEX → SEG também atende. Antes esta penalização vinha depois do pior prazo/total,
           // por isso o vínculo ainda escolhia SAB → SEG por ter menor espera absoluta.
           || (avoidableSaturdayLoadScore(row,a.combo)-avoidableSaturdayLoadScore(row,b.combo))
           || (firstLoadScore(a.combo)-firstLoadScore(b.combo))
-          || (circularLoadSpacingScore(a.combo)-circularLoadSpacingScore(b.combo))
+          || (!forceFixed ? (circularLoadSpacingScore(a.combo)-circularLoadSpacingScore(b.combo)) : 0)
           || (a.score.worst-b.score.worst)
           || (a.score.total-b.score.total)
           // Mantém o subconjunto mais alinhado ao fim da matriz quando isso não piora prazo,
@@ -2972,6 +3035,7 @@ function compareLinkedSchedulesOk(a,b){
   // 4) se todos atendem com o mesmo alinhamento/quantidade, prioriza início da semana
   //    também nos vinculados: SEG, depois TER, QUA, QUI, SEX e SAB;
   // 5) somente depois compara sábado evitável, qualidade de prazo e desempates.
+  const forceFixedActive=linkedForceFixedActive(a) || linkedForceFixedActive(b);
   return (linkedSharedLoadShortfall(a)-linkedSharedLoadShortfall(b))
     || (linkedDistinctLoadDates(a)-linkedDistinctLoadDates(b))
     // Depois que existe data comum suficiente, economiza janelas por vocativo.
@@ -2980,13 +3044,18 @@ function compareLinkedSchedulesOk(a,b){
     || ((a.anchorShortfall||0)-(b.anchorShortfall||0))
     || (a.assignedLoads-b.assignedLoads)
     || (b.rowsWithSingleCommon-a.rowsWithSingleCommon)
-    // Ajuste pontual: em cenários vinculados que já atendem o prazo, a data comum
-    // mais cedo na semana vem antes de "prazo real menor"/gap. Assim, se SEG atende,
-    // SEG vence TER/QUA/QUI/SEX/SAB; se não atender, o próximo dia viável vence.
+    // Quando o flag FORÇAR ENTREGAS FIXAS estiver ativo, a primeira preferência
+    // passa a ser a aderência carga→entrega fixa pelo transit time.
+    || (forceFixedActive ? (linkedForceFixedTransitAdherenceScore(a)-linkedForceFixedTransitAdherenceScore(b)) : 0)
+    // Depois da aderência ao TT, aplica o espaçamento circular antes do início da semana.
+    || (forceFixedActive ? (linkedCommonSpacingScore(a)-linkedCommonSpacingScore(b)) : 0)
+    || (forceFixedActive ? (linkedAllLoadsSpacingScore(a)-linkedAllLoadsSpacingScore(b)) : 0)
+    // Sem o flag, mantém a regra anterior de início da semana. Com o flag, o início
+    // da semana permanece como desempate posterior.
     || (linkedCommonEarlyLoadScore(a)-linkedCommonEarlyLoadScore(b))
     || (linkedAllLoadsEarlyScore(a)-linkedAllLoadsEarlyScore(b))
-    || (linkedCommonSpacingScore(a)-linkedCommonSpacingScore(b))
-    || (linkedAllLoadsSpacingScore(a)-linkedAllLoadsSpacingScore(b))
+    || (!forceFixedActive ? (linkedCommonSpacingScore(a)-linkedCommonSpacingScore(b)) : 0)
+    || (!forceFixedActive ? (linkedAllLoadsSpacingScore(a)-linkedAllLoadsSpacingScore(b)) : 0)
     // Em vínculo, sábado só é evitado depois de preservar o carregamento na mesma data.
     // Assim, SÁB pode ser escolhido quando for a melhor data comum para atender o prazo.
     || (linkedAvoidableSaturdayScore(a)-linkedAvoidableSaturdayScore(b))
@@ -3131,16 +3200,20 @@ function compareLinkedIterationScores(a,b){
       || String(a.comboKey || '').localeCompare(String(b.comboKey || ''));
   }
 
+  const forceFixedActive=n(a.forceFixedActive) || n(b.forceFixedActive);
   return (n(a.sharedShortfall)-n(b.sharedShortfall))
     || (n(a.distinctLoadDates)-n(b.distinctLoadDates))
     || (n(a.assignedLoads)-n(b.assignedLoads))
     || (n(a.anchorShortfall)-n(b.anchorShortfall))
-    // Ajuste pontual para iterações internas já OK: não trocar uma matriz de início
-    // de semana por outra mais tarde apenas porque o gap/prazo real ficou menor.
+    || (forceFixedActive ? (n(a.forceFixedTransitScore)-n(b.forceFixedTransitScore)) : 0)
+    || (forceFixedActive ? (n(a.spacingCommonScore)-n(b.spacingCommonScore)) : 0)
+    || (forceFixedActive ? (n(a.spacingAllScore)-n(b.spacingAllScore)) : 0)
+    // Ajuste pontual para iterações internas já OK: sem o flag, mantém início
+    // de semana antes do espaçamento; com o flag, início fica depois do TT/espaçamento.
     || (n(a.earlyCommonScore)-n(b.earlyCommonScore))
     || (n(a.earlyAllScore)-n(b.earlyAllScore))
-    || (n(a.spacingCommonScore)-n(b.spacingCommonScore))
-    || (n(a.spacingAllScore)-n(b.spacingAllScore))
+    || (!forceFixedActive ? (n(a.spacingCommonScore)-n(b.spacingCommonScore)) : 0)
+    || (!forceFixedActive ? (n(a.spacingAllScore)-n(b.spacingAllScore)) : 0)
     || (n(a.avoidableSaturday)-n(b.avoidableSaturday))
     || (n(a.maxOver)-n(b.maxOver))
     || (n(a.worst)-n(b.worst))
@@ -3186,6 +3259,8 @@ function linkedScorePackForCombos(groupRows, comboByVoc, plan, scored, matrix, f
     ok: scored.ok ? 0 : 1,
     commonShortfall: fixedShortfall,
     fixedFullShortfall,
+    forceFixedActive: groupRows.some(r=>getFixedDeliveryDays(r.vocativo).length && shouldForceAllFixedDeliveries(r.vocativo)) ? 1 : 0,
+    forceFixedTransitScore: groupRows.reduce((sum,r)=>sum + (getFixedDeliveryDays(r.vocativo).length && shouldForceAllFixedDeliveries(r.vocativo) ? fixedTransitAdherenceScore(r, comboByVoc[r.vocativo] || [], {linkedDeliveryPlan:plan}) : 0), 0),
     sharedShortfall: Math.max(0, Math.min(...groupRows.map(r=>(comboByVoc[r.vocativo] || []).length)) - common.length),
     distinctLoadDates: [...new Set(Object.values(comboByVoc).flat().map(Number))].length,
     anchorShortfall,
@@ -3448,6 +3523,8 @@ function makeLinkedScheduleCandidate(groupRows, groupSequence){
     commonShortfall,
     fixedFullShortfall,
     anchorShortfall,
+    forceFixedTransitScore: groupRows.reduce((sum,r)=>sum + (getFixedDeliveryDays(r.vocativo).length && shouldForceAllFixedDeliveries(r.vocativo) ? fixedTransitAdherenceScore(r, comboByVoc[r.vocativo] || [], {linkedDeliveryPlan:linkedPlan}) : 0), 0),
+    forceFixedActive: groupRows.some(r=>getFixedDeliveryDays(r.vocativo).length && shouldForceAllFixedDeliveries(r.vocativo)),
     avoidableSaturday: groupRows.reduce((sum,r)=>sum + linkedRowSaturdayPreferenceScore(r, comboByVoc[r.vocativo] || []), 0),
     linkedWeekPenalty: linkedPlan.weekPenalty,
     linkedGap: linkedPlan.gap,
