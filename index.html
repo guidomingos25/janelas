@@ -703,7 +703,7 @@ html[data-theme="dark"] .vocCard.status-nao-atende{border-left-color:var(--bad)!
       <div class="ruleGrid">
         <div class="rule"><b>EXW</b><br>Se “não conta”: EXW + coleta. Caso contrário: EXW + coleta - 1.</div>
         <div class="rule"><b>FCA</b><br>Se “não conta”: PRAZO FCA + consolidação FCA + 1. Caso contrário: PRAZO FCA + consolidação FCA.</div>
-        <div class="rule"><b>Prazo útil</b><br>O prazo conta em dias corridos, descontando os dias não úteis marcados. Se o limite cair no fim de semana e não houver entrega fixa em sábado/domingo, o atendimento é aceito até o próximo dia útil.</div><div class="rule"><b>Entrega fixa</b><br>Quando marcada, a entrega só ocorre nesses dias. Sábado e domingo podem ser selecionados para clientes que recebem nesses dias.</div>
+        <div class="rule"><b>Prazo efetivo</b><br>O prazo conta em dias corridos, descontando os dias não úteis marcados. Se o limite cair em fim de semana ou em dia sem recebimento do cliente, o SLA é aceito até a próxima entrega válida.</div><div class="rule"><b>Entrega fixa</b><br>Quando marcada, a entrega só ocorre nesses dias. Esses dias também definem a próxima data válida para extensão do SLA.</div>
       </div>
     </div>
   </section>
@@ -1593,18 +1593,30 @@ function hasWeekendFixedDelivery(row){
   return fixed.some(d => Number(d) === 0 || Number(d) === 6);
 }
 function effectiveDeadlineForReceipt(row, deadline, receiptDow, nonBusiness){
-  // Regra de prazo em fim de semana:
-  // se a data limite calculada cair em SÁBADO ou DOMINGO, e o cliente não tiver
-  // entrega fixa no fim de semana, o prazo de atendimento é estendido até o
-  // próximo dia útil. Essa regra muda apenas a comparação de prazo, não força
-  // novas datas de entrega nem altera o transit time.
+  // Regra de prazo efetivo de SLA:
+  // se a data limite calculada cair em um dia em que o cliente não recebe,
+  // o prazo de atendimento é estendido até o próximo dia válido de recebimento.
+  // Para vocativos com ENTREGAS_FIXAS, os dias válidos são exatamente os dias
+  // configurados em entrega fixa. Para vocativos sem entrega fixa, mantém a
+  // regra geral dos dias permitidos de entrega. Essa função altera somente a
+  // comparação de SLA; não muda transit time, geração de janelas, vínculos,
+  // quantidade de cargas nem prioridade de carregamento.
   const base = Math.ceil(num(deadline));
-  if(base <= 0 || hasWeekendFixedDelivery(row)){
+  if(base <= 0){
     return {deadline:base, extended:false, dueDay:null, extendedToDay:null, extraDays:0};
   }
 
   const blocked = new Set();
   (nonBusiness || new Set()).forEach(d => blocked.add(Number(d)));
+
+  const fixed = getFixedDeliveryDays(row && row.vocativo);
+  const receivingDays = fixed.length
+    ? [...new Set(fixed.map(Number))].filter(d => d >= 0 && d <= 6).sort((a,b)=>a-b)
+    : allowedDeliveryDays(row || {}).map(Number).filter(d => d >= 0 && d <= 6);
+
+  if(!receivingDays.length){
+    return {deadline:base, extended:false, dueDay:null, extendedToDay:null, extraDays:0};
+  }
 
   let count=0;
   let dueOffset=null;
@@ -1619,7 +1631,11 @@ function effectiveDeadlineForReceipt(row, deadline, receiptDow, nonBusiness){
     }
   }
 
-  if(dueDay !== 0 && dueDay !== 6){
+  if(dueDay === null){
+    return {deadline:base, extended:false, dueDay:null, extendedToDay:null, extraDays:0};
+  }
+
+  if(receivingDays.includes(dueDay)){
     return {deadline:base, extended:false, dueDay, extendedToDay:dueDay, extraDays:0};
   }
 
@@ -1627,7 +1643,7 @@ function effectiveDeadlineForReceipt(row, deadline, receiptDow, nonBusiness){
   for(let offset=(dueOffset ?? 0)+1; offset<90; offset++){
     const dow=(Number(receiptDow)+offset)%7;
     if(!blocked.has(dow)) adjusted++;
-    if(dow >= 1 && dow <= 5 && !blocked.has(dow)){
+    if(receivingDays.includes(dow)){
       return {
         deadline:Math.max(base, adjusted),
         extended:true,
