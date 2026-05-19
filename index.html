@@ -236,6 +236,11 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 .forceFixedToggle.active{background:transparent;color:#111827}
 .forceFixedToggle span{white-space:normal;line-height:1.15}
 .forceFixedToggle:hover{color:var(--brand)}
+.fixedLoadDeliveryRows{display:grid;gap:6px;margin-top:8px}
+.fixedLoadDeliveryRow{display:grid;grid-template-columns:72px minmax(120px,1fr);gap:6px;align-items:center}
+.fixedLoadDeliveryTag{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;color:#374151;border-radius:999px;padding:5px 7px;font-size:9.5px;font-weight:950;white-space:nowrap}
+.fixedLoadDeliverySelect{min-height:28px!important;border-radius:8px!important;font-size:10.5px!important;padding:5px 7px!important;width:100%}
+.fixedLoadDeliveryNote{margin-top:6px;font-size:9.5px;line-height:1.25;color:var(--muted);font-weight:800}
 @media(max-width:760px){
   main{padding-left:10px;padding-right:10px}
   header{padding-left:14px;padding-right:14px}
@@ -526,6 +531,8 @@ html[data-theme="dark"] .day.load, html[data-theme="dark"] .simpleBox.load{backg
 html[data-theme="dark"] .day.deliv, html[data-theme="dark"] .simpleBox.delivery{background:#052e1a!important;color:#86efac!important;border-color:#166534!important}
 html[data-theme="dark"] .day.off{background:#1e293b!important;color:#94a3b8!important}
 html[data-theme="dark"] .cycle, html[data-theme="dark"] .simpleZoneBadge, html[data-theme="dark"] .simpleZoneBadge.isZone, html[data-theme="dark"] .auxVehicle, html[data-theme="dark"] .linkFilterToggle, html[data-theme="dark"] .restrictionPill.warn, html[data-theme="dark"] .simpleVocPill.warn{background:#082f49!important;color:#7dd3fc!important;border-color:#1e3a5f!important}
+html[data-theme="dark"] .fixedLoadDeliveryTag{background:#0b1220!important;color:#cbd5e1!important;border-color:#334155!important}
+html[data-theme="dark"] .fixedLoadDeliverySelect{background:#0b1220!important;color:#e5e7eb!important;border-color:#334155!important}
 html[data-theme="dark"] .linkFilterToggle.active{background:#0284c7!important;border-color:#38bdf8!important;color:#f8fafc!important}
 html[data-theme="dark"] .badge.good{background:#052e1a;color:#86efac;border-color:#166534}html[data-theme="dark"] .badge.warn{background:#3b2606;color:#fde68a;border-color:#92400e}html[data-theme="dark"] .badge.bad{background:#3b0d12;color:#fecaca;border-color:#7f1d1d}
 html[data-theme="dark"] .ruleAlert{background:#3b0d12!important;border-color:#7f1d1d!important;color:#fecaca!important}html[data-theme="dark"] .ruleAlert b{color:#fee2e2!important}
@@ -653,7 +660,7 @@ html[data-theme="dark"] .vocCard.status-nao-atende{border-left-color:var(--bad)!
     </div>
     <div class="headerNote">
       <b>Regras ativas</b><br>
-      Recebimento conta dentro do prazo, porém o início do prazo só é simulado de segunda a sexta, pois não há recebimento aos sábados e domingos. O primeiro carregamento só pode ocorrer no dia seguinte. Carregamentos: conforme regime selecionado na entrada da filial. Entrega padrão: segunda a sexta. Se marcar entrega fixa, a entrega é forçada nos dias escolhidos, inclusive sábado e domingo; a aplicação usa o mínimo de janelas possível que atenda o prazo. Se marcar carregamento fixo e acionar FORÇAR CARREGAMENTOS FIXOS, a carga será avaliada nos dias definidos pela empresa, calculando o transit time a partir desses carregamentos e indicando se atende ao SLA. Vocativos vinculados usam uma combinação comum de carregamento, inclusive com entregas fixas quando o transit time permite ou há folga para entrega.
+      Recebimento conta dentro do prazo, porém o início do prazo só é simulado de segunda a sexta, pois não há recebimento aos sábados e domingos. O primeiro carregamento só pode ocorrer no dia seguinte. Carregamentos: conforme regime selecionado na entrada da filial. Entrega padrão: segunda a sexta. Se marcar entrega fixa, a entrega é forçada nos dias escolhidos, inclusive sábado e domingo; a aplicação usa o mínimo de janelas possível que atenda o prazo. Se marcar carregamento fixo e acionar FORÇAR CARREGAMENTOS FIXOS, a carga será avaliada nos dias definidos pela empresa; quando houver entrega informada para a carga fixa, o prazo real será a distância até a próxima entrega selecionada, sem obrigar o transit time mínimo. Vocativos vinculados usam uma combinação comum de carregamento, inclusive com entregas fixas quando o transit time permite ou há folga para entrega.
     </div>
   </div>
 </header>
@@ -704,7 +711,7 @@ html[data-theme="dark"] .vocCard.status-nao-atende{border-left-color:var(--bad)!
       <div class="ruleGrid">
         <div class="rule"><b>EXW</b><br>Se “não conta”: EXW + coleta. Caso contrário: EXW + coleta - 1.</div>
         <div class="rule"><b>FCA</b><br>Se “não conta”: PRAZO FCA + consolidação FCA + 1. Caso contrário: PRAZO FCA + consolidação FCA.</div>
-        <div class="rule"><b>Prazo efetivo</b><br>O prazo conta em dias corridos, descontando os dias não úteis marcados. Se o limite cair em fim de semana ou em dia sem recebimento do cliente, o SLA é aceito até a próxima entrega válida.</div><div class="rule"><b>Entrega fixa</b><br>Quando marcada, a entrega só ocorre nesses dias. Esses dias também definem a próxima data válida para extensão do SLA.</div><div class="rule"><b>Carregamento fixo</b><br>Quando forçado, a carga usa os dias definidos pela empresa, calcula o transit time a partir da carga e mostra se esses dias atendem ao SLA.</div>
+        <div class="rule"><b>Prazo efetivo</b><br>O prazo conta em dias corridos, descontando os dias não úteis marcados. Se o limite cair em fim de semana ou em dia sem recebimento do cliente, o SLA é aceito até a próxima entrega válida.</div><div class="rule"><b>Entrega fixa</b><br>Quando marcada, a entrega só ocorre nesses dias. Esses dias também definem a próxima data válida para extensão do SLA.</div><div class="rule"><b>Carregamento fixo</b><br>Quando forçado, a carga usa os dias definidos pela empresa. Se uma entrega for indicada para a carga fixa, o prazo real conta até a próxima ocorrência desse dia; entrega fixa continua tendo prioridade.</div>
       </div>
     </div>
   </section>
@@ -889,6 +896,7 @@ function loadConfig(){
       nonBusinessByVocativo: raw.nonBusinessByVocativo || {},
       fixedDeliveryByVocativo: raw.fixedDeliveryByVocativo || {},
       fixedLoadByVocativo: raw.fixedLoadByVocativo || {},
+      fixedLoadDeliveryByVocativo: raw.fixedLoadDeliveryByVocativo || {},
       linkedByVocativo: raw.linkedByVocativo || {},
       deliveryOrderByVocativo: raw.deliveryOrderByVocativo || {},
       sameDayDeliveryByVocativo: raw.sameDayDeliveryByVocativo || {},
@@ -896,7 +904,7 @@ function loadConfig(){
       forceAllFixedLoadsByVocativo: raw.forceAllFixedLoadsByVocativo || {}
     };
   }catch(e){
-    return {nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}};
+    return {nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, fixedLoadDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}};
   }
 }
 function ensureConfigShape(){
@@ -904,6 +912,7 @@ function ensureConfigShape(){
   CONFIG.nonBusinessByVocativo = CONFIG.nonBusinessByVocativo || {};
   CONFIG.fixedDeliveryByVocativo = CONFIG.fixedDeliveryByVocativo || {};
   CONFIG.fixedLoadByVocativo = CONFIG.fixedLoadByVocativo || {};
+  CONFIG.fixedLoadDeliveryByVocativo = CONFIG.fixedLoadDeliveryByVocativo || {};
   CONFIG.linkedByVocativo = CONFIG.linkedByVocativo || {};
   CONFIG.deliveryOrderByVocativo = CONFIG.deliveryOrderByVocativo || {};
   CONFIG.sameDayDeliveryByVocativo = CONFIG.sameDayDeliveryByVocativo || {};
@@ -923,6 +932,31 @@ function dayListToIndexes(list){
   return [...new Set(list.map(dayToIndex).filter(v=>v!==null))].sort((a,b)=>a-b);
 }
 function indexesToDayList(list){ return (list||[]).map(Number).filter(d=>d>=0 && d<=6).sort((a,b)=>a-b).map(i=>DAYS[i]); }
+function normalizeFixedLoadDeliveryMap(raw){
+  const out={};
+  if(raw && typeof raw === 'object' && !Array.isArray(raw)){
+    Object.entries(raw).forEach(([load, delivery])=>{
+      const l=dayToIndex(load);
+      const d=dayToIndex(delivery);
+      if(l!==null && d!==null) out[l]=d;
+    });
+    return out;
+  }
+  String(raw || '').split(/[;,|]/).forEach(part=>{
+    const txt=String(part || '').trim();
+    if(!txt) return;
+    const pieces=txt.split(/(?:->|=>|=|:|\/)/).map(x=>x.trim()).filter(Boolean);
+    if(pieces.length < 2) return;
+    const l=dayToIndex(pieces[0]);
+    const d=dayToIndex(pieces[1]);
+    if(l!==null && d!==null) out[l]=d;
+  });
+  return out;
+}
+function fixedLoadDeliveryMapToText(map){
+  const clean=normalizeFixedLoadDeliveryMap(map);
+  return Object.keys(clean).map(Number).sort((a,b)=>a-b).map(loadDay=>`${DAYS[loadDay]}=${DAYS[clean[loadDay]]}`).join(', ');
+}
 function splitVocativoList(value){
   const arr = Array.isArray(value) ? value : String(value || '').split(',');
   return [...new Set(arr.map(v=>String(v||'').trim()).filter(Boolean))];
@@ -932,13 +966,14 @@ function normalizeYesNoFront(value){
   return (s==='SIM' || s==='S' || s==='YES' || s==='TRUE' || s==='1') ? 'SIM' : 'NÃO';
 }
 function applyBackendConfigs(configs){
-  CONFIG = {nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}};
+  CONFIG = {nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, fixedLoadDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}};
   BACKEND_CONFIG_VOCATIVOS = new Set();
   Object.entries(configs || {}).forEach(([voc,cfg])=>{
     BACKEND_CONFIG_VOCATIVOS.add(voc);
     const off=dayListToIndexes(cfg.diasNaoUteis || cfg.DIAS_NAO_UTEIS || '');
     const fixed=dayListToIndexes(cfg.entregasFixas || cfg.ENTREGAS_FIXAS || '');
     const fixedLoad=dayListToIndexes(cfg.carregamentosFixos || cfg.CARREGAMENTOS_FIXOS || cfg.cargasFixas || cfg.CARGAS_FIXAS || '');
+    const fixedLoadDelivery=normalizeFixedLoadDeliveryMap(cfg.entregasPorCarregamentoFixo || cfg.ENTREGAS_POR_CARREGAMENTO_FIXO || cfg.entregaPorCargaFixa || cfg.ENTREGA_POR_CARGA_FIXA || cfg.fixedLoadDeliveryMap || cfg.FIXED_LOAD_DELIVERY_MAP || '');
     const linkedList=splitVocativoList(cfg.vincularComLista || cfg.vincularCom || cfg.VINCULAR_COM || cfg.vinculadoCom || '').filter(v=>v && v!==voc);
     const ordem=Number(cfg.ordemEntrega || cfg.ORDEM_ENTREGA || cfg.ordem || 0);
     const mesmoDia=normalizeYesNoFront(cfg.entregaMesmoDia || cfg.ENTREGA_MESMO_DIA || cfg.mesmoDia || 'NÃO');
@@ -947,6 +982,7 @@ function applyBackendConfigs(configs){
     if(off.length) CONFIG.nonBusinessByVocativo[voc]=off;
     if(fixed.length) CONFIG.fixedDeliveryByVocativo[voc]=fixed;
     if(fixedLoad.length) CONFIG.fixedLoadByVocativo[voc]=fixedLoad;
+    if(Object.keys(fixedLoadDelivery).length) CONFIG.fixedLoadDeliveryByVocativo[voc]=fixedLoadDelivery;
     if(linkedList.length) CONFIG.linkedByVocativo[voc]=linkedList;
     if(Number.isFinite(ordem) && ordem>0) CONFIG.deliveryOrderByVocativo[voc]=Math.floor(ordem);
     CONFIG.sameDayDeliveryByVocativo[voc]=mesmoDia;
@@ -1171,6 +1207,7 @@ function getConfigForVocativo(vocativo){
   const diasNaoUteis = indexesToDayList(CONFIG.nonBusinessByVocativo[vocativo] || []);
   const entregasFixas = indexesToDayList(CONFIG.fixedDeliveryByVocativo[vocativo] || []);
   const carregamentosFixos = indexesToDayList(CONFIG.fixedLoadByVocativo[vocativo] || []);
+  const entregasPorCarregamentoFixo = fixedLoadDeliveryMapToText(CONFIG.fixedLoadDeliveryByVocativo && CONFIG.fixedLoadDeliveryByVocativo[vocativo]);
   const ordemEntrega = getDeliveryOrder(vocativo);
   const entregaMesmoDia = getEntregaMesmoDia(vocativo);
   const forcarTodasEntregasFixas = shouldForceAllFixedDeliveries(vocativo) ? 'SIM' : 'NÃO';
@@ -1194,6 +1231,9 @@ function getConfigForVocativo(vocativo){
 
     carregamentosFixos,
     CARREGAMENTOS_FIXOS: carregamentosFixos,
+
+    entregasPorCarregamentoFixo,
+    ENTREGAS_POR_CARREGAMENTO_FIXO: entregasPorCarregamentoFixo,
 
     forcarTodasEntregasFixas,
     FORCAR_TODAS_ENTREGAS_FIXAS: forcarTodasEntregasFixas,
@@ -1415,6 +1455,39 @@ function cssEsc(s){ return (window.CSS && CSS.escape) ? CSS.escape(String(s)) : 
 function getNonBusinessDays(vocativo){ return (CONFIG.nonBusinessByVocativo[vocativo] || []).map(Number).filter(d=>d>=0 && d<=6); }
 function getFixedDeliveryDays(vocativo){ return (CONFIG.fixedDeliveryByVocativo[vocativo] || []).map(Number).filter(d=>d>=0 && d<=6); }
 function getFixedLoadDays(vocativo){ return (CONFIG.fixedLoadByVocativo[vocativo] || []).map(Number).filter(d=>d>=0 && d<=6); }
+function getFixedLoadDeliveryMap(vocativo){
+  ensureConfigShape();
+  return normalizeFixedLoadDeliveryMap(CONFIG.fixedLoadDeliveryByVocativo && CONFIG.fixedLoadDeliveryByVocativo[vocativo]);
+}
+function getFixedLoadDeliveryDay(vocativo, loadDay){
+  const map=getFixedLoadDeliveryMap(vocativo);
+  const d=map[Number(loadDay)];
+  return Number.isFinite(Number(d)) && Number(d)>=0 && Number(d)<=6 ? Number(d) : null;
+}
+function setFixedLoadDeliveryDay(vocativo, loadDay, deliveryDay){
+  ensureConfigShape();
+  const l=Number(loadDay);
+  if(!Number.isFinite(l) || l<0 || l>6) return;
+  const map=getFixedLoadDeliveryMap(vocativo);
+  const d=dayToIndex(deliveryDay);
+  if(d===null) delete map[l];
+  else map[l]=d;
+  const validLoads=new Set(getFixedLoadDays(vocativo));
+  Object.keys(map).forEach(k=>{ if(!validLoads.has(Number(k))) delete map[k]; });
+  if(Object.keys(map).length) CONFIG.fixedLoadDeliveryByVocativo[vocativo]=map;
+  else delete CONFIG.fixedLoadDeliveryByVocativo[vocativo];
+  markDirty(vocativo);
+}
+function cleanupFixedLoadDeliveryMap(vocativo){
+  ensureConfigShape();
+  const map=getFixedLoadDeliveryMap(vocativo);
+  const validLoads=new Set(getFixedLoadDays(vocativo));
+  let changed=false;
+  Object.keys(map).forEach(k=>{ if(!validLoads.has(Number(k))){ delete map[k]; changed=true; } });
+  if(Object.keys(map).length) CONFIG.fixedLoadDeliveryByVocativo[vocativo]=map;
+  else if(CONFIG.fixedLoadDeliveryByVocativo && CONFIG.fixedLoadDeliveryByVocativo[vocativo]){ delete CONFIG.fixedLoadDeliveryByVocativo[vocativo]; changed=true; }
+  return changed;
+}
 function shouldForceAllFixedDeliveries(vocativo){
   ensureConfigShape();
   return !!(CONFIG.forceAllFixedDeliveriesByVocativo && CONFIG.forceAllFixedDeliveriesByVocativo[vocativo]);
@@ -1438,17 +1511,22 @@ function setForceAllFixedLoads(vocativo, checked){
 function fixedLoadInfoForRow(row){
   const voc=row && row.vocativo;
   const selected=[...new Set(getFixedLoadDays(voc))].sort((a,b)=>a-b);
-  const active=!!(voc && selected.length && shouldForceAllFixedLoads(voc));
+  const fixedDeliveryActive=!!(voc && getFixedDeliveryDays(voc).length);
+  const requested=!!(voc && selected.length && shouldForceAllFixedLoads(voc));
+  const active=!!(requested && !fixedDeliveryActive);
   const allowed=getLoadIndexes();
   const combo=selected.filter(d=>allowed.includes(Number(d))).sort((a,b)=>a-b);
-  return {active, selected, combo, invalid: active && (!combo.length || combo.length !== selected.length)};
+  return {active, requested, fixedDeliveryIgnored:requested && fixedDeliveryActive, selected, combo, invalid: active && (!combo.length || combo.length !== selected.length)};
 }
 function hasForcedFixedLoads(row){ const info=fixedLoadInfoForRow(row); return !!(info && info.active); }
 function fixedLoadReason(row, info, ev){
   const selected=(info && info.selected || []).map(i=>DAYS[i]).join(', ');
   const combo=(info && info.combo || []).map(i=>DAYS[i]).join(', ');
   if(info && info.invalid) return `Carregamento fixo: ${selected || 'nenhum dia válido'} não está permitido no regime de carga atual (${getLoadModeLabel()}).`;
-  const base=`Carregamento fixo: ${combo || selected} definido pela empresa. Transit time calculado a partir do carregamento fixo.`;
+  const mapped=fixedLoadDeliveryMapToText(getFixedLoadDeliveryMap(row && row.vocativo));
+  const base=mapped
+    ? `Carregamento fixo: ${combo || selected} definido pela empresa. Entrega da carga fixa: ${mapped}. Prazo real calculado entre a carga e a próxima entrega selecionada.`
+    : `Carregamento fixo: ${combo || selected} definido pela empresa. Sem entrega por carga fixa selecionada, o transit time continua sendo usado a partir do carregamento fixo.`;
   if(ev && !ev.ok) return `${base} Não atende ao SLA com os dias de carga fixos selecionados.`;
   return base;
 }
@@ -1816,7 +1894,7 @@ function buildLinkedDeliveryPlan(groupRows, combo){
       const base=assignedBase || resolveDeliveryFromLoad(row, loadDay, row.transitTime, allowedDeliveryDays(row), {allowFixedDeliverySlack:true});
       if(!base){ plan.complete=false; return plan; }
       let delivery={...base, linkedAdjusted:false};
-      if(idx>0){
+      if(idx>0 && !delivery.fixedLoadDeliveryApplied){
         const sameDay=getEntregaMesmoDia(row.vocativo)==='SIM';
         if(sameDay){
           // Mesmo dia: tenta entregar exatamente no mesmo dia que o líder.
@@ -1914,7 +1992,7 @@ function buildLinkedDeliveryPlanForCombos(groupRows, comboByVoc){
       if(!base){ plan.complete=false; return {...plan, commonCombo:shared}; }
 
       let delivery={...base, linkedAdjusted:false};
-      if(idx>0){
+      if(idx>0 && !delivery.fixedLoadDeliveryApplied){
         const sameDay=getEntregaMesmoDia(row.vocativo)==='SIM';
         if(sameDay){
           // Mesmo dia: tenta entregar exatamente no mesmo dia que o líder.
@@ -2123,9 +2201,35 @@ function getFixedDeliveryPairs(row, transit){
     };
   }).filter(Boolean);
 }
+function fixedLoadDeliveryFromLoad(row, loadDay, transit, options={}){
+  if(!row || getFixedDeliveryDays(row.vocativo).length) return null;
+  const info=fixedLoadInfoForRow(row);
+  if(!info || !info.active) return null;
+  const targetDay=getFixedLoadDeliveryDay(row.vocativo, loadDay);
+  if(targetDay === null) return null;
+  let elapsed=diffForwardDays(Number(loadDay), Number(targetDay));
+  // Como a regra é "próximo dia de entrega", carga e entrega no mesmo dia da semana
+  // significam a próxima ocorrência semanal, não D+0.
+  if(elapsed===0) elapsed=7;
+  const transitDays=Math.max(0, Math.ceil(num(transit)));
+  return {
+    day:Number(targetDay),
+    travelElapsed:elapsed,
+    transitTime:transitDays,
+    calendarSpanFromLoad:elapsed + 1,
+    fixedLoadDeliveryApplied:true,
+    fixedLoadDeliveryIgnoresTransit: elapsed !== transitDays,
+    extraWaitingDays:elapsed - transitDays
+  };
+}
 function resolveDeliveryFromLoad(row, loadDay, transit, allowedDays, options={}){
   const fixed = getFixedDeliveryDays(row.vocativo);
   if(fixed.length) return fixedDeliveryFromLoad(loadDay, transit, fixed, options);
+  const fixedLoadDelivery=fixedLoadDeliveryFromLoad(row, loadDay, transit, options);
+  if(fixedLoadDelivery) return fixedLoadDelivery;
+  // Auto por TT: sem entrega informada para a carga fixa, volta integralmente à regra padrão.
+  // A regra padrão usa allowedDeliveryDays(row), que sem entrega fixa permanece SEG-SEX,
+  // respeitando dias não úteis e sem considerar sábado/domingo como entrega automática.
   return deliveryFromLoad(loadDay, transit, allowedDays);
 }
 function fixedDeliveryCheck(row, transit, combo, options={}){
@@ -2236,7 +2340,7 @@ function evaluateComboForRow(row, deadline, transit, combo, options={}){
     const assignedFixed = fixedCheck.fixed.length ? assignFixedDeliveriesToCombo(row, combo, {...options, allowFixedDeliverySlack:true}) : null;
     const pairs=combo.map(i=>{
       const de=(assignedFixed && assignedFixed.map && assignedFixed.map[Number(i)]) || resolveDeliveryFromLoad(row,i,transit,allowedDays,options);
-      return de ? {load:DAYS[i],delivery:DAYS[de.day],travelElapsed:de.travelElapsed,adjustedFromSunday:de.adjustedFromSunday,fixedSlackApplied:!!de.fixedSlackApplied} : null;
+      return de ? {load:DAYS[i],delivery:DAYS[de.day],travelElapsed:de.travelElapsed,adjustedFromSunday:de.adjustedFromSunday,fixedSlackApplied:!!de.fixedSlackApplied,fixedLoadDeliveryApplied:!!de.fixedLoadDeliveryApplied} : null;
     }).filter(Boolean);
     return {ok:false, reason:fixedCheck.reason, combo, loadDays:combo.map(i=>DAYS[i]), deliveryDays:pairs.map(p=>p.delivery), windowPairs:pairs, worst:999, worstCalendar:999, total:999, maxOver:9999, minSlack:null, effectiveDeadlineWorst:deadline, deadlineAdjustments:[], worstReceiptDay:'—', worstLoadDay:'—', worstDeliveryDay:'—'};
   }
@@ -2303,7 +2407,7 @@ function evaluateComboForRow(row, deadline, transit, combo, options={}){
   const pairs=combo.map(i=>{
     const planned=getPlannedDelivery(options,row.vocativo,i);
     const de=planned || (assignedFixed && assignedFixed.map && assignedFixed.map[Number(i)]) || resolveDeliveryFromLoad(row,i,transit,allowedDays,options);
-    return de ? {load:DAYS[i],delivery:DAYS[de.day],travelElapsed:de.travelElapsed,adjustedFromSunday:de.adjustedFromSunday,linkedAdjusted:!!de.linkedAdjusted,fixedSlackApplied:!!de.fixedSlackApplied} : null;
+    return de ? {load:DAYS[i],delivery:DAYS[de.day],travelElapsed:de.travelElapsed,adjustedFromSunday:de.adjustedFromSunday,linkedAdjusted:!!de.linkedAdjusted,fixedSlackApplied:!!de.fixedSlackApplied,fixedLoadDeliveryApplied:!!de.fixedLoadDeliveryApplied} : null;
   }).filter(Boolean);
   const deliveryDays = fixedCheck.fixed.length
     ? [...new Set(pairs.map(p=>p.delivery))].sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b))
@@ -3628,7 +3732,7 @@ function findBestLinkedSchedule(row){
   // se a matriz do grupo for SEG/QUA/SAB, qualquer vocativo com 1 janela usa SEG,
   // com 2 janelas usa SEG/QUA e com 3 janelas usa SEG/QUA/SAB.
   // Assim, os vocativos nunca criam dias diferentes para a mesma camada de carregamento.
-  const cacheKey=groupRows.map(r=>r.vocativo).sort((a,b)=>a.localeCompare(b,'pt-BR')).join('|||') + '::' + groupRows.map(r=>`${r.vocativo}:${getDeliveryOrder(r.vocativo)||''}:${getEntregaMesmoDia(r.vocativo)}:${shouldForceAllFixedDeliveries(r.vocativo)?'FORCAR':'OTIMIZAR'}:${getFixedDeliveryDays(r.vocativo).join('-')}:${shouldForceAllFixedLoads(r.vocativo)?'CARGA_FIXA':'CARGA_AUTO'}:${getFixedLoadDays(r.vocativo).join('-')}:${getNonBusinessDays(r.vocativo).join('-')}`).join('|') + '::' + getLoadIndexes().join(',');
+  const cacheKey=groupRows.map(r=>r.vocativo).sort((a,b)=>a.localeCompare(b,'pt-BR')).join('|||') + '::' + groupRows.map(r=>`${r.vocativo}:${getDeliveryOrder(r.vocativo)||''}:${getEntregaMesmoDia(r.vocativo)}:${shouldForceAllFixedDeliveries(r.vocativo)?'FORCAR':'OTIMIZAR'}:${getFixedDeliveryDays(r.vocativo).join('-')}:${shouldForceAllFixedLoads(r.vocativo)?'CARGA_FIXA':'CARGA_AUTO'}:${getFixedLoadDays(r.vocativo).join('-')}:${fixedLoadDeliveryMapToText(getFixedLoadDeliveryMap(r.vocativo))}:${getNonBusinessDays(r.vocativo).join('-')}`).join('|') + '::' + getLoadIndexes().join(',');
   if(LINKED_SCHEDULE_CACHE.has(cacheKey)) return LINKED_SCHEDULE_CACHE.get(cacheKey);
 
   const okCandidates=[];
@@ -3672,7 +3776,7 @@ function enrich(r){
   const w=evaluateWindows(r,parts.menorPrazo,r.transitTime,linkedSchedule);
   const folga = w.worst===999 ? null : (Number.isFinite(Number(w.minSlack)) ? Number(w.minSlack) : parts.menorPrazo - w.worst);
   const status = !w.ok ? 'impossivel' : folga<=1 ? 'critico' : 'atende';
-  return {...r,...parts,...w,folga,status,nonBusiness:getNonBusinessDays(r.vocativo),fixedDelivery:getFixedDeliveryDays(r.vocativo),fixedLoad:getFixedLoadDays(r.vocativo),forceAllFixedDeliveries:shouldForceAllFixedDeliveries(r.vocativo),forceAllFixedLoads:shouldForceAllFixedLoads(r.vocativo),linkedWith:getLinkedVocativo(r.vocativo),linkedWithList:getLinkedVocativos(r.vocativo),deliveryOrder:getDeliveryOrder(r.vocativo),entregaMesmoDia:getEntregaMesmoDia(r.vocativo)};
+  return {...r,...parts,...w,folga,status,nonBusiness:getNonBusinessDays(r.vocativo),fixedDelivery:getFixedDeliveryDays(r.vocativo),fixedLoad:getFixedLoadDays(r.vocativo),fixedLoadDeliveryMap:getFixedLoadDeliveryMap(r.vocativo),forceAllFixedDeliveries:shouldForceAllFixedDeliveries(r.vocativo),forceAllFixedLoads:shouldForceAllFixedLoads(r.vocativo),linkedWith:getLinkedVocativo(r.vocativo),linkedWithList:getLinkedVocativos(r.vocativo),deliveryOrder:getDeliveryOrder(r.vocativo),entregaMesmoDia:getEntregaMesmoDia(r.vocativo)};
 }
 function configSignatureForVocativo(voc){
   ensureConfigShape();
@@ -3683,6 +3787,7 @@ function configSignatureForVocativo(voc){
     (cfg.nonBusinessByVocativo && cfg.nonBusinessByVocativo[v] || []).join('-'),
     (cfg.fixedDeliveryByVocativo && cfg.fixedDeliveryByVocativo[v] || []).join('-'),
     (cfg.fixedLoadByVocativo && cfg.fixedLoadByVocativo[v] || []).join('-'),
+    fixedLoadDeliveryMapToText(cfg.fixedLoadDeliveryByVocativo && cfg.fixedLoadDeliveryByVocativo[v]),
     (cfg.linkedByVocativo && cfg.linkedByVocativo[v] || []).join('~'),
     (cfg.deliveryOrderByVocativo && cfg.deliveryOrderByVocativo[v]) || '',
     (cfg.sameDayDeliveryByVocativo && cfg.sameDayDeliveryByVocativo[v]) || '',
@@ -3884,6 +3989,7 @@ function getPlanningCardDisplayPairs(row){
       adjustedFromSunday:!!adjusted.adjustedFromSunday,
       linkedAdjusted:!!adjusted.linkedAdjusted,
       fixedSlackApplied:!!adjusted.fixedSlackApplied,
+      fixedLoadDeliveryApplied:!!adjusted.fixedLoadDeliveryApplied,
       panelWindowSequenceAdjusted:!!adjusted.panelWindowSequenceAdjusted
     };
   });
@@ -3975,6 +4081,20 @@ function renderForceFixedLoadToggle(vocativo){
   const active=shouldForceAllFixedLoads(vocativo);
   return `<label class="forceFixedToggle ${active?'active':''}" title="Forçar os dias de carregamento definidos pela empresa e validar o SLA a partir desses carregamentos."><input type="checkbox" data-force-load-voc="${escapeHtml(vocativo)}" ${active?'checked':''}><span>FORÇAR CARREGAMENTOS FIXOS</span></label>`;
 }
+function renderFixedLoadDeliveryControls(vocativo){
+  const loads=getFixedLoadDays(vocativo);
+  if(!loads.length) return '';
+  if(getFixedDeliveryDays(vocativo).length) return '';
+  const map=getFixedLoadDeliveryMap(vocativo);
+  const options='<option value="">Auto por TT</option>'+ALL_DAYS.map(day=>`<option value="${day}">${DAYS[day]}</option>`).join('');
+  return `<div class="fixedLoadDeliveryRows">${loads.map(loadDay=>`
+    <div class="fixedLoadDeliveryRow">
+      <span class="fixedLoadDeliveryTag">${DAYS[loadDay]} →</span>
+      <select class="fixedLoadDeliverySelect" data-fixed-load-delivery-voc="${escapeHtml(vocativo)}" data-fixed-load-day="${loadDay}">
+        ${options.replace(`value="${map[loadDay]}"`, `value="${map[loadDay]}" selected`)}
+      </select>
+    </div>`).join('')}</div>`;
+}
 
 function renderCards(rows){
   if(!rows.length){ cards.innerHTML='<div class="empty card">Nenhum registro encontrado. Verifique a conexão com o Google Planilhas ou os filtros atuais.</div>'; return; }
@@ -4020,6 +4140,7 @@ function renderCards(rows){
               <div class="compactLabel"><label>Carga fixa</label><span class="compactHint">empresa</span></div>
               ${renderDayToggles(r.vocativo,'load')}
               ${renderForceFixedLoadToggle(r.vocativo)}
+              ${renderFixedLoadDeliveryControls(r.vocativo)}
             </div>
           </div>
           <div class="configBlock">
@@ -4029,7 +4150,7 @@ function renderCards(rows){
         </div>
       </div>
       <div class="miniInfo">
-        <div class="metric"><span>Cargas</span><div class="pillLine">${cardLoadDays.map(d=>`<span class="day load">${d}</span>`).join('')}</div>${r.fixedLoad && r.fixedLoad.length ? `<div class="smallmuted">Carga fixa: ${r.fixedLoad.map(i=>DAYS[i]).join(', ')} ${r.forceAllFixedLoads ? '• forçada' : ''}</div>` : ''}</div>
+        <div class="metric"><span>Cargas</span><div class="pillLine">${cardLoadDays.map(d=>`<span class="day load">${d}</span>`).join('')}</div>${r.fixedLoad && r.fixedLoad.length ? `<div class="smallmuted">Carga fixa: ${r.fixedLoad.map(i=>DAYS[i]).join(', ')} ${r.fixedDelivery && r.fixedDelivery.length && r.forceAllFixedLoads ? '• ignorada por entrega fixa' : (r.forceAllFixedLoads ? '• forçada' : '')}${fixedLoadDeliveryMapToText(r.fixedLoadDeliveryMap) ? ' • entrega: '+escapeHtml(fixedLoadDeliveryMapToText(r.fixedLoadDeliveryMap)) : ''}</div>` : ''}</div>
         <div class="metric"><span>Entregas</span><div class="pillLine">${cardDeliveryDays.map(d=>`<span class="day deliv">${d}</span>`).join('') || '<span class="smallmuted">Nenhuma</span>'}</div></div>
         <div class="metric"><span>Não úteis</span><div class="pillLine">${r.nonBusiness.length ? r.nonBusiness.map(i=>`<span class="day off">${DAYS[i]}</span>`).join('') : '<span class="smallmuted">Nenhum</span>'}</div></div>
         <div class="metric"><span>Entrega fixa</span><div class="pillLine">${r.fixedDelivery.length ? r.fixedDelivery.map(i=>`<span class="day deliv">${DAYS[i]}</span>`).join('') : '<span class="smallmuted">Livre seg-sex</span>'}</div></div>
@@ -4065,12 +4186,19 @@ function bindCardEvents(){
       afterCardConfigChange(voc);
     });
   });
+  cards.querySelectorAll('select[data-fixed-load-delivery-voc]').forEach(sel=>{
+    sel.addEventListener('change',()=>{
+      const voc=sel.dataset.fixedLoadDeliveryVoc;
+      setFixedLoadDeliveryDay(voc, sel.dataset.fixedLoadDay, sel.value);
+      afterCardConfigChange(voc);
+    });
+  });
   cards.querySelectorAll('input[data-type]').forEach(input=>{
     input.addEventListener('change',()=>{
       const voc=input.dataset.voc, type=input.dataset.type;
       const checked=[...cards.querySelectorAll(`input[data-voc="${cssEsc(voc)}"][data-type="${type}"]:checked`)].map(x=>Number(x.dataset.day)).sort((a,b)=>a-b);
       if(type==='off'){ if(checked.length) CONFIG.nonBusinessByVocativo[voc]=checked; else delete CONFIG.nonBusinessByVocativo[voc]; }
-      else if(type==='load'){ if(checked.length) CONFIG.fixedLoadByVocativo[voc]=checked; else delete CONFIG.fixedLoadByVocativo[voc]; }
+      else if(type==='load'){ if(checked.length) CONFIG.fixedLoadByVocativo[voc]=checked; else delete CONFIG.fixedLoadByVocativo[voc]; cleanupFixedLoadDeliveryMap(voc); }
       else { if(checked.length) CONFIG.fixedDeliveryByVocativo[voc]=checked; else delete CONFIG.fixedDeliveryByVocativo[voc]; }
       afterCardConfigChange(voc);
     });
@@ -4143,6 +4271,7 @@ function bindCardEvents(){
         delete CONFIG.nonBusinessByVocativo[voc];
         delete CONFIG.fixedDeliveryByVocativo[voc];
         delete CONFIG.fixedLoadByVocativo[voc];
+        delete CONFIG.fixedLoadDeliveryByVocativo[voc];
         delete CONFIG.deliveryOrderByVocativo[voc];
         delete CONFIG.forceAllFixedDeliveriesByVocativo[voc];
         delete CONFIG.forceAllFixedLoadsByVocativo[voc];
@@ -4163,7 +4292,7 @@ document.addEventListener("click", (ev)=>{
 
 function exportCSV(){
   const rows=getFiltered(getAll());
-  const cols=[['filial','Filial'],['cliente','Cliente'],['vocativo','Vocativo'],['ufOrigem','UF Origem'],['cidadeDestino','Cidade destino'],['ufDestino','UF Destino'],['prazoExwReal','Prazo EXW real'],['prazoFcaReal','Prazo FCA real'],['menorPrazo','Menor prazo'],['transitTime','Transit time'],['status','Status'],['cargas','Cargas semanais'],['ciclos','Ciclos carga entrega'],['entregaFixa','Entrega fixa'],['vinculo','Vinculado com'],['ordemEntrega','Ordem entrega'],['maiorVeiculo','Maior veículo'],['entregaMesmoDia','Entrega mesmo dia'],['diasNaoUteis','Dias nao uteis vocativo'],['loadDays','Dias carga'],['deliveryDays','Dias entrega'],['worst','Pior prazo util'],['worstCalendar','Pior prazo corrido'],['worstReceiptDay','Dia recebimento critico'],['worstLoadDay','Dia carga do pior prazo'],['worstDeliveryDay','Dia entrega do pior prazo'],['folga','Folga']];
+  const cols=[['filial','Filial'],['cliente','Cliente'],['vocativo','Vocativo'],['ufOrigem','UF Origem'],['cidadeDestino','Cidade destino'],['ufDestino','UF Destino'],['prazoExwReal','Prazo EXW real'],['prazoFcaReal','Prazo FCA real'],['menorPrazo','Menor prazo'],['transitTime','Transit time'],['status','Status'],['cargas','Cargas semanais'],['ciclos','Ciclos carga entrega'],['entregaCargaFixa','Entrega por carga fixa'],['entregaFixa','Entrega fixa'],['vinculo','Vinculado com'],['ordemEntrega','Ordem entrega'],['maiorVeiculo','Maior veículo'],['entregaMesmoDia','Entrega mesmo dia'],['diasNaoUteis','Dias nao uteis vocativo'],['loadDays','Dias carga'],['deliveryDays','Dias entrega'],['worst','Pior prazo util'],['worstCalendar','Pior prazo corrido'],['worstReceiptDay','Dia recebimento critico'],['worstLoadDay','Dia carga do pior prazo'],['worstDeliveryDay','Dia entrega do pior prazo'],['folga','Folga']];
   const lines=[cols.map(c=>c[1]).join(';')];
 
   // Mantém o CSV do Planejamento de Janelas coerente com a visualização.
@@ -4177,6 +4306,7 @@ function exportCSV(){
 
     if(key==='status') v=getUiStatusLabel(r);
     if(key==='ciclos') v=(displayPairs || []).map(p=>`${p.load}->${p.delivery}`).join(' | ');
+    if(key==='entregaCargaFixa') v=fixedLoadDeliveryMapToText(getFixedLoadDeliveryMap(r.vocativo));
     if(key==='entregaFixa') v=getFixedDeliveryDays(r.vocativo).map(i=>DAYS[i]).join(', ');
     if(key==='vinculo') v=getLinkedVocativos(r.vocativo).join(', ');
     if(key==='ordemEntrega') v=getDeliveryOrder(r.vocativo);
@@ -4381,7 +4511,7 @@ async function selectFilialAndLoad(filial, loadMode){
   setLastFilial(filial);
   setLastLoadMode(loadMode || getLastLoadMode());
   DIRTY_VOCATIVOS.clear();
-  CONFIG={nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}, maxVehicleByVocativo:{}, bodyRestrictionByVocativo:{}};
+  CONFIG={nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, fixedLoadDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}, maxVehicleByVocativo:{}, bodyRestrictionByVocativo:{}};
   saveConfig();
   const overlay=document.getElementById('filialModalOverlay');
   if(overlay) overlay.classList.remove('open');
@@ -4544,7 +4674,7 @@ $('btnReload').addEventListener('click',()=>loadBackendData(true));
 $('btnReset').addEventListener('click',()=>{
   if(confirm('Limpar as configurações dos vocativos exibidos? Depois clique em Salvar alterações para gravar na aba Página2.')){
     const vocs=new Set([...BACKEND_CONFIG_VOCATIVOS, ...BASE_DATA.map(r=>r.vocativo).filter(Boolean)]);
-    CONFIG={nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}, maxVehicleByVocativo:{}, bodyRestrictionByVocativo:{}};
+    CONFIG={nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, fixedLoadDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}, maxVehicleByVocativo:{}, bodyRestrictionByVocativo:{}};
     vocs.forEach(v=>DIRTY_VOCATIVOS.add(v));
     saveConfig(); render(); updateSaveButton();
     setLoadStatus('Configurações limpas na tela. Clique em Salvar alterações para gravar a limpeza na aba Página2.','loading');
@@ -5424,13 +5554,16 @@ applyBackendConfigs = function(configs){
   CONFIG.maxVehicleByVocativo = CONFIG.maxVehicleByVocativo || {};
   CONFIG.bodyRestrictionByVocativo = CONFIG.bodyRestrictionByVocativo || {};
   CONFIG.fixedLoadByVocativo = CONFIG.fixedLoadByVocativo || {};
+  CONFIG.fixedLoadDeliveryByVocativo = CONFIG.fixedLoadDeliveryByVocativo || {};
   CONFIG.forceAllFixedLoadsByVocativo = CONFIG.forceAllFixedLoadsByVocativo || {};
   Object.entries(configs || {}).forEach(([voc,cfg])=>{
     const maxV=normalizeVehicleRestriction(cfg.maiorVeiculoPermitido || cfg.MAIOR_VEICULO_PERMITIDO || cfg.maiorVeiculo || cfg.MAIOR_VEICULO || '');
     const body=normalizeBodyRestriction(cfg.restricaoCarroceria || cfg.RESTRICAO_CARROCERIA || cfg.tipoCarroceria || cfg.TIPO_CARROCERIA || '');
     const fixedLoad=dayListToIndexes(cfg.carregamentosFixos || cfg.CARREGAMENTOS_FIXOS || cfg.cargasFixas || cfg.CARGAS_FIXAS || '');
+    const fixedLoadDelivery=normalizeFixedLoadDeliveryMap(cfg.entregasPorCarregamentoFixo || cfg.ENTREGAS_POR_CARREGAMENTO_FIXO || cfg.entregaPorCargaFixa || cfg.ENTREGA_POR_CARGA_FIXA || cfg.fixedLoadDeliveryMap || cfg.FIXED_LOAD_DELIVERY_MAP || '');
     const forcarCargas=normalizeYesNoFront(cfg.forcarTodosCarregamentosFixos || cfg.FORCAR_TODOS_CARREGAMENTOS_FIXOS || cfg.forcarCarregamentosFixos || cfg.FORCAR_CARREGAMENTOS_FIXOS || 'NÃO');
     if(fixedLoad.length) CONFIG.fixedLoadByVocativo[voc]=fixedLoad;
+    if(Object.keys(fixedLoadDelivery).length) CONFIG.fixedLoadDeliveryByVocativo[voc]=fixedLoadDelivery;
     if(forcarCargas === 'SIM') CONFIG.forceAllFixedLoadsByVocativo[voc]=true;
     if(maxV !== 'SEM RESTRIÇÃO') CONFIG.maxVehicleByVocativo[voc]=maxV;
     if(body !== 'SEM RESTRIÇÃO') CONFIG.bodyRestrictionByVocativo[voc]=body;
@@ -5443,6 +5576,7 @@ getConfigForVocativo = function(vocativo){
   const diasNaoUteis = indexesToDayList(CONFIG.nonBusinessByVocativo[vocativo] || []);
   const entregasFixas = indexesToDayList(CONFIG.fixedDeliveryByVocativo[vocativo] || []);
   const carregamentosFixos = indexesToDayList(CONFIG.fixedLoadByVocativo[vocativo] || []);
+  const entregasPorCarregamentoFixo = fixedLoadDeliveryMapToText(CONFIG.fixedLoadDeliveryByVocativo && CONFIG.fixedLoadDeliveryByVocativo[vocativo]);
   const ordemEntrega = getDeliveryOrder(vocativo);
   const entregaMesmoDia = getEntregaMesmoDia(vocativo);
   const forcarTodasEntregasFixas = shouldForceAllFixedDeliveries(vocativo) ? 'SIM' : 'NÃO';
@@ -5465,6 +5599,9 @@ getConfigForVocativo = function(vocativo){
 
     carregamentosFixos: carregamentosFixos,
     CARREGAMENTOS_FIXOS: carregamentosFixos,
+
+    entregasPorCarregamentoFixo: entregasPorCarregamentoFixo,
+    ENTREGAS_POR_CARREGAMENTO_FIXO: entregasPorCarregamentoFixo,
 
     forcarTodasEntregasFixas: forcarTodasEntregasFixas,
     FORCAR_TODAS_ENTREGAS_FIXAS: forcarTodasEntregasFixas,
