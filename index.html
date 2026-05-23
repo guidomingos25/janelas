@@ -1593,10 +1593,11 @@ function firstLoadScore(combo){
   return days.length ? (order.get(days[0]) ?? 99) : 99;
 }
 function circularLoadSpacingScore(combo){
-  // Desempate operacional para combinações que já ATENDEM o prazo:
-  // distribui as janelas no ciclo da semana de carregamento, evitando tanto dias
-  // seguidos quanto o par SEX -> próxima SEG muito curto. Ex.: em SEG-SEX,
-  // SEG+QUI vence SEG+SEX, pois equilibra SEG->QUI e QUI->próxima SEG.
+  // Preferência operacional para combinações que já ATENDEM o prazo
+  // e possuem a mesma quantidade de janelas: distribui as janelas no ciclo
+  // da semana de carregamento, evitando tanto dias seguidos quanto o par
+  // SEX -> próxima SEG muito curto. Ex.: em SEG-SEX, SEG+QUI vence
+  // SEG+SEX, pois equilibra SEG->QUI e QUI->próxima SEG.
   const allowed=getLoadIndexes().map(Number);
   const order=new Map(allowed.map((d,i)=>[Number(d),i]));
   const days=normalizeLoadComboByOrder(combo);
@@ -1649,9 +1650,10 @@ function fixedTransitAdherenceScore(row, combo, options={}){
 function compareEvalByPrazoThenInicioForRow(row, a, b, options={}){
   if(row && isPlanningFixedDeliveryActive(row.vocativo) && shouldForceAllFixedDeliveries(row.vocativo)){
     return (fixedTransitAdherenceScore(row, a.combo, options)-fixedTransitAdherenceScore(row, b.combo, options))
+      // Se as duas opções atendem com a mesma quantidade, evita SÁB antes do espaçamento.
+      || (saturdayLoadCount(a.combo)-saturdayLoadCount(b.combo))
       || (circularLoadSpacingScore(a.combo)-circularLoadSpacingScore(b.combo))
       || (firstLoadScore(a.combo)-firstLoadScore(b.combo))
-      || (saturdayLoadCount(a.combo)-saturdayLoadCount(b.combo))
       || (a.worst-b.worst)
       || (a.total-b.total)
       || (earlyLoadScore(a.combo)-earlyLoadScore(b.combo))
@@ -1676,20 +1678,27 @@ function linkedForceFixedTransitAdherenceScore(candidate){
   },0);
 }
 function okLoadDistributionScore(combo){
-  // Só deve ser usado para cenários já viáveis e, preferencialmente, depois da
-  // quantidade de janelas. Não muda prazo, TT, vínculo ou entrega fixa.
-  return (firstLoadScore(combo)*1000000000000) + circularLoadSpacingScore(combo);
+  // Só deve ser usado para cenários já viáveis e depois da menor quantidade
+  // de janelas. Não muda prazo, TT, vínculo ou entrega fixa.
+  // Nova prioridade: evita SÁB quando houver alternativa SEG-SEX sem
+  // aumentar janelas; depois avalia espaçamento e usa início da semana
+  // como desempate. Assim SEX+TER vence SEX+SEG, e SEG+QUI continua
+  // vencendo TER+SEX quando o espaçamento é equivalente.
+  return (saturdayLoadCount(combo)*1000000000) + (circularLoadSpacingScore(combo)*1000) + firstLoadScore(combo);
 }
 function compareEvalByPrazoThenInicio(a,b){
-  // Para combinações que ATENDEM o prazo:
-  // 1) mantém a primeira janela no início da semana;
-  // 2) em empate, evita sábado quando houver alternativa viável;
-  // 3) em empate, distribui circularmente as janelas para evitar cargas seguidas
-  //    e também evitar SEX muito próximo da próxima SEG;
-  // 4) em empate, escolhe melhor pior prazo e menor total/média.
-  return (firstLoadScore(a.combo) - firstLoadScore(b.combo))
-    || (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
+  // Para combinações que ATENDEM o prazo, a quantidade de janelas já foi
+  // definida antes deste comparador. A prioridade agora é:
+  // 1) evita SÁB quando houver alternativa SEG-SEX sem aumentar janelas;
+  // 2) melhor espaçamento circular entre janelas;
+  // 3) se o espaçamento empatar, início da semana;
+  // 4) qualidade do prazo e demais desempates.
+  // Ex.: SEG+QUI vence TER+SEX por começar antes; SEX+TER vence SEX+SEG
+  // porque evita o intervalo curto de SEX -> próxima SEG; qualquer alternativa
+  // SEG-SEX equivalente vence uma alternativa com SÁB.
+  return (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
     || (circularLoadSpacingScore(a.combo) - circularLoadSpacingScore(b.combo))
+    || (firstLoadScore(a.combo) - firstLoadScore(b.combo))
     || (a.worst - b.worst)
     || (a.total - b.total)
     || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
@@ -1699,21 +1708,22 @@ function compareFallbackByPrazoThenSabado(a,b){
   // Para cenários que NÃO atendem:
   // 1) reduz o estouro real do prazo, já considerando a extensão para segunda
   //    quando o limite cai em sábado/domingo;
-  // 2) em empate, prioriza início da semana;
-  // 3) depois evita sábado.
+  // 2) em empate real de prazo, evita sábado quando houver alternativa SEG-SEX;
+  // 3) depois prioriza início da semana.
   return (evalMaxOver(a) - evalMaxOver(b))
     || (a.worst - b.worst)
     || (a.total - b.total)
-    || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
     || (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
+    || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
     || String(a.combo || '').localeCompare(String(b.combo || ''));
 }
 function compareLinkedCandidatesByPrazoThenInicio(a,b){
-  // Para vocativos vinculados que ATENDEM, mantém o início da semana e usa o
-  // espaçamento circular apenas como desempate operacional.
-  return (firstLoadScore(a.combo) - firstLoadScore(b.combo))
-    || (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
+  // Para vocativos vinculados que ATENDEM, mantém vínculo e quantidade antes
+  // deste comparador. Aqui o espaçamento passa a vir antes do início da semana,
+  // evitando combinações como SEX+SEG quando SEX+TER ainda atende com folga.
+  return (saturdayLoadCount(a.combo) - saturdayLoadCount(b.combo))
     || (circularLoadSpacingScore(a.combo) - circularLoadSpacingScore(b.combo))
+    || (firstLoadScore(a.combo) - firstLoadScore(b.combo))
     || (a.worst - b.worst)
     || (a.total - b.total)
     || (earlyLoadScore(a.combo) - earlyLoadScore(b.combo))
@@ -2972,11 +2982,12 @@ function bestPrefixForLinkedRow(row, groupSequence, linkedPlan, requiredCore=[],
         // Em empate de quantidade, casar o máximo possível com as âncoras/preferências do grupo.
         ||(preferredMissing(a.combo)-preferredMissing(b.combo))
         ||(preferredOverlap(b.combo)-preferredOverlap(a.combo))
-        // Depois de preservar prazo, quantidade e âncoras, distribui as janelas
-        // no ciclo semanal sem deslocar a primeira carga do início da semana.
-        ||(firstLoadScore(a.combo)-firstLoadScore(b.combo))
+        // Depois de preservar prazo, quantidade e âncoras, evita SÁB quando
+        // houver alternativa SEG-SEX equivalente. Em seguida distribui as janelas
+        // no ciclo semanal. O início da semana fica como desempate posterior.
         ||(linkedRowSaturdayPreferenceScore(row,a.combo)-linkedRowSaturdayPreferenceScore(row,b.combo))
         ||(circularLoadSpacingScore(a.combo)-circularLoadSpacingScore(b.combo))
+        ||(firstLoadScore(a.combo)-firstLoadScore(b.combo))
         ||(a.score.over-b.score.over)
         ||(a.score.worst-b.score.worst)
         ||(a.score.total-b.score.total)
@@ -3023,15 +3034,12 @@ function bestPrefixForLinkedRow(row, groupSequence, linkedPlan, requiredCore=[],
           // antes de puxar a janela para o início da semana.
           || (forceFixed ? (fixedTransitAdherenceScore(row,a.combo,{linkedDeliveryPlan:linkedPlan})-fixedTransitAdherenceScore(row,b.combo,{linkedDeliveryPlan:linkedPlan})) : 0)
           || (a.score.over-b.score.over)
-          // Com o flag ligado, depois da aderência ao TT vem o espaçamento entre janelas;
-          // a prioridade de início da semana fica apenas como desempate posterior.
-          || (forceFixed ? (circularLoadSpacingScore(a.combo)-circularLoadSpacingScore(b.combo)) : 0)
-          // Quando os dois cenários atendem o prazo, evita usar SÁB se a alternativa
-          // SEX → SEG também atende. Antes esta penalização vinha depois do pior prazo/total,
-          // por isso o vínculo ainda escolhia SAB → SEG por ter menor espera absoluta.
+          // Depois da aderência ao TT, evita SÁB se a alternativa também atende
+          // com a mesma quantidade de janelas. Em seguida vem o espaçamento;
+          // início da semana fica como desempate posterior.
           || (avoidableSaturdayLoadScore(row,a.combo)-avoidableSaturdayLoadScore(row,b.combo))
+          || (circularLoadSpacingScore(a.combo)-circularLoadSpacingScore(b.combo))
           || (firstLoadScore(a.combo)-firstLoadScore(b.combo))
-          || (!forceFixed ? (circularLoadSpacingScore(a.combo)-circularLoadSpacingScore(b.combo)) : 0)
           || (a.score.worst-b.score.worst)
           || (a.score.total-b.score.total)
           // Mantém o subconjunto mais alinhado ao fim da matriz quando isso não piora prazo,
@@ -3235,9 +3243,10 @@ function compareLinkedSchedulesOk(a,b){
   // 1) força primeiro a mesma data de CARREGAMENTO para todos os vocativos vinculados;
   // 2) se algum vocativo precisar de janela extra para atender prazo, a janela extra fica só nele;
   // 3) minimiza a quantidade total de janelas realmente usadas;
-  // 4) se todos atendem com o mesmo alinhamento/quantidade, prioriza início da semana
-  //    também nos vinculados: SEG, depois TER, QUA, QUI, SEX e SAB;
-  // 5) somente depois compara sábado evitável, qualidade de prazo e desempates.
+  // 4) se todos atendem com o mesmo alinhamento/quantidade, prioriza o espaçamento
+  //    circular entre janelas;
+  // 5) se o espaçamento empatar, prioriza início da semana, como SEG+QUI;
+  // 6) somente depois compara sábado evitável, qualidade de prazo e desempates.
   const forceFixedActive=linkedForceFixedActive(a) || linkedForceFixedActive(b);
   return (linkedSharedLoadShortfall(a)-linkedSharedLoadShortfall(b))
     || (linkedDistinctLoadDates(a)-linkedDistinctLoadDates(b))
@@ -3250,18 +3259,15 @@ function compareLinkedSchedulesOk(a,b){
     // Quando o flag FORÇAR ENTREGAS FIXAS estiver ativo, a primeira preferência
     // passa a ser a aderência carga→entrega fixa pelo transit time.
     || (forceFixedActive ? (linkedForceFixedTransitAdherenceScore(a)-linkedForceFixedTransitAdherenceScore(b)) : 0)
-    // Depois da aderência ao TT, aplica o espaçamento circular antes do início da semana.
-    || (forceFixedActive ? (linkedCommonSpacingScore(a)-linkedCommonSpacingScore(b)) : 0)
-    || (forceFixedActive ? (linkedAllLoadsSpacingScore(a)-linkedAllLoadsSpacingScore(b)) : 0)
-    // Sem o flag, mantém a regra anterior de início da semana. Com o flag, o início
-    // da semana permanece como desempate posterior.
+    // Depois de preservar vínculo, prazo e quantidade, evita SÁB quando houver
+    // alternativa SEG-SEX equivalente. Em seguida aplica o espaçamento circular
+    // e o início da semana fica como desempate. Assim, SÁB continua válido
+    // quando for necessário para atender o prazo ou manter o vínculo.
+    || (linkedAvoidableSaturdayScore(a)-linkedAvoidableSaturdayScore(b))
+    || (linkedCommonSpacingScore(a)-linkedCommonSpacingScore(b))
+    || (linkedAllLoadsSpacingScore(a)-linkedAllLoadsSpacingScore(b))
     || (linkedCommonEarlyLoadScore(a)-linkedCommonEarlyLoadScore(b))
     || (linkedAllLoadsEarlyScore(a)-linkedAllLoadsEarlyScore(b))
-    || (!forceFixedActive ? (linkedCommonSpacingScore(a)-linkedCommonSpacingScore(b)) : 0)
-    || (!forceFixedActive ? (linkedAllLoadsSpacingScore(a)-linkedAllLoadsSpacingScore(b)) : 0)
-    // Em vínculo, sábado só é evitado depois de preservar o carregamento na mesma data.
-    // Assim, SÁB pode ser escolhido quando for a melhor data comum para atender o prazo.
-    || (linkedAvoidableSaturdayScore(a)-linkedAvoidableSaturdayScore(b))
     || (linkedFixedAnchorScore(a)-linkedFixedAnchorScore(b))
     || (a.maxRowLoads-b.maxRowLoads)
     || (a.firstDeliveryLoads-b.firstDeliveryLoads)
@@ -3409,15 +3415,14 @@ function compareLinkedIterationScores(a,b){
     || (n(a.assignedLoads)-n(b.assignedLoads))
     || (n(a.anchorShortfall)-n(b.anchorShortfall))
     || (forceFixedActive ? (n(a.forceFixedTransitScore)-n(b.forceFixedTransitScore)) : 0)
-    || (forceFixedActive ? (n(a.spacingCommonScore)-n(b.spacingCommonScore)) : 0)
-    || (forceFixedActive ? (n(a.spacingAllScore)-n(b.spacingAllScore)) : 0)
-    // Ajuste pontual para iterações internas já OK: sem o flag, mantém início
-    // de semana antes do espaçamento; com o flag, início fica depois do TT/espaçamento.
+    // Em iterações internas já OK, evita SÁB antes do espaçamento quando
+    // houver alternativa SEG-SEX sem aumentar janelas. O início da semana
+    // continua decidindo empates equivalentes, ex.: SEG+QUI.
+    || (n(a.avoidableSaturday)-n(b.avoidableSaturday))
+    || (n(a.spacingCommonScore)-n(b.spacingCommonScore))
+    || (n(a.spacingAllScore)-n(b.spacingAllScore))
     || (n(a.earlyCommonScore)-n(b.earlyCommonScore))
     || (n(a.earlyAllScore)-n(b.earlyAllScore))
-    || (!forceFixedActive ? (n(a.spacingCommonScore)-n(b.spacingCommonScore)) : 0)
-    || (!forceFixedActive ? (n(a.spacingAllScore)-n(b.spacingAllScore)) : 0)
-    || (n(a.avoidableSaturday)-n(b.avoidableSaturday))
     || (n(a.maxOver)-n(b.maxOver))
     || (n(a.worst)-n(b.worst))
     || (n(a.total)-n(b.total))
