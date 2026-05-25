@@ -13,6 +13,8 @@
     document.documentElement.setAttribute('data-theme','dark');
   }
 })();
+
+
 </script>
 
 <style>
@@ -390,6 +392,59 @@ button.small{padding:6px 8px;border-radius:8px;font-size:10px}
 #pageJanelasSimples .simpleZoneBadge.isZone,#pageJanelasSimples .simpleZoneBadge{background:#f8fafc;color:#4b5563;border-color:#e5e7eb}
 @media(max-width:1220px){#pageJanelasSimples .simpleWindowCard{grid-template-columns:minmax(240px,1.2fr) 100px minmax(210px,1fr)}#pageJanelasSimples .simpleVocLine{grid-template-columns:minmax(160px,.75fr) minmax(0,1.7fr)}}
 @media(max-width:760px){#pageJanelasSimples .simpleVocLine{grid-template-columns:1fr}.simpleInfoItem{white-space:normal}}
+
+
+
+
+/* ===== Ajuste solicitado: painel sem rolagem de vocativos e linha única nas restrições ===== */
+#pageJanelasSimples .simpleWindowCard{
+  grid-template-columns:minmax(300px,1.08fr) 112px 84px minmax(640px,2.35fr)!important;
+  align-items:stretch!important;
+  height:auto!important;
+  min-height:64px!important;
+}
+#pageJanelasSimples .simpleCell.simpleRestrictionsCell{
+  justify-content:flex-start!important;
+}
+#pageJanelasSimples .simpleVocList{
+  max-height:none!important;
+  overflow:visible!important;
+  padding-right:0!important;
+  gap:0!important;
+}
+#pageJanelasSimples .simpleVocLine{
+  grid-template-columns:minmax(170px,.72fr) minmax(0,2.05fr)!important;
+  align-items:center!important;
+}
+#pageJanelasSimples .simpleVocLineInfo{
+  flex-wrap:nowrap!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  gap:6px!important;
+  line-height:1.15!important;
+}
+#pageJanelasSimples .simpleInfoItem{
+  flex:0 0 auto!important;
+  white-space:nowrap!important;
+}
+#pageJanelasSimples .simpleInfoItem.transfer{
+  padding:1px 5px!important;
+}
+@media(max-width:1220px){
+  #pageJanelasSimples .simpleWindowCard{
+    grid-template-columns:minmax(240px,1.2fr) 100px 82px!important;
+  }
+  #pageJanelasSimples .simpleWindowCard .simpleCell.simpleRestrictionsCell{
+    grid-column:1/-1!important;
+    border-top:1px solid var(--line2)!important;
+  }
+}
+@media(max-width:760px){
+  #pageJanelasSimples .simpleWindowCard{display:block!important;}
+  #pageJanelasSimples .simpleVocLine{grid-template-columns:1fr!important;}
+  #pageJanelasSimples .simpleVocLineInfo{flex-wrap:wrap!important;white-space:normal!important;}
+}
 
 
 /* ===== Seleção obrigatória de filial ===== */
@@ -5534,7 +5589,7 @@ function auxExportCSV(){
     .transferToggle input{width:13px;height:13px;margin:0;accent-color:var(--brand);flex:0 0 auto}
     .transferToggle.active{background:var(--brand);border-color:var(--brand);color:#fff}
     .restrictionPill.transfer{background:#eef2ff;border-color:#c7d2fe;color:#3730a3}
-    .simpleInfoItem.transfer{background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;border-radius:999px;padding:2px 6px;font-weight:950}
+    .simpleInfoItem.transfer{background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;border-radius:999px;padding:1px 5px;font-weight:950}
     html[data-theme="dark"] .transferToggle{background:#172554;border-color:#1d4ed8;color:#bfdbfe}
     html[data-theme="dark"] .transferToggle.active{background:var(--brand);border-color:var(--brand);color:#00111c}
     html[data-theme="dark"] .restrictionPill.transfer, html[data-theme="dark"] .simpleInfoItem.transfer{background:#172554;border-color:#1d4ed8;color:#bfdbfe}
