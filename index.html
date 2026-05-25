@@ -4379,7 +4379,7 @@ document.addEventListener("click", (ev)=>{
 
 function exportCSV(){
   const rows=getFiltered(getAll());
-  const cols=[['filial','Filial'],['cliente','Cliente'],['vocativo','Vocativo'],['ufOrigem','UF Origem'],['cidadeDestino','Cidade destino'],['ufDestino','UF Destino'],['prazoExwReal','Prazo EXW real'],['prazoFcaReal','Prazo FCA real'],['menorPrazo','Menor prazo'],['transitTime','Transit time'],['status','Status'],['cargas','Cargas semanais'],['ciclos','Ciclos carga entrega'],['entregaCargaFixa','Entrega por carga fixa'],['entregaFixa','Entrega fixa'],['vinculo','Vinculado com'],['ordemEntrega','Ordem entrega'],['maiorVeiculo','Maior veículo'],['entregaMesmoDia','Entrega mesmo dia'],['diasNaoUteis','Dias nao uteis vocativo'],['loadDays','Dias carga'],['deliveryDays','Dias entrega'],['worst','Pior prazo util'],['worstCalendar','Pior prazo corrido'],['worstReceiptDay','Dia recebimento critico'],['worstLoadDay','Dia carga do pior prazo'],['worstDeliveryDay','Dia entrega do pior prazo'],['folga','Folga']];
+  const cols=[['filial','Filial'],['cliente','Cliente'],['vocativo','Vocativo'],['ufOrigem','UF Origem'],['cidadeDestino','Cidade destino'],['ufDestino','UF Destino'],['prazoExwReal','Prazo EXW real'],['prazoFcaReal','Prazo FCA real'],['menorPrazo','Menor prazo'],['transitTime','Transit time'],['status','Status'],['transferencia','Transferência'],['cargas','Cargas semanais'],['ciclos','Ciclos carga entrega'],['entregaCargaFixa','Entrega por carga fixa'],['entregaFixa','Entrega fixa'],['vinculo','Vinculado com'],['ordemEntrega','Ordem entrega'],['maiorVeiculo','Maior veículo'],['entregaMesmoDia','Entrega mesmo dia'],['diasNaoUteis','Dias nao uteis vocativo'],['loadDays','Dias carga'],['deliveryDays','Dias entrega'],['worst','Pior prazo util'],['worstCalendar','Pior prazo corrido'],['worstReceiptDay','Dia recebimento critico'],['worstLoadDay','Dia carga do pior prazo'],['worstDeliveryDay','Dia entrega do pior prazo'],['folga','Folga']];
   const lines=[cols.map(c=>c[1]).join(';')];
 
   // Mantém o CSV do Planejamento de Janelas coerente com a visualização.
@@ -4392,6 +4392,7 @@ function exportCSV(){
     let v=r[key];
 
     if(key==='status') v=getUiStatusLabel(r);
+    if(key==='transferencia') v=(typeof isTransferVocativo==='function' && isTransferVocativo(r.vocativo)) ? 'TRANSFERÊNCIA' : '';
     if(key==='ciclos') v=(displayPairs || []).map(p=>`${p.load}->${p.delivery}`).join(' | ');
     if(key==='entregaCargaFixa') v=fixedLoadDeliveryMapToText(getFixedLoadDeliveryMap(r.vocativo));
     if(key==='entregaFixa') v=getFixedDeliveryDays(r.vocativo).map(i=>DAYS[i]).join(', ');
@@ -5010,6 +5011,11 @@ function jsBuildReportRows(){
   const joinUnique=(arr, sep=', ')=>unique(arr.filter(v=>String(v ?? '').trim()!=='')).join(sep);
   const restrictionVehicle=v=>(typeof getVehicleRestriction==='function' ? getVehicleRestriction(v) : (typeof getMaxVehicleRestriction==='function' ? getMaxVehicleRestriction(v) : 'SEM RESTRIÇÃO')) || 'SEM RESTRIÇÃO';
   const restrictionBody=v=>(typeof getBodyRestriction==='function' ? getBodyRestriction(v) : 'SEM RESTRIÇÃO') || 'SEM RESTRIÇÃO';
+  const transferInfo=(vocativos, isConsolidatedWindow)=>{
+    const marked=(vocativos || []).filter(v=>typeof isTransferVocativo==='function' && isTransferVocativo(v));
+    if(!marked.length) return '—';
+    return marked.map(v=>isConsolidatedWindow ? `${v}: TRANSFERÊNCIA` : 'TRANSFERÊNCIA').join(' / ');
+  };
 
   daysToRender.forEach(day=>{
     groups.forEach(g=>{
@@ -5035,6 +5041,7 @@ function jsBuildReportRows(){
         entrega:joinUnique(items.map(it=>it.delivery), ' / ') || '—',
         prazo:joinUnique(items.map(it=>fmt(it.travelElapsed)+'d'+(it.linkedAdjusted?' ajust.':'')), ' / ') || '—',
         status:joinUnique(activeVocativos.map(v=>getUiStatusLabel(byVoc.get(v) || {})), ' / ') || '—',
+        transferencia:transferInfo(activeVocativos, isConsolidatedWindow),
         maiorVeiculo:joinUnique(activeVocativos.map(v=>restrictionVehicle(v)), ' / ') || 'SEM RESTRIÇÃO',
         carroceria:joinUnique(activeVocativos.map(v=>restrictionBody(v)), ' / ') || 'SEM RESTRIÇÃO'
       });
@@ -5054,6 +5061,7 @@ function jsReportColumns(){
     ['entrega','Dia(s) de entrega'],
     ['prazo','Prazo calculado'],
     ['status','Status'],
+    ['transferencia','Transferência'],
     ['maiorVeiculo','Maior veículo'],
     ['carroceria','Carroceria']
   ];
@@ -5114,8 +5122,8 @@ function jsExportReportPdf(){
     margin:{left:6,right:6,top:15,bottom:8},
     styles:{
       font:'helvetica',
-      fontSize:5.1,
-      cellPadding:0.75,
+      fontSize:4.75,
+      cellPadding:0.6,
       lineWidth:0.08,
       overflow:'linebreak',
       valign:'top',
@@ -5125,24 +5133,25 @@ function jsExportReportPdf(){
     headStyles:{
       fillColor:[43,47,54],
       textColor:[255,255,255],
-      fontSize:5.2,
+      fontSize:4.85,
       fontStyle:'bold',
       halign:'center',
       valign:'middle'
     },
     alternateRowStyles:{fillColor:[248,250,252]},
     columnStyles:{
-      0:{cellWidth:18},
-      1:{cellWidth:22},
-      2:{cellWidth:34},
-      3:{cellWidth:42},
-      4:{cellWidth:14,halign:'center'},
-      5:{cellWidth:54},
-      6:{cellWidth:24},
-      7:{cellWidth:19,halign:'center'},
-      8:{cellWidth:17,halign:'center'},
-      9:{cellWidth:21},
-      10:{cellWidth:20}
+      0:{cellWidth:15},
+      1:{cellWidth:20},
+      2:{cellWidth:31},
+      3:{cellWidth:36},
+      4:{cellWidth:12,halign:'center'},
+      5:{cellWidth:47},
+      6:{cellWidth:20},
+      7:{cellWidth:17,halign:'center'},
+      8:{cellWidth:15,halign:'center'},
+      9:{cellWidth:24},
+      10:{cellWidth:18},
+      11:{cellWidth:15}
     },
     didDrawPage:function(){
       const page=doc.internal.getNumberOfPages();
