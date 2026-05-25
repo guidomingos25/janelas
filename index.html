@@ -901,10 +901,11 @@ function loadConfig(){
       deliveryOrderByVocativo: raw.deliveryOrderByVocativo || {},
       sameDayDeliveryByVocativo: raw.sameDayDeliveryByVocativo || {},
       forceAllFixedDeliveriesByVocativo: raw.forceAllFixedDeliveriesByVocativo || {},
-      forceAllFixedLoadsByVocativo: raw.forceAllFixedLoadsByVocativo || {}
+      forceAllFixedLoadsByVocativo: raw.forceAllFixedLoadsByVocativo || {},
+      transferByVocativo: raw.transferByVocativo || {}
     };
   }catch(e){
-    return {nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, fixedLoadDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}};
+    return {nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, fixedLoadDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}, transferByVocativo:{}};
   }
 }
 function ensureConfigShape(){
@@ -918,6 +919,7 @@ function ensureConfigShape(){
   CONFIG.sameDayDeliveryByVocativo = CONFIG.sameDayDeliveryByVocativo || {};
   CONFIG.forceAllFixedDeliveriesByVocativo = CONFIG.forceAllFixedDeliveriesByVocativo || {};
   CONFIG.forceAllFixedLoadsByVocativo = CONFIG.forceAllFixedLoadsByVocativo || {};
+  CONFIG.transferByVocativo = CONFIG.transferByVocativo || {};
 }
 function saveConfig(){ ensureConfigShape(); localStorage.setItem(CFG_KEY, JSON.stringify(CONFIG)); invalidatePlanningCaches(); }
 function dayToIndex(day){
@@ -966,7 +968,7 @@ function normalizeYesNoFront(value){
   return (s==='SIM' || s==='S' || s==='YES' || s==='TRUE' || s==='1') ? 'SIM' : 'NÃO';
 }
 function applyBackendConfigs(configs){
-  CONFIG = {nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, fixedLoadDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}};
+  CONFIG = {nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, fixedLoadDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}, transferByVocativo:{}};
   BACKEND_CONFIG_VOCATIVOS = new Set();
   Object.entries(configs || {}).forEach(([voc,cfg])=>{
     BACKEND_CONFIG_VOCATIVOS.add(voc);
@@ -4541,7 +4543,7 @@ async function selectFilialAndLoad(filial, loadMode){
   setLastFilial(filial);
   setLastLoadMode(loadMode || getLastLoadMode());
   DIRTY_VOCATIVOS.clear();
-  CONFIG={nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, fixedLoadDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}, maxVehicleByVocativo:{}, bodyRestrictionByVocativo:{}};
+  CONFIG={nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, fixedLoadDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}, maxVehicleByVocativo:{}, bodyRestrictionByVocativo:{}, transferByVocativo:{}};
   saveConfig();
   const overlay=document.getElementById('filialModalOverlay');
   if(overlay) overlay.classList.remove('open');
@@ -4704,7 +4706,7 @@ $('btnReload').addEventListener('click',()=>loadBackendData(true));
 $('btnReset').addEventListener('click',()=>{
   if(confirm('Limpar as configurações dos vocativos exibidos? Depois clique em Salvar alterações para gravar na aba Página2.')){
     const vocs=new Set([...BACKEND_CONFIG_VOCATIVOS, ...BASE_DATA.map(r=>r.vocativo).filter(Boolean)]);
-    CONFIG={nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, fixedLoadDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}, maxVehicleByVocativo:{}, bodyRestrictionByVocativo:{}};
+    CONFIG={nonBusinessByVocativo:{}, fixedDeliveryByVocativo:{}, fixedLoadByVocativo:{}, fixedLoadDeliveryByVocativo:{}, linkedByVocativo:{}, deliveryOrderByVocativo:{}, sameDayDeliveryByVocativo:{}, forceAllFixedDeliveriesByVocativo:{}, forceAllFixedLoadsByVocativo:{}, maxVehicleByVocativo:{}, bodyRestrictionByVocativo:{}, transferByVocativo:{}};
     vocs.forEach(v=>DIRTY_VOCATIVOS.add(v));
     saveConfig(); render(); updateSaveButton();
     setLoadStatus('Configurações limpas na tela. Clique em Salvar alterações para gravar a limpeza na aba Página2.','loading');
@@ -4863,13 +4865,15 @@ function jsItemsForGroupAndDay(g, day){
 function jsRenderVocDetail(vocativo, extraHtml, showRestrictions){
   const vehicle=(typeof getVehicleRestriction==='function' ? getVehicleRestriction(vocativo) : (typeof getMaxVehicleRestriction==='function' ? getMaxVehicleRestriction(vocativo) : 'SEM RESTRIÇÃO'));
   const body=(typeof getBodyRestriction==='function' ? getBodyRestriction(vocativo) : 'SEM RESTRIÇÃO');
+  const isTransfer=(typeof isTransferVocativo==='function' && isTransferVocativo(vocativo));
   const deliveryText = extraHtml || '';
+  const transferText = isTransfer ? '<span class="simpleInfoItem transfer"><em>Obs.</em> TRANSFERÊNCIA</span>' : '';
   const restrictionText = showRestrictions
     ? '<span class="simpleInfoItem"><em>Maior veículo</em> '+escapeHtml(vehicle || 'SEM RESTRIÇÃO')+'</span><span class="simpleInfoItem"><em>Carroceria</em> '+escapeHtml(body || 'SEM RESTRIÇÃO')+'</span>'
     : '';
   return '<div class="simpleVocLine">'
     + '<div class="simpleVocLineName">'+escapeHtml(vocativo)+'</div>'
-    + '<div class="simpleVocLineInfo">'+deliveryText+restrictionText+'</div>'
+    + '<div class="simpleVocLineInfo">'+deliveryText+transferText+restrictionText+'</div>'
     + '</div>';
 }
 function jsRenderGroupCard(g, day, items){
@@ -5520,6 +5524,24 @@ function auxExportCSV(){
 }
 
 
+
+(function injectTransferStyles(){
+  if(document.getElementById('transferFlagStyle')) return;
+  const style=document.createElement('style');
+  style.id='transferFlagStyle';
+  style.textContent=`
+    .transferToggle{display:inline-flex;align-items:center;gap:6px;border:1px solid #c7d2fe;background:#eef2ff;color:#3730a3;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:950;cursor:pointer;user-select:none;white-space:nowrap;text-transform:uppercase;letter-spacing:.035em}
+    .transferToggle input{width:13px;height:13px;margin:0;accent-color:var(--brand);flex:0 0 auto}
+    .transferToggle.active{background:var(--brand);border-color:var(--brand);color:#fff}
+    .restrictionPill.transfer{background:#eef2ff;border-color:#c7d2fe;color:#3730a3}
+    .simpleInfoItem.transfer{background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;border-radius:999px;padding:2px 6px;font-weight:950}
+    html[data-theme="dark"] .transferToggle{background:#172554;border-color:#1d4ed8;color:#bfdbfe}
+    html[data-theme="dark"] .transferToggle.active{background:var(--brand);border-color:var(--brand);color:#00111c}
+    html[data-theme="dark"] .restrictionPill.transfer, html[data-theme="dark"] .simpleInfoItem.transfer{background:#172554;border-color:#1d4ed8;color:#bfdbfe}
+  `;
+  document.head.appendChild(style);
+})();
+
 /* ===== Regras de restrição de veículo por vocativo - injetado ===== */
 const VEHICLE_RESTRICTION_OPTIONS = ['SEM RESTRIÇÃO','UTILITÁRIO','VAN','3/4','TRUCK','CARRETA','RODOTREM'];
 const BODY_RESTRICTION_OPTIONS = ['SEM RESTRIÇÃO','ABERTO','FECHADO'];
@@ -5540,6 +5562,9 @@ function normalizeBodyRestriction(value){ return BODY_RESTRICTION_ALIASES[norm(v
 function vehicleRestrictionRank(value){ const idx=VEHICLE_RESTRICTION_OPTIONS.indexOf(normalizeVehicleRestriction(value)); return idx < 0 ? 0 : idx; }
 CONFIG.maxVehicleByVocativo = CONFIG.maxVehicleByVocativo || {};
 CONFIG.bodyRestrictionByVocativo = CONFIG.bodyRestrictionByVocativo || {};
+CONFIG.transferByVocativo = CONFIG.transferByVocativo || {};
+function isTransferVocativo(vocativo){ ensureConfigShape(); return normalizeYesNoFront((CONFIG.transferByVocativo || {})[vocativo] || 'NÃO') === 'SIM'; }
+function setTransferVocativo(vocativo, value){ ensureConfigShape(); CONFIG.transferByVocativo = CONFIG.transferByVocativo || {}; if(normalizeYesNoFront(value) === 'SIM') CONFIG.transferByVocativo[vocativo] = 'SIM'; else delete CONFIG.transferByVocativo[vocativo]; markDirty(vocativo); }
 function getVehicleRestriction(vocativo){ return normalizeVehicleRestriction((CONFIG.maxVehicleByVocativo || {})[vocativo] || 'SEM RESTRIÇÃO'); }
 function getMaxVehicleRestriction(vocativo){ return getVehicleRestriction(vocativo); }
 function getBodyRestriction(vocativo){ return normalizeBodyRestriction((CONFIG.bodyRestrictionByVocativo || {})[vocativo] || 'SEM RESTRIÇÃO'); }
@@ -5567,15 +5592,17 @@ function getGroupBodyRestriction(vocativos){
 function renderRestrictionPills(vocativos){
   const maxV=getGroupVehicleRestriction(vocativos);
   const body=getGroupBodyRestriction(vocativos);
-  return '<div class="restrictionLine"><span class="restrictionPill '+(maxV==='SEM RESTRIÇÃO'?'':'warn')+'">Maior veículo: '+escapeHtml(maxV)+'</span><span class="restrictionPill '+(body==='SEM RESTRIÇÃO'?'':'warn')+'">Carroceria: '+escapeHtml(body)+'</span></div>';
+  const transfer=(vocativos || []).some(v=>isTransferVocativo(v));
+  return '<div class="restrictionLine">'+(transfer ? '<span class="restrictionPill transfer">TRANSFERÊNCIA</span>' : '')+'<span class="restrictionPill '+(maxV==='SEM RESTRIÇÃO'?'':'warn')+'">Maior veículo: '+escapeHtml(maxV)+'</span><span class="restrictionPill '+(body==='SEM RESTRIÇÃO'?'':'warn')+'">Carroceria: '+escapeHtml(body)+'</span></div>';
 }
 function restrictionSelectHtml(vocativo){
-  const maxV=getVehicleRestriction(vocativo), body=getBodyRestriction(vocativo);
+  const maxV=getVehicleRestriction(vocativo), body=getBodyRestriction(vocativo), transfer=isTransferVocativo(vocativo);
   return '<div class="restrictionConfigBlock restrictionConfigStack">'+
     '<div class="compactLabel"><label>Maior veículo</label><span class="compactHint">Peso x veículos</span></div>'+
     '<select class="configSelect" data-max-vehicle-voc="'+escapeHtml(vocativo)+'">'+VEHICLE_RESTRICTION_OPTIONS.map(v=>'<option value="'+escapeHtml(v)+'" '+(v===maxV?'selected':'')+'>'+escapeHtml(v)+'</option>').join('')+'</select>'+
     '<div class="configSubBlock"><div class="compactLabel"><label>Carroceria</label><span class="compactHint">aberto/fechado</span></div>'+
     '<select class="configSelect" data-body-restriction-voc="'+escapeHtml(vocativo)+'">'+BODY_RESTRICTION_OPTIONS.map(v=>'<option value="'+escapeHtml(v)+'" '+(v===body?'selected':'')+'>'+escapeHtml(v)+'</option>').join('')+'</select></div>'+
+    '<div class="configSubBlock"><label class="transferToggle '+(transfer?'active':'')+'" title="Marcar apenas como observação de transferência. Não altera cálculo de janelas, SLA ou transit time."><input type="checkbox" data-transfer-voc="'+escapeHtml(vocativo)+'" '+(transfer?'checked':'')+'><span>TRANSFERÊNCIA</span></label></div>'+
     '</div>';
 }
 const _applyBackendConfigsBase = applyBackendConfigs;
@@ -5583,12 +5610,14 @@ applyBackendConfigs = function(configs){
   _applyBackendConfigsBase(configs);
   CONFIG.maxVehicleByVocativo = CONFIG.maxVehicleByVocativo || {};
   CONFIG.bodyRestrictionByVocativo = CONFIG.bodyRestrictionByVocativo || {};
+  CONFIG.transferByVocativo = CONFIG.transferByVocativo || {};
   CONFIG.fixedLoadByVocativo = CONFIG.fixedLoadByVocativo || {};
   CONFIG.fixedLoadDeliveryByVocativo = CONFIG.fixedLoadDeliveryByVocativo || {};
   CONFIG.forceAllFixedLoadsByVocativo = CONFIG.forceAllFixedLoadsByVocativo || {};
   Object.entries(configs || {}).forEach(([voc,cfg])=>{
     const maxV=normalizeVehicleRestriction(cfg.maiorVeiculoPermitido || cfg.MAIOR_VEICULO_PERMITIDO || cfg.maiorVeiculo || cfg.MAIOR_VEICULO || '');
     const body=normalizeBodyRestriction(cfg.restricaoCarroceria || cfg.RESTRICAO_CARROCERIA || cfg.tipoCarroceria || cfg.TIPO_CARROCERIA || '');
+    const transferencia=normalizeYesNoFront(cfg.transferencia || cfg.TRANSFERENCIA || cfg.transferenciaFlag || cfg.FLAG_TRANSFERENCIA || 'NÃO');
     const fixedLoad=dayListToIndexes(cfg.carregamentosFixos || cfg.CARREGAMENTOS_FIXOS || cfg.cargasFixas || cfg.CARGAS_FIXAS || '');
     const fixedLoadDelivery=normalizeFixedLoadDeliveryMap(cfg.entregasPorCarregamentoFixo || cfg.ENTREGAS_POR_CARREGAMENTO_FIXO || cfg.entregaPorCargaFixa || cfg.ENTREGA_POR_CARGA_FIXA || cfg.fixedLoadDeliveryMap || cfg.FIXED_LOAD_DELIVERY_MAP || '');
     const forcarCargas=normalizeYesNoFront(cfg.forcarTodosCarregamentosFixos || cfg.FORCAR_TODOS_CARREGAMENTOS_FIXOS || cfg.forcarCarregamentosFixos || cfg.FORCAR_CARREGAMENTOS_FIXOS || 'NÃO');
@@ -5597,6 +5626,7 @@ applyBackendConfigs = function(configs){
     if(forcarCargas === 'SIM') CONFIG.forceAllFixedLoadsByVocativo[voc]=true;
     if(maxV !== 'SEM RESTRIÇÃO') CONFIG.maxVehicleByVocativo[voc]=maxV;
     if(body !== 'SEM RESTRIÇÃO') CONFIG.bodyRestrictionByVocativo[voc]=body;
+    if(transferencia === 'SIM') CONFIG.transferByVocativo[voc]='SIM';
   });
   saveConfig();
 };
@@ -5613,6 +5643,7 @@ getConfigForVocativo = function(vocativo){
   const forcarTodosCarregamentosFixos = shouldForceAllFixedLoads(vocativo) ? 'SIM' : 'NÃO';
   const maiorVeiculo = getVehicleRestriction(vocativo);
   const restricaoCarroceria = getBodyRestriction(vocativo);
+  const transferencia = isTransferVocativo(vocativo) ? 'SIM' : 'NÃO';
 
   return {
     filial: SELECTED_FILIAL || '',
@@ -5653,7 +5684,10 @@ getConfigForVocativo = function(vocativo){
     MAIOR_VEICULO_PERMITIDO: maiorVeiculo,
 
     restricaoCarroceria: restricaoCarroceria,
-    RESTRICAO_CARROCERIA: restricaoCarroceria
+    RESTRICAO_CARROCERIA: restricaoCarroceria,
+
+    transferencia: transferencia,
+    TRANSFERENCIA: transferencia
   };
 };
 function injectRestrictionControls(){
@@ -5672,6 +5706,10 @@ function injectRestrictionControls(){
     if(sel._restrictionBound) return; sel._restrictionBound=true;
     sel.addEventListener('change',()=>{ const voc=sel.dataset.bodyRestrictionVoc; setBodyRestriction(voc, sel.value); afterCardConfigChange(voc,{impact:false}); });
   });
+  document.querySelectorAll('input[data-transfer-voc]').forEach(input=>{
+    if(input._transferBound) return; input._transferBound=true;
+    input.addEventListener('change',()=>{ const voc=input.dataset.transferVoc; setTransferVocativo(voc, input.checked ? 'SIM' : 'NÃO'); afterCardConfigChange(voc,{impact:false}); });
+  });
 }
 const _renderCardsBase = renderCards;
 renderCards = function(rows){ _renderCardsBase(rows); injectRestrictionControls(); };
@@ -5679,7 +5717,7 @@ cards.addEventListener('click', e=>{
   const btn=e.target.closest('button[data-action="clear"]');
   if(!btn) return;
   const voc=btn.dataset.voc;
-  if(voc){ delete CONFIG.maxVehicleByVocativo[voc]; delete CONFIG.bodyRestrictionByVocativo[voc]; afterCardConfigChange(voc,{impact:false}); }
+  if(voc){ delete CONFIG.maxVehicleByVocativo[voc]; delete CONFIG.bodyRestrictionByVocativo[voc]; if(CONFIG.transferByVocativo) delete CONFIG.transferByVocativo[voc]; afterCardConfigChange(voc,{impact:false}); }
 }, true);
 const _auxVehicleForWeightBase = auxVehicleForWeight;
 auxVehicleForWeight = function(weight, maxAllowed='SEM RESTRIÇÃO'){
