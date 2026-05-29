@@ -704,6 +704,44 @@ html[data-theme="dark"] .vocCard.status-nao-atende{border-left-color:var(--bad)!
   z-index:10002!important;
 }
 
+
+/* ===== Página de Aderência de Viagens x Janelas ===== */
+#adStatus{margin-top:12px}
+#adPage .adHero{padding:16px;border-top:4px solid var(--brand);margin-bottom:12px}
+#adPage .adHero h2{margin:0;color:var(--dark2);font-size:18px;letter-spacing:-.02em}
+#adPage .adHero p{margin:6px 0 0;color:var(--muted);line-height:1.45;max-width:1120px}
+#adPage .adFilters{display:grid;grid-template-columns:minmax(260px,1.1fr) minmax(190px,.8fr) auto auto auto auto;gap:10px;align-items:end;margin-top:14px}
+#adPage .adFilters button{height:44px;align-self:end;padding-left:14px;padding-right:14px}
+#adPage .adKpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:12px 0}
+#adPage .adTableCard{padding:0;overflow:hidden;border-top:4px solid var(--brand)}
+#adPage .adTableTop{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 14px;background:linear-gradient(180deg,#fff,#fafafa);border-bottom:1px solid var(--line2)}
+#adPage .adTableTop h3{margin:0;color:var(--dark2);font-size:15px;letter-spacing:-.01em}
+#adPage .adTableTop span{font-size:11px;color:var(--muted);font-weight:800}
+#adTableWrap{overflow:auto;max-height:68vh;background:#fff}
+#adTable{width:100%;border-collapse:separate;border-spacing:0;min-width:1180px;font-size:11px}
+#adTable th{position:sticky;top:0;z-index:2;background:#2b2f36;color:#fff;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.045em;padding:9px 8px;border-right:1px solid rgba(255,255,255,.12);white-space:nowrap}
+#adTable td{padding:8px;border-right:1px solid var(--line2);border-bottom:1px solid var(--line2);vertical-align:top;color:#374151;background:#fff}
+#adTable tr:nth-child(even) td{background:#f8fafc}
+#adTable .adStatusPill{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:4px 8px;font-size:9.5px;font-weight:950;white-space:nowrap;border:1px solid transparent;text-transform:uppercase;letter-spacing:.025em}
+#adTable .adStatusPill.ok{background:var(--goodBg);color:#166534;border-color:#bbf7d0}
+#adTable .adStatusPill.bad{background:var(--badBg);color:#991b1b;border-color:#fecaca}
+#adTable .adStatusPill.warn{background:var(--warnBg);color:#92400e;border-color:#f5d58b}
+#adTable .adMono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:850;color:#111827;white-space:nowrap}
+#adTable .adMuted{color:var(--muted);font-weight:800}
+#adEmpty{padding:26px;text-align:center;color:var(--muted);background:#fff}
+@media(max-width:1220px){#adPage .adFilters{grid-template-columns:1fr 1fr}#adPage .adKpis{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){#adPage .adFilters{grid-template-columns:1fr}#adPage .adKpis{grid-template-columns:1fr}#adTableWrap{max-height:none}}
+html[data-theme="dark"] #adPage .adHero, html[data-theme="dark"] #adPage .adTableCard{background:var(--panel)!important;border-color:var(--line)!important}
+html[data-theme="dark"] #adPage .adTableTop{background:linear-gradient(180deg,#111827,#0f172a)!important;border-color:var(--line2)!important}
+html[data-theme="dark"] #adTableWrap, html[data-theme="dark"] #adEmpty{background:#0f172a!important;color:#94a3b8!important}
+html[data-theme="dark"] #adTable th{background:#0b1220!important;color:#e5e7eb!important;border-color:#243244!important}
+html[data-theme="dark"] #adTable td{background:#0f172a!important;color:#cbd5e1!important;border-color:#1f2a3a!important}
+html[data-theme="dark"] #adTable tr:nth-child(even) td{background:#111827!important}
+html[data-theme="dark"] #adTable .adMono{color:#f8fafc!important}
+html[data-theme="dark"] #adTable .adStatusPill.ok{background:#052e1a;color:#86efac;border-color:#166534}
+html[data-theme="dark"] #adTable .adStatusPill.bad{background:#3b0d12;color:#fecaca;border-color:#7f1d1d}
+html[data-theme="dark"] #adTable .adStatusPill.warn{background:#3b2606;color:#fde68a;border-color:#92400e}
+
 </style>
 </head>
 <body>
@@ -719,7 +757,7 @@ html[data-theme="dark"] .vocCard.status-nao-atende{border-left-color:var(--bad)!
     </div>
   </div>
 </header>
-<div class="pageNav"><button id="tabPlanejamento" class="active" type="button">Planejamento de janelas</button><button id="tabJanelasSimples" type="button">Painel de Janelas</button><button id="tabAuxVeiculos" type="button">Peso x veículos</button><button id="themeToggle" class="themeToggle" type="button" aria-pressed="true">Modo claro</button></div>
+<div class="pageNav"><button id="tabPlanejamento" class="active" type="button">Planejamento de janelas</button><button id="tabJanelasSimples" type="button">Painel de Janelas</button><button id="tabAderencia" type="button">Aderência de viagens</button><button id="tabAuxVeiculos" type="button">Peso x veículos</button><button id="themeToggle" class="themeToggle" type="button" aria-pressed="true">Modo claro</button></div>
 <main>
   <div id="pagePlanejamento" class="appPage active">
   <section class="card toolbar">
@@ -809,6 +847,57 @@ html[data-theme="dark"] .vocCard.status-nao-atende{border-left-color:var(--bad)!
       </div>
     </section>
     <section id="jsCards"></section>
+  </section>
+
+
+  <section id="adPage" class="appPage">
+    <section class="card adHero">
+      <h2>Aderência de viagens x janelas de carregamento</h2>
+      <p>Carregue a planilha no mesmo padrão do arquivo anexo. A conferência cruza <b>OF Destino</b> com a cidade dos vocativos cadastrados na aplicação e compara o dia da semana da <b>Data Viagem</b> com o dia correto de carregamento. Use o filtro de <b>Cliente</b> desta página para limitar quais vocativos entram no confronto. Destinos que não existem na base filtrada são descartados do percentual.</p>
+      <div class="adFilters">
+        <div><label>Planilha de viagens</label><input id="adFile" type="file" accept=".xlsx,.xls,.csv"></div>
+        <div><label>Cliente</label><select id="adCliente" multiple></select><div class="filterHint">Vazio = todos</div></div>
+        <button id="adProcessar" type="button">Processar confronto</button>
+        <button id="adExportar" class="secondary" type="button">Exportar CSV</button>
+        <button id="adVoltarPainel" class="ghost" type="button">Voltar ao painel</button>
+        <button id="adLimpar" class="ghost" type="button">Limpar relatório</button>
+      </div>
+      <div id="adStatus" class="connectionStatus">Aguardando planilha de viagens...</div>
+    </section>
+
+    <section class="adKpis">
+      <div class="card kpi"><span>Viagens confrontadas</span><strong id="adKTotal">0</strong></div>
+      <div class="card kpi good"><span>No dia correto</span><strong id="adKOk">0</strong></div>
+      <div class="card kpi bad"><span>Fora do dia correto</span><strong id="adKBad">0</strong></div>
+      <div class="card kpi"><span>Aderência</span><strong id="adKPct">0%</strong></div>
+      <div class="card kpi warn"><span>Destinos descartados</span><strong id="adKDiscard">0</strong></div>
+    </section>
+
+    <section class="card adTableCard">
+      <div class="adTableTop">
+        <h3>Relatório de aderência</h3>
+        <span id="adTableInfo">Sem dados processados.</span>
+      </div>
+      <div id="adTableWrap">
+        <div id="adEmpty">Carregue uma planilha para visualizar as viagens corretas e divergentes.</div>
+        <table id="adTable" style="display:none">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Data Viagem</th>
+              <th>Dia viagem</th>
+              <th>OF Destino</th>
+              <th>OF</th>
+              <th>Tipo OF</th>
+              <th>Veículo</th>
+              <th>Vocativo(s) encontrado(s)</th>
+              <th>Dias corretos de carregamento</th>
+            </tr>
+          </thead>
+          <tbody id="adTbody"></tbody>
+        </table>
+      </div>
+    </section>
   </section>
 
   <section id="pageAuxVeiculos" class="appPage">
@@ -5164,6 +5253,226 @@ function jsExportReportPdf(){
 }
 
 
+
+// ===== Aderência de viagens x Painel de Janelas =====
+let AD_ROWS_RAW = [];
+let AD_ROWS = [];
+let AD_RESULT = [];
+let AD_DISCARDED = [];
+let AD_LAST_SUMMARY = {total:0, ok:0, previous:0, bad:0, discarded:0, pct:0};
+const adCliente = $('adCliente');
+
+function adSetStatus(msg, cls=''){
+  const el=$('adStatus');
+  if(!el) return;
+  el.className='connectionStatus' + (cls ? ' '+cls : '');
+  el.innerHTML=msg;
+}
+function adNormCity(value){
+  return norm(value).replace(/[^A-Z0-9]+/g,' ').replace(/\s+/g,' ').trim();
+}
+function adFindValue(row, names){
+  const keys=Object.keys(row || {});
+  const wanted=names.map(adNormCity);
+  for(const k of keys){ if(wanted.includes(adNormCity(k))) return row[k]; }
+  for(const k of keys){
+    const nk=adNormCity(k);
+    if(wanted.some(w=>nk.includes(w) || w.includes(nk))) return row[k];
+  }
+  return '';
+}
+function adToDate(v){
+  if(v===null || v===undefined || v==='') return null;
+  if(v instanceof Date && !isNaN(v)) return v;
+  if(typeof v === 'number' && window.XLSX && XLSX.SSF && typeof XLSX.SSF.parse_date_code === 'function'){
+    const d=XLSX.SSF.parse_date_code(v);
+    if(d) return new Date(d.y, d.m-1, d.d, d.H || 0, d.M || 0, Math.floor(d.S || 0));
+  }
+  const s=String(v).trim();
+  let m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(m){
+    const y=Number(m[3].length===2 ? '20'+m[3] : m[3]);
+    const d=new Date(y, Number(m[2])-1, Number(m[1]), Number(m[4]||0), Number(m[5]||0), Number(m[6]||0));
+    return isNaN(d) ? null : d;
+  }
+  m=s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})(?:[T\s]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if(m){
+    const d=new Date(Number(m[1]), Number(m[2])-1, Number(m[3]), Number(m[4]||0), Number(m[5]||0), Number(m[6]||0));
+    return isNaN(d) ? null : d;
+  }
+  const parsed=new Date(s);
+  return isNaN(parsed) ? null : parsed;
+}
+function adFmtDate(d){
+  if(!(d instanceof Date) || isNaN(d)) return '';
+  return d.toLocaleDateString('pt-BR') + (d.getHours() || d.getMinutes() ? ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') : '');
+}
+function adPreviousDay(day){
+  const idx=DAYS.indexOf(day);
+  if(idx < 0) return '';
+  return DAYS[(idx + DAYS.length - 1) % DAYS.length];
+}
+function adIsPreviousLoadingDay(diaViagem, expectedDays){
+  if(!diaViagem || !expectedDays || !expectedDays.length) return false;
+  return expectedDays.some(day=>adPreviousDay(day) === diaViagem);
+}
+function adNormalizeRows(rows){
+  return (rows || []).map((row, idx)=>{
+    const data=adToDate(adFindValue(row, ['Data Viagem','DATA VIAGEM','Dt Viagem','Data da viagem']));
+    const destino=String(adFindValue(row, ['OF Destino','Destino OF','Destino']) || '').trim();
+    return {
+      idx: idx + 2,
+      dataViagem: data,
+      diaViagem: data ? DAYS[data.getDay()] : '',
+      ofDestino: destino,
+      destinoKey: adNormCity(destino),
+      of: String(adFindValue(row, ['OF']) || '').trim(),
+      tipoOf: String(adFindValue(row, ['Tipo OF','TIPO OF']) || '').trim(),
+      veiculo: String(adFindValue(row, ['Veiculo','Veículo']) || '').trim()
+    };
+  }).filter(r=>r.ofDestino && r.dataViagem);
+}
+function adRefreshFilters(){
+  if(!adCliente) return;
+  const rows = typeof getAll === 'function' ? getAll() : [];
+  opt(adCliente, unique(rows.map(r=>r.cliente)), 'Todos');
+  updateMultiSelectDropdown(adCliente);
+}
+function adBuildPanelReference(){
+  adRefreshFilters();
+  const selectedClientes = getSelectedValues(adCliente);
+  const allRows = getAll().filter(r=>!selectedClientes.length || selectedClientes.includes(String(r.cliente)));
+  const groups=jsBuildGroups(allRows);
+  const ref=new Map();
+  groups.forEach(g=>{
+    DAYS.forEach(day=>{
+      const items=jsItemsForGroupAndDay(g, day);
+      items.forEach(it=>{
+        const key=adNormCity(it.cidade);
+        if(!key) return;
+        if(!ref.has(key)) ref.set(key, {cidade:it.cidade, uf:it.uf, days:new Set(), vocativos:new Set(), clientes:new Set()});
+        const entry=ref.get(key);
+        entry.days.add(day);
+        if(it.vocativo) entry.vocativos.add(it.vocativo);
+        if(it.cliente) entry.clientes.add(it.cliente);
+      });
+    });
+  });
+  return ref;
+}
+function adBuildResults(){
+  const ref=adBuildPanelReference();
+  const result=[];
+  const discarded=[];
+  (AD_ROWS || []).forEach(row=>{
+    const match=ref.get(row.destinoKey);
+    if(!match){ discarded.push(row); return; }
+    const expectedDays=[...match.days].sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b));
+    const onScheduledDay=expectedDays.includes(row.diaViagem);
+    const previous=!onScheduledDay && adIsPreviousLoadingDay(row.diaViagem, expectedDays);
+    const ok=onScheduledDay || previous;
+    result.push({
+      ...row,
+      ok,
+      previous,
+      status: ok ? 'CORRETO' : 'DIVERGENTE',
+      expectedDays,
+      vocativos:[...match.vocativos].sort((a,b)=>String(a).localeCompare(String(b),'pt-BR')),
+      cidadePainel: match.cidade,
+      ufPainel: match.uf
+    });
+  });
+  const okCount=result.filter(r=>r.ok).length;
+  const badCount=result.length-okCount;
+  AD_RESULT=result;
+  AD_DISCARDED=discarded;
+  AD_LAST_SUMMARY={total:result.length, ok:okCount, previous:0, bad:badCount, discarded:discarded.length, pct:result.length ? (okCount/result.length*100) : 0};
+  return {result, discarded, summary:AD_LAST_SUMMARY, ref};
+}
+function adUpdateKpis(summary){
+  const s=summary || AD_LAST_SUMMARY;
+  $('adKTotal').textContent=(s.total || 0).toLocaleString('pt-BR');
+  $('adKOk').textContent=(s.ok || 0).toLocaleString('pt-BR');
+  $('adKBad').textContent=(s.bad || 0).toLocaleString('pt-BR');
+  $('adKDiscard').textContent=(s.discarded || 0).toLocaleString('pt-BR');
+  $('adKPct').textContent=(s.pct || 0).toLocaleString('pt-BR',{minimumFractionDigits:1, maximumFractionDigits:1}) + '%';
+}
+function adRenderTable(rows){
+  const table=$('adTable'), tbody=$('adTbody'), empty=$('adEmpty');
+  if(!table || !tbody || !empty) return;
+  if(!rows.length){
+    table.style.display='none';
+    empty.style.display='block';
+    empty.textContent=AD_ROWS.length ? 'Nenhuma viagem foi confrontada. Os destinos da planilha não existem na base de vocativos considerada pelo filtro de cliente ou não possuem janelas.' : 'Carregue uma planilha para visualizar as viagens corretas e divergentes.';
+    tbody.innerHTML='';
+    return;
+  }
+  empty.style.display='none';
+  table.style.display='table';
+  tbody.innerHTML=rows.map(r=>{
+    const cls=r.ok ? 'ok' : 'bad';
+    return '<tr>'
+      + '<td><span class="adStatusPill '+cls+'">'+escapeHtml(r.status)+'</span></td>'
+      + '<td>'+escapeHtml(adFmtDate(r.dataViagem))+'</td>'
+      + '<td><span class="adMono">'+escapeHtml(r.diaViagem)+'</span></td>'
+      + '<td>'+escapeHtml(r.ofDestino)+'</td>'
+      + '<td><span class="adMono">'+escapeHtml(r.of || '—')+'</span></td>'
+      + '<td>'+escapeHtml(r.tipoOf || '—')+'</td>'
+      + '<td>'+escapeHtml(r.veiculo || '—')+'</td>'
+      + '<td>'+escapeHtml((r.vocativos || []).join(', ') || '—')+'</td>'
+      + '<td><span class="adMono">'+escapeHtml((r.expectedDays || []).join(' / ') || '—')+'</span></td>'
+      + '</tr>';
+  }).join('');
+}
+function renderAdherenceReport(){
+  const built=adBuildResults();
+  adUpdateKpis(built.summary);
+  adRenderTable(built.result);
+  const info=$('adTableInfo');
+  if(info){
+    info.textContent=`${built.summary.total.toLocaleString('pt-BR')} viagem(ns) confrontada(s), ${built.summary.discarded.toLocaleString('pt-BR')} destino(s) descartado(s) pelo filtro de cliente da página Aderência.`;
+  }
+  if(!AD_ROWS.length) return;
+  const cls=built.summary.bad ? 'loading' : 'ok';
+  adSetStatus(`Planilha carregada com ${AD_ROWS.length.toLocaleString('pt-BR')} linha(s) válida(s). Confronto atual: <b>${built.summary.ok.toLocaleString('pt-BR')}</b> correta(s), <b>${built.summary.bad.toLocaleString('pt-BR')}</b> divergente(s), aderência de <b>${built.summary.pct.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})}%</b>. Carregamentos realizados no dia anterior ao dia correto também entram como CORRETO. Destinos sem correspondência na base considerada pelo filtro de cliente foram descartados.`, cls);
+}
+async function adReadFile(file){
+  if(!window.XLSX){ adSetStatus('Biblioteca XLSX não carregada. Verifique sua conexão com a internet e recarregue a página.','err'); return; }
+  adSetStatus('Processando planilha e confrontando com a base filtrada por cliente na página Aderência...','loading');
+  await new Promise(resolve=>setTimeout(resolve,0));
+  const data=await file.arrayBuffer();
+  const wb=XLSX.read(data,{type:'array',cellDates:true});
+  const sheet=wb.Sheets[wb.SheetNames[0]];
+  AD_ROWS_RAW=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:true});
+  AD_ROWS=adNormalizeRows(AD_ROWS_RAW);
+  renderAdherenceReport();
+}
+function adExportCSV(){
+  if(!AD_RESULT.length){ adSetStatus('Não há viagens confrontadas para exportar nos filtros atuais.','err'); return; }
+  const header=['Status','Data Viagem','Dia viagem','OF Destino','OF','Tipo OF','Veiculo','Vocativos encontrados','Dias corretos de carregamento'];
+  const lines=[header.join(';')];
+  AD_RESULT.forEach(r=>{
+    const row=[r.status,adFmtDate(r.dataViagem),r.diaViagem,r.ofDestino,r.of,r.tipoOf,r.veiculo,(r.vocativos||[]).join(', '),(r.expectedDays||[]).join(' / ')];
+    lines.push(row.map(jsCsvCell).join(';'));
+  });
+  const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  const d=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  a.href=URL.createObjectURL(blob);
+  a.download='aderencia_viagens_janelas_'+d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'_'+pad(d.getHours())+pad(d.getMinutes())+'.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+function adClear(){
+  AD_ROWS_RAW=[]; AD_ROWS=[]; AD_RESULT=[]; AD_DISCARDED=[]; AD_LAST_SUMMARY={total:0,ok:0,previous:0,bad:0,discarded:0,pct:0};
+  const file=$('adFile'); if(file) file.value='';
+  adUpdateKpis(AD_LAST_SUMMARY);
+  adRenderTable([]);
+  const info=$('adTableInfo'); if(info) info.textContent='Sem dados processados.';
+  adSetStatus('Aguardando planilha de viagens...');
+}
+
 const AUX_VEHICLES = [
   {nome:'UTILITÁRIO', peso:800},
   {nome:'VAN', peso:1500},
@@ -5191,14 +5500,18 @@ const auxFile = $('auxFile'), auxFilial = $('auxFilial'), auxCliente = $('auxCli
 function setActivePage(page){
   const isAux = page === 'aux';
   const isSimple = page === 'janelas';
-  $('pagePlanejamento').classList.toggle('active', !isAux && !isSimple);
+  const isAdherence = page === 'aderencia';
+  $('pagePlanejamento').classList.toggle('active', !isAux && !isSimple && !isAdherence);
   $('pageJanelasSimples').classList.toggle('active', isSimple);
+  $('adPage').classList.toggle('active', isAdherence);
   $('pageAuxVeiculos').classList.toggle('active', isAux);
-  $('tabPlanejamento').classList.toggle('active', !isAux && !isSimple);
+  $('tabPlanejamento').classList.toggle('active', !isAux && !isSimple && !isAdherence);
   $('tabJanelasSimples').classList.toggle('active', isSimple);
+  $('tabAderencia').classList.toggle('active', isAdherence);
   $('tabAuxVeiculos').classList.toggle('active', isAux);
   if(isAux) renderAux();
   if(isSimple) renderSimpleWindows();
+  if(isAdherence){ adRefreshFilters(); renderAdherenceReport(); }
 }
 function auxSetStatus(msg, cls=''){
   const el=$('auxStatus');
@@ -5857,14 +6170,22 @@ initMultiSelectDropdown(jsCliente,'Todos');
 initMultiSelectDropdown(jsUf,'Todas');
 initMultiSelectDropdown(jsCidade,'Todas');
 initMultiSelectDropdown(jsVocativo,'Todos');
+initMultiSelectDropdown(adCliente,'Todos');
 refreshAllMultiSelectDropdowns();
 $('tabPlanejamento').addEventListener('click',()=>setActivePage('planejamento'));
 $('tabJanelasSimples').addEventListener('click',()=>setActivePage('janelas'));
+$('tabAderencia').addEventListener('click',()=>setActivePage('aderencia'));
 $('tabAuxVeiculos').addEventListener('click',()=>setActivePage('aux'));
 [jsDia,jsCliente,jsUf,jsCidade,jsVocativo].forEach(el=>el.addEventListener('change',()=>{ updateMultiSelectDropdown(el); scheduleSimpleRender(); }));
 $('jsRelatorio').addEventListener('click',jsExportReport);
 $('jsRelatorioPdf').addEventListener('click',jsExportReportPdf);
-$('jsLimpar').addEventListener('click',()=>{ [jsDia,jsCliente,jsUf,jsCidade,jsVocativo].forEach(clearSelect); refreshAllMultiSelectDropdowns(); renderSimpleWindows(); });
+$('jsLimpar').addEventListener('click',()=>{ [jsDia,jsCliente,jsUf,jsCidade,jsVocativo].forEach(clearSelect); refreshAllMultiSelectDropdowns(); renderSimpleWindows(); if($('adPage')?.classList.contains('active')) renderAdherenceReport(); });
+$('adFile').addEventListener('change',e=>{ const file=e.target.files && e.target.files[0]; if(file) adReadFile(file).catch(err=>{ console.error(err); adSetStatus('Erro ao ler planilha: '+err.message,'err'); }); });
+adCliente.addEventListener('change',()=>{ updateMultiSelectDropdown(adCliente); renderAdherenceReport(); });
+$('adProcessar').addEventListener('click',renderAdherenceReport);
+$('adExportar').addEventListener('click',adExportCSV);
+$('adVoltarPainel').addEventListener('click',()=>setActivePage('janelas'));
+$('adLimpar').addEventListener('click',adClear);
 auxFile.addEventListener('change',e=>{ const file=e.target.files && e.target.files[0]; if(file) auxReadFile(file).catch(err=>{ console.error(err); auxSetStatus('Erro ao ler Excel: '+err.message,'err'); }); });
 auxFilial.addEventListener('change',()=>{ updateMultiSelectDropdown(auxFilial); scheduleAuxRender(); });
 auxCliente.addEventListener('change',()=>{ updateMultiSelectDropdown(auxCliente); scheduleAuxRender(); });
